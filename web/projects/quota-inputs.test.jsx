@@ -107,3 +107,28 @@ describe('defaultQuota', () => {
         expect(defaultQuota([cores, ipv4])).toEqual({ cores: 4, 'dhbw-ipv4': 0 });
     });
 });
+
+// The share line under a quantity: what the entered value takes of what the
+// budget being drawn from still has free.
+describe('QuotaInputs headroom', () => {
+    afterEach(cleanup);
+
+    it('states the free amount and the share the value takes', () => {
+        renderForm({ headroom: { cores: 16 } });
+
+        expect(screen.getByText(/16 free in that budget · this takes 25%/)).toBeTruthy();
+    });
+
+    it('warns when the value exceeds what is free', () => {
+        renderForm({ value: { cores: 20, 'dhbw-ipv4': 0 }, headroom: { cores: 16 } });
+
+        expect(screen.getByText(/Exceeds the 16 still free/)).toBeTruthy();
+    });
+
+    it('stays silent without headroom, and for an uncapped budget', () => {
+        renderForm({ headroom: { cores: Infinity } });
+
+        expect(screen.queryByText(/free in that budget/)).toBeNull();
+        expect(screen.queryByText(/Exceeds/)).toBeNull();
+    });
+});

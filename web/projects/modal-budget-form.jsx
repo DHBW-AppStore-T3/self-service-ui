@@ -9,7 +9,7 @@ import { TerminationDatePicker } from './component-common.jsx';
 import { FormModal, FormTabs } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenListEditor } from './component-token-list-editor.jsx';
-import { COLOR, formatError, visibleResources } from './util-project.jsx';
+import { COLOR, formatError, freeAmount, isAvailability, UNLIMITED_QUOTA, visibleResources } from './util-project.jsx';
 
 // Same three-step split as the project dialog: what it is → how much → who.
 const TAB_DETAILS = 'details';
@@ -104,6 +104,32 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     });
 
     const { quota, adminScope, eligibleRequesters, autoApproveEnabled, autoApproveQuota } = form.values;
+
+    // The budget the new one would draw from: the picked one when requesting,
+    // the parent when a manager carves out a sub-budget directly. Editing shows
+    // no shares — the node's own cap already counts against the parent there,
+    // so "free" would undercount what a manager may set.
+    const sourceBudget = isRequest
+        ? (eligibleBudgets.find(b => b.id === form.values.parentId) || null)
+        : (isEdit ? null : parent);
+    const headroom = sourceBudget
+        ? Object.fromEntries(offered.filter(r => !isAvailability(r))
+            .map(r => [r.id, freeAmount(sourceBudget, r.id)]))
+        : null;
+    // "296/300 Cores · 1584/1600 GB RAM (GB)" — free of total, capped resources
+    // only: a share of an uncapped budget says nothing.
+    const freeSummary = sourceBudget
+        ? offered
+            .filter(r => !isAvailability(r))
+            .map(r => {
+                const cap = sourceBudget.limit?.[r.id];
+                if (cap === UNLIMITED_QUOTA || cap === undefined || cap === null) return null;
+                const free = freeAmount(sourceBudget, r.id);
+                return r.unit ? `${free}/${cap} ${r.unit} ${r.name}` : `${free}/${cap} ${r.name}`;
+            })
+            .filter(Boolean)
+            .join(' · ')
+        : '';
 
     // Which tab to flag: a field the user cannot see must not fail silently.
     const errorsInTab = (tab, errs) => {
@@ -200,6 +226,11 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                     {...form.getInputProps('parentId')}
                 />
             )}
+            {isRequest && freeSummary && (
+                <Text size="xs" c="dimmed" mt={-8}>
+                    Still free there: {freeSummary}
+                </Text>
+            )}
 
             <TextInput
                 label="Name"
@@ -237,6 +268,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 value={quota}
                 errors={Object.fromEntries(offered.map(r => [r.id, form.errors[`quota.${r.id}`]]))}
                 allowUnlimited
+                headroom={headroom}
                 onChange={(id, v) => { form.setFieldValue(`quota.${id}`, v); form.clearFieldError(`quota.${id}`); }}
             />
         </div>

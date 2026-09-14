@@ -118,6 +118,14 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
                     <Button variant="light" size="xs" onClick={() => act('details')}>
                         <Eye size="13" style={{ marginRight: 4 }} />Details
                     </Button>
+                    {/* On a budget shown read-only, requesting is the one thing
+                        the viewer CAN do here — offered only when the budget
+                        takes sub-budget requests at all. */}
+                    {!manageable && isApproved && node.allow_sub_budget_requests !== false && (
+                        <Button variant="light" size="xs" onClick={() => act('request-here')}>
+                            <Plus size="13" style={{ marginRight: 4 }} />Request budget
+                        </Button>
+                    )}
                     {manageable && (isPending || isChangePending) && (
                         <>
                             <Button color={COLOR.positive} variant="light" size="xs" onClick={() => act('approve')}>

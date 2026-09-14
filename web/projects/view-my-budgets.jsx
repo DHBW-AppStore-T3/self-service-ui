@@ -127,11 +127,24 @@ export function MyBudgetsView() {
         ));
     }, [myBudgets]);
 
+    // Budgets the user may request from but does not manage, shown read-only in
+    // the tree: a requester sees where their requests draw from and how full it
+    // is. The server already hands them exactly this (eligible-for-me carries
+    // the usage rollup). Not expandable — listing children is a manager's view —
+    // so child_count is dropped, and request_only marks the rows and gates the
+    // card's actions. Direct parent managed = already reachable in the tree.
+    const requestableOnly = useMemo(() => {
+        const managedIds = new Set(myBudgets.items.map(b => b.id));
+        return (eligibleQuery.data?.items ?? [])
+            .filter(b => !managedIds.has(b.id) && !managedIds.has(b.parent_id))
+            .map(b => ({ ...b, child_count: 0, request_only: true }));
+    }, [myBudgets, eligibleQuery.data]);
+
     // Nothing picked yet falls back to the first root, so the detail panel is
     // never empty for someone who manages something. Derived rather than written
     // into state when the roots arrive: an effect that "selects the first one"
     // also has to decide what to do when the list changes under it.
-    const selected = selectedNode ?? rootBudgets[0] ?? null;
+    const selected = selectedNode ?? rootBudgets[0] ?? requestableOnly[0] ?? null;
 
     const childLimit = (nodeId) => limits[nodeId] ?? PAGE_SIZE;
     const childQuery = (nodeId) => ({
@@ -310,8 +323,8 @@ export function MyBudgetsView() {
     };
 
     const treeData = useMemo(
-        () => budgetsToTreeData(rootBudgets, childrenMap),
-        [rootBudgets, childrenMap],
+        () => budgetsToTreeData([...rootBudgets, ...requestableOnly], childrenMap),
+        [rootBudgets, requestableOnly, childrenMap],
     );
 
     // Widening the scope only changes the inbox, not the tree. The scope is part
@@ -369,6 +382,8 @@ export function MyBudgetsView() {
     // Central action dispatch for both node kinds.
     const handleAction = (action, node) => {
         if (action === 'sub-budget') return setBudgetForm({ mode: 'create', parent: node });
+        // From a read-only budget: request under it — `parent` preselects it.
+        if (action === 'request-here') return setBudgetForm({ mode: 'request', parent: node });
         if (action === 'release') return handleRelease(node);
         if (action === 'edit') {
             // Editing a budget IS delegating from its parent, so the form has
@@ -401,8 +416,8 @@ export function MyBudgetsView() {
         <Stack>
             <Group justify="space-between" align="center">
                 <Text size="sm" c="dimmed">
-                    The budgets you manage, as a tree. Select a node to inspect it;
-                    delegate by creating a sub-budget with someone else in “Managed by”.
+                    The budgets you manage{requestableOnly.length > 0 ? ' — and, read-only, the ones you may request from —' : ''}, as a tree.
+                    Select a node to inspect it; delegate by creating a sub-budget with someone else in “Managed by”.
                 </Text>
                 {budgetRequestTargets.length > 0 && (
                     <Button size="xs" variant="light" leftSection={<Inbox size="14" />}
@@ -431,7 +446,7 @@ export function MyBudgetsView() {
                 </Alert>
             )}
 
-            {myBudgets.items.length > 0 && (
+            {(myBudgets.items.length > 0 || requestableOnly.length > 0) && (
                 // align="flex-start": tree and detail panel each keep their
                 // natural height — otherwise the panel card stretches to the
                 // tree's height and its action bar floats far below the content.
@@ -564,7 +579,8 @@ export function MyBudgetsView() {
                         )}
                         {selected && (isBudget(selected) ? (
                             <BudgetCard node={selected} resources={resources}
-                                onAction={handleAction} manageable />
+                                onAction={handleAction}
+                                manageable={!requestableOnly.some(b => b.id === selected.id)} />
                         ) : (
                             <ProjectCard node={selected} resources={resources} parentName={selected.parent_name}
                                 perspective="manager" onAction={handleAction} />

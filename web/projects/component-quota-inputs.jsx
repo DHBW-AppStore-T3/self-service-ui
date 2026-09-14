@@ -18,11 +18,14 @@ const SEARCH_THRESHOLD = 12;
 //   errors        optional map { [resourceId]: string }
 //   disabled      render read-only
 //   allowUnlimited budgets may set a QUANTITY to "no cap" (-1); adds a checkbox per field
+//   headroom      optional map { [resourceId]: number } — how much the budget the
+//                 request draws from still has free; each quantity then shows what
+//                 share of that the entered value takes
 //
 // The caller decides WHICH resources to pass. Filtering to what is in scope at a
 // node is visibleResources' job, not this component's — the same form is used
 // where there is no node at all.
-export function QuotaInputs({ resources, value, onChange, errors = {}, disabled = false, allowUnlimited = false }) {
+export function QuotaInputs({ resources, value, onChange, errors = {}, disabled = false, allowUnlimited = false, headroom = null }) {
     const [query, setQuery] = useState('');
 
     const matching = useMemo(() => {
@@ -72,6 +75,7 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
                                         error={errors[r.id]}
                                         disabled={disabled}
                                         allowUnlimited={allowUnlimited}
+                                        free={headroom?.[r.id]}
                                     />}
                             </Grid.Col>
                         ))}
@@ -99,7 +103,7 @@ function AvailabilityField({ resource, value, onChange, disabled }) {
     );
 }
 
-function QuantityField({ resource: r, value: current, onChange, error, disabled, allowUnlimited }) {
+function QuantityField({ resource: r, value: current, onChange, error, disabled, allowUnlimited, free }) {
     const isUnlimited = current === UNLIMITED_QUOTA;
     return (
         <Stack gap="4">
@@ -114,6 +118,7 @@ function QuantityField({ resource: r, value: current, onChange, error, disabled,
                 error={error}
                 description={isUnlimited ? 'Children may use any amount' : r.message}
             />
+            <HeadroomShare free={free} value={isUnlimited ? UNLIMITED_QUOTA : current} />
             {allowUnlimited && (
                 <Checkbox
                     size="xs"
@@ -125,6 +130,25 @@ function QuantityField({ resource: r, value: current, onChange, error, disabled,
             )}
         </Stack>
     );
+}
+
+// One line under a quantity: how the entered value relates to what the budget
+// being drawn from still has free. Silent when the caller passed no headroom
+// for this resource (no budget in hand, or it is uncapped — a share of infinity
+// says nothing). "No cap" wanting more than a finite free amount is the one
+// combination that must speak up even at value 0.
+function HeadroomShare({ free, value }) {
+    if (free === undefined || free === null || !Number.isFinite(free)) return null;
+    const v = value === UNLIMITED_QUOTA ? Infinity : (typeof value === 'number' ? value : 0);
+    if (v > free) {
+        return (
+            <Text size="xs" c="red.8">
+                Exceeds the {free} still free in that budget — a manager would have to raise it first.
+            </Text>
+        );
+    }
+    const share = free > 0 ? Math.round((v / free) * 100) : 0;
+    return <Text size="xs" c="dimmed">{free} free in that budget · this takes {share}%</Text>;
 }
 
 // Returns the default quota map for a set of resource definitions.

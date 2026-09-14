@@ -11,8 +11,12 @@ export function TokenListEditor({ label, description, tokens, onChange, placehol
     const labels = useTokenLabels(tokens);
 
     const add = (raw) => {
-        const token = (raw ?? draft).trim();
+        let token = (raw ?? draft).trim();
         if (!token) return;
+        // A bare email means a person: store it as the user: token it has to be
+        // to ever match. The badge strips the prefix for display, so an
+        // unprefixed address would look identical — and silently never grant.
+        if (!token.includes(':') && token.includes('@')) token = 'user:' + token;
         if (!tokens.includes(token)) onChange([...tokens, token]);
         setDraft('');
     };

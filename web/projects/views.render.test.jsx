@@ -123,6 +123,32 @@ describe('the cloud project views render', () => {
         expectNoRenderFailure();
     });
 
+    // A requester who manages nothing still sees where their requests would
+    // draw from: the eligible budget appears in the tree, read-only — no
+    // manager actions, but requesting from it is offered.
+    it('shows a requestable budget read-only when the user manages nothing', async () => {
+        const api = fakeNodesApi(fixtureTree());
+        api.listMyBudgets = async () => ({ items: [], total: 0 });
+        api.listEligibleForMe = async () => ({
+            items: [{
+                id: 'b_src', kind: 'budget', status: 'approved', name: 'OneIT',
+                child_count: 3, limit: { cores: 32, ram: 128 },
+                admin_scope: ['user:boss@dhbw.de'],
+                eligible_requesters: ['user:dennis.pfisterer@dhbw.de'],
+                usage: { approved: { limit: { cores: 8, ram: 16 }, node_ids: [] } },
+                created_at: '2026-08-01T10:00:00Z',
+            }],
+            total: 1,
+        });
+        globalThis.__testApi = api;
+        renderView(<MyBudgetsView />);
+
+        expect(await screen.findAllByText('OneIT')).not.toHaveLength(0);
+        expect(screen.queryByRole('button', { name: /Edit/ })).toBeNull();
+        expect(screen.getAllByRole('button', { name: /Request budget/ }).length).toBeGreaterThan(0);
+        expectNoRenderFailure();
+    });
+
     it('My Projects renders its cards', async () => {
         renderView(<MyProjectsView />);
         expect(await screen.findByText('Mein Projekt')).toBeDefined();

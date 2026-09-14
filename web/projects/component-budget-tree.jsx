@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, ChevronDown, ChevronRight, CloudDownload, FileText, Folder, Zap } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, CloudDownload, Eye, FileText, Folder, Zap } from 'lucide-react';
 import { Box, Group, Loader, Text, Tooltip, Tree, UnstyledButton } from '@mantine/core';
 import { COLOR, isBudget, isImported, nodeTitle, statusDescription, statusLabel, statusStyle } from './util-project.jsx';
 
@@ -88,6 +88,13 @@ function StatusDot({ status }) {
 function NodeMarkers({ node }) {
     return (
         <>
+            {/* Set by the owning view on budgets the user may request from but
+                does not manage — the row is a window, not a workplace. */}
+            {node.request_only && (
+                <Tooltip label="You can request from this budget, but you don't manage it — shown read-only.">
+                    <Eye size="12" color="var(--mantine-color-gray-6)" style={{ flexShrink: 0 }} />
+                </Tooltip>
+            )}
             {node.auto_approve?.per_requester_limit && (
                 <Tooltip label="Auto-approve: small requests are approved automatically.">
                     <Zap size="12" color="var(--mantine-color-green-6)" style={{ flexShrink: 0 }} />
