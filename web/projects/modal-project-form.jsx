@@ -9,7 +9,7 @@ import { NodeChangesDiff, TerminationDatePicker } from './component-common.jsx';
 import { FormModal, FormTabs } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenRoleEditor } from './component-token-role-editor.jsx';
-import { autoApproveHeadroom, COLOR, freeAmount, quotaFits, resourceSummaryText, visibleResources } from './util-project.jsx';
+import { autoApproveHeadroom, COLOR, freeAmount, isAvailability, quotaFits, resourceSummaryText, visibleResources } from './util-project.jsx';
 
 const DEFAULT_TERM_DAYS = 90;
 
@@ -128,6 +128,19 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             [...(myBudgets || []), ...(eligibleBudgets || [])].find(b => b.id === id),
             resources, myProjects);
 
+    // A headroom is only worth PRE-FILLING when every quantity in it is a
+    // valid request on its own (>= the resource's minimum). Once the requester
+    // has used up even one resource, filling the form with it would produce
+    // invalid zeros — and a green "set to nothing left" note, which reads as
+    // success while meaning the opposite.
+    const usableHeadroomFor = (id) => {
+        const h = headroomFor(id);
+        if (!h) return null;
+        const ok = offeredFor(id).every(r =>
+            isAvailability(r) || (h[r.id] ?? 0) >= (r.min ?? 0));
+        return ok ? h : null;
+    };
+
     // Reading the clock is a side effect, so it happens once in a lazy
     // initialiser rather than on every render. The dialog is remounted per
     // opening (see the `key` at the call sites), so once = per opening.
@@ -154,8 +167,9 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 name: '',
                 reason: '',
                 // A budget that approves instantly starts filled with the most
-                // it would grant, so the common case is one click.
-                quota: headroomFor(initialParentId) ?? defaultQuota(resources),
+                // it would grant, so the common case is one click — unless the
+                // allowance is (partly) used up: then the defaults stay.
+                quota: usableHeadroomFor(initialParentId) ?? defaultQuota(resources),
                 terminationDate: defaultEnd,
                 authorizedUsers: [],
             },
@@ -185,7 +199,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     const selectBudget = (id) => {
         form.setFieldValue('parentId', id);
         form.clearFieldError('parentId');
-        const headroom = headroomFor(id);
+        const headroom = usableHeadroomFor(id);
         if (headroom) form.setFieldValue('quota', headroom);
     };
 
@@ -293,14 +307,23 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 />
             )}
 
-            {/* Say why the numbers on the next tab just changed by themselves. */}
-            {!isChange && selectedHeadroom && (
+            {/* Say why the numbers on the next tab just changed by themselves —
+                or, when the requester's instant allowance is used up, say THAT
+                clearly instead of a green success note about nothing. */}
+            {!isChange && selectedHeadroom && (usableHeadroomFor(parentId) ? (
                 <Text size="xs" c={COLOR.positive}>
-                    Resources set to {resourceSummaryText(resources, selectedHeadroom) || 'nothing left'} — the most
-                    this budget approves instantly for you. Ask for less and it is still instant; ask for more and a
-                    manager decides.
+                    Resources pre-filled with the most this budget approves instantly for
+                    you: {resourceSummaryText(resources, selectedHeadroom)}. Ask for less and it is still
+                    instant; ask for more and a manager decides.
                 </Text>
-            )}
+            ) : (
+                <Text size="xs" c={COLOR.attention}>
+                    You have used up what this budget approves instantly
+                    {resourceSummaryText(resources, selectedHeadroom)
+                        ? ` (left: ${resourceSummaryText(resources, selectedHeadroom)})`
+                        : ''} — this request will go to a manager for approval.
+                </Text>
+            ))}
 
             <TextInput
                 label="Name"
