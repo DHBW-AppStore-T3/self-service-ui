@@ -113,7 +113,12 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     // demand a value for a field nobody was shown.
     const budgetById = (id) => [...(myBudgets || []), ...(eligibleBudgets || [])].find(b => b.id === id);
     const offeredFor = (id) => {
-        const budget = budgetById(id);
+        // A change request has no budget picker — the project stays where it
+        // is, so the scope is its PARENT budget: that is what a request could
+        // draw from. The leaf itself is the fallback when the parent is not in
+        // view (never the whole catalogue: offering an availability the budget
+        // was never delegated reads as a promise the approval cannot keep).
+        const budget = budgetById(isChange ? node.parent_id : id) || (isChange ? node : null);
         return budget ? visibleResources(resources, budget) : resources;
     };
 
