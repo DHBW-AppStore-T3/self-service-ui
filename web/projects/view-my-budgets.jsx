@@ -370,7 +370,18 @@ export function MyBudgetsView() {
     const handleAction = (action, node) => {
         if (action === 'sub-budget') return setBudgetForm({ mode: 'create', parent: node });
         if (action === 'release') return handleRelease(node);
-        if (action === 'edit') return setBudgetForm({ mode: 'edit', node });
+        if (action === 'edit') {
+            // Editing a budget IS delegating from its parent, so the form has
+            // to offer the PARENT's resource scope: the child's own scope can
+            // by definition never contain a resource it has not been given
+            // yet, so a catalogue entry new to the platform would stay
+            // invisible forever. When the parent is outside the caller's view
+            // the node itself remains the fallback — the server enforces the
+            // real boundary either way.
+            const parent = [...myBudgets.items, ...Object.values(childrenMap).flatMap(p => p.items)]
+                .find(b => b.id === node.parent_id) || null;
+            return setBudgetForm({ mode: 'edit', node, parent });
+        }
         if (action === 'delete') return handleDelete(node);
         dlg.open(action, node);
     };
