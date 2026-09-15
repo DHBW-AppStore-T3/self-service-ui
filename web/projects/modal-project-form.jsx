@@ -229,16 +229,25 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
 
     const handleSearchTokens = async (query) => {
         if (!query) { setTokenSearchResults([]); return; }
+        // A typed address is offerable as-is, ahead of the search: the
+        // directory only knows enumerable people (staff) and existing
+        // participants, while a pattern member (student) or an address new to
+        // the platform is still a valid user: token. Same normalization as
+        // TokenListEditor — and kept even when the directory is unreachable.
+        const typed = query.trim().replace(/^user:/, '');
+        const typedToken = (typed.includes('@') && !typed.includes(':') && !/\s/.test(typed))
+            ? 'user:' + typed : null;
         setIsSearchingTokens(true);
         try {
             // No second filter on the query here: the API already matched, and a
             // group found through its DESCRIPTION has a token that does not
             // contain the search text — filtering again would drop exactly those.
             const tokens = await api.searchPrincipals(query);
+            if (typedToken && !tokens.includes(typedToken)) tokens.unshift(typedToken);
             setTokenSearchResults(tokens.filter(t =>
                 !authorizedUsers.some(au => au.token === t)));
         } catch {
-            setTokenSearchResults([]);
+            setTokenSearchResults(typedToken ? [typedToken] : []);
         } finally {
             setIsSearchingTokens(false);
         }
