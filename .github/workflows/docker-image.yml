@@ -171,6 +171,7 @@ jobs:
       # --- ghcr retention (runs after the push, so counts include the new tag) ---
       # Keep only the newest pre-release "-test.N" tag
       - uses: dataaxiom/ghcr-cleanup-action@v1
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           use-regex: true
           exclude-tags: '^latest$'
@@ -178,6 +179,7 @@ jobs:
           keep-n-tagged: 1
       # Keep the newest 3 stable semver tags (X.Y.Z)
       - uses: dataaxiom/ghcr-cleanup-action@v1
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           use-regex: true
           exclude-tags: '^latest$'
@@ -185,11 +187,13 @@ jobs:
           keep-n-tagged: 3
       # Delete all old pre-release "-alpha" tags
       - uses: dataaxiom/ghcr-cleanup-action@v1
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           use-regex: true
           delete-tags: '^.*-alpha$'
       # Clean up untagged / ghost / orphaned leftovers
       - uses: dataaxiom/ghcr-cleanup-action@v1
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           delete-untagged: true
           delete-ghost-images: true
