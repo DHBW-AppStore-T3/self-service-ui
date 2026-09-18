@@ -101,6 +101,13 @@ export function QuotaBadges({ resources, quota, size = 'sm' }) {
         <Group gap="xs" wrap="wrap">
             {resources.map(r => {
                 const value = quota[r.id] ?? 0;
+                // An availability is granted or not: its name alone when granted,
+                // nothing when withheld — "0 DHBW IPv4 network" reads like an amount.
+                if (isAvailability(r)) {
+                    return value === 1
+                        ? <Badge key={r.id} size={size} variant="outline" color={COLOR.identity}>{r.name}</Badge>
+                        : null;
+                }
                 const display = value === UNLIMITED_QUOTA ? '∞' : (r.unit ? `${value} ${r.unit}` : value);
                 return <Badge key={r.id} size={size} variant="outline" color={COLOR.identity}>{display} {r.name}</Badge>;
             })}

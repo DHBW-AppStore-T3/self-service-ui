@@ -34,13 +34,18 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     const isRequest = mode === 'request';
 
     // A budget can only hold what the budget above it holds, so the parent is
-    // what decides which resources this form may offer at all.
+    // what decides which resources this form may offer at all. When requesting,
+    // that is the budget picked under "Request from" — the dialog opened from
+    // the page header has no parent in hand, and falling back to the whole
+    // catalogue offered availabilities the chosen budget does not carry.
     //
     // Editing without a parent in hand falls back to the node's own scope. That
     // is narrower than the truth — it shows what the budget HAS rather than what
     // it could be given — but the alternative is offering the whole catalogue
     // and letting the server refuse, which teaches the user nothing.
-    const offered = visibleResources(resources, parent || node);
+    const scopeFor = (parentId) => isRequest
+        ? (eligibleBudgets.find(b => b.id === parentId) || null)
+        : (parent || node);
 
     const [activeTab, setActiveTab] = useState(TAB_DETAILS);
 
@@ -93,25 +98,24 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 ? 'Name at least one person or group — a budget nobody manages appears in nobody\'s "My Budgets", and requests under it land with the budget above instead'
                 : null,
             ...Object.fromEntries(
-                Object.entries(validateQuota(visibleResources(resources, parent || node), values.quota, { allowUnlimited: true }))
+                Object.entries(validateQuota(visibleResources(resources, scopeFor(values.parentId)), values.quota, { allowUnlimited: true }))
                     .map(([id, msg]) => [`quota.${id}`, msg])),
             ...(values.autoApproveEnabled
                 ? Object.fromEntries(
-                    Object.entries(validateQuota(visibleResources(resources, parent || node), values.autoApproveQuota))
+                    Object.entries(validateQuota(visibleResources(resources, scopeFor(values.parentId)), values.autoApproveQuota))
                         .map(([id, msg]) => [`autoApproveQuota.${id}`, msg]))
                 : {}),
         }),
     });
 
     const { quota, adminScope, eligibleRequesters, autoApproveEnabled, autoApproveQuota } = form.values;
+    const offered = visibleResources(resources, scopeFor(form.values.parentId));
 
     // The budget the new one would draw from: the picked one when requesting,
     // the parent when a manager carves out a sub-budget directly. Editing shows
     // no shares — the node's own cap already counts against the parent there,
     // so "free" would undercount what a manager may set.
-    const sourceBudget = isRequest
-        ? (eligibleBudgets.find(b => b.id === form.values.parentId) || null)
-        : (isEdit ? null : parent);
+    const sourceBudget = isEdit ? null : scopeFor(form.values.parentId);
     const headroom = sourceBudget
         ? Object.fromEntries(offered.filter(r => !isAvailability(r))
             .map(r => [r.id, freeAmount(sourceBudget, r.id)]))

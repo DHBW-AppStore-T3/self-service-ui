@@ -416,7 +416,7 @@ export function MyBudgetsView() {
         <Stack>
             <Group justify="space-between" align="center">
                 <Text size="sm" c="dimmed">
-                    The budgets you manage{requestableOnly.length > 0 ? ' — and, read-only, the ones you may request from —' : ''}, as a tree.
+                    The budgets you manage, as a tree{requestableOnly.length > 0 ? ', plus the ones you may request from (read-only)' : ''}.
                     Select a node to inspect it; delegate by creating a sub-budget with someone else in “Managed by”.
                 </Text>
                 {budgetRequestTargets.length > 0 && (
