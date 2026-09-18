@@ -28,7 +28,7 @@ docker-build:
 		-t "$(DOCKER_REPO):$(DOCKER_TAG)" \
 		.
 	@echo "✅ Docker image $(DOCKER_REPO):$(DOCKER_TAG) built."
-	@echo "To run locally: docker run -p 8084:8080 -e "DYNAMIC_ZONE_BASE_URL=https://your-host.com/" $(DOCKER_REPO):$(DOCKER_TAG)"
+	@echo 'To run locally: docker run -p 8084:8080 -e DYN_ZONES_BASE_URL=https://your-host.example/ -e OIDC_CLIENT_ID=<client> -e OIDC_ISSUER_URL=https://<issuer>/realms/<realm> $(DOCKER_REPO):$(DOCKER_TAG)'
 
 # Docker Login (Placeholder for standard workflow)
 docker-login:
