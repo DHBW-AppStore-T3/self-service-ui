@@ -10,3 +10,10 @@ https://github.com/DHBW-AppStore-T3/.github/blob/main/docs/HARNESS.md
 
 Details zu diesem Repo: siehe `claude_docs/architecture.md`,
 `claude_docs/decisions.md`.
+
+## Lokale Befehle
+- Dev-Server: `npm run dev`
+- Tests: `npm test`
+- Linting: `npm run lint`
+- Build: `npm run build`
+
