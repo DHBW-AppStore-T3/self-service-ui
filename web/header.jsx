@@ -62,6 +62,14 @@ function SubNavItem({ item, active, onClick, vertical = false }) {
     );
 }
 
+function openWithSso(url, userEmail) {
+    const dest = new URL(url);
+    if (userEmail) {
+        dest.searchParams.set('sso_handoff', userEmail);
+    }
+    window.open(dest.toString(), 'dhbw-app-store');
+}
+
 export function Header() {
     const [opened, setOpened] = useState(false);
     const { user, login, logout, useDummyAuth } = useAuth();
@@ -146,16 +154,20 @@ export function Header() {
                         <Group gap="4" wrap="nowrap" h={HEADER_HEIGHT}>
                             {sections.map(section => {
                                 const active = activeSection?.id === section.id;
-                                return (
-                                    <Link key={section.id} href={section.href} onClick={close}>
-                                        <Button size="sm" variant={active ? 'light' : 'subtle'}
-                                            color={active ? undefined : 'gray'}
-                                            fw={active ? 600 : 500}>
-                                            {section.label}
-                                            {section.dot && <PendingDot ml="6" />}
-                                        </Button>
-                                    </Link>
+                                const btn = (
+                                    <Button size="sm" variant={active ? 'light' : 'subtle'}
+                                        color={active ? undefined : 'gray'}
+                                        fw={active ? 600 : 500}>
+                                        {section.label}
+                                        {section.dot && <PendingDot ml="6" />}
+                                    </Button>
                                 );
+                                return section.external
+                                    ? <Button key={section.id} size="sm" variant="subtle" color="gray" fw={500}
+                                        onClick={() => openWithSso(section.href, user?.profile?.email)}>
+                                        {section.label}
+                                      </Button>
+                                    : <Link key={section.id} href={section.href} onClick={close}>{btn}</Link>;
                             })}
                         </Group>
 
@@ -227,15 +239,23 @@ export function Header() {
                         {sections.map((section, index) => (
                             <Box key={section.id}>
                                 {index > 0 && <Divider mb="xs" />}
-                                <Link href={section.href} onClick={close}>
+                                {section.external ? (
                                     <Button size="sm" fullWidth justify="flex-start"
-                                        variant={activeSection?.id === section.id ? 'light' : 'subtle'}
-                                        color={activeSection?.id === section.id ? undefined : 'gray'}
-                                        fw={600}>
+                                        variant="subtle" color="gray" fw={600}
+                                        onClick={() => { close(); openWithSso(section.href, user?.profile?.email); }}>
                                         {section.label}
-                                        {section.dot && <PendingDot ml="6" />}
                                     </Button>
-                                </Link>
+                                ) : (
+                                    <Link href={section.href} onClick={close}>
+                                        <Button size="sm" fullWidth justify="flex-start"
+                                            variant={activeSection?.id === section.id ? 'light' : 'subtle'}
+                                            color={activeSection?.id === section.id ? undefined : 'gray'}
+                                            fw={600}>
+                                            {section.label}
+                                            {section.dot && <PendingDot ml="6" />}
+                                        </Button>
+                                    </Link>
+                                )}
                                 {/* Indented under their category: the whole navigation
                                     is open at once here, and the offset is what keeps
                                     the two levels apart. */}

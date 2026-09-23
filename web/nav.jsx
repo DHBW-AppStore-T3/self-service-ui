@@ -85,11 +85,18 @@ export function useNav() {
             // stacked on one page did.
             items: TOKEN_SCOPES.map(s => ({ label: s.label, href: tokenScopePath(s) })),
         },
+        {
+            id: 'app-store',
+            label: 'DHBW App-Store',
+            href: 'http://localhost:5173/',
+            external: true,
+            items: [],
+        },
     ].filter(Boolean).map(s => ({ ...s, href: s.href ?? s.items[0]?.href ?? '/' }));
 
-    const inSection = (s) => (s.base
+    const inSection = (s) => (!s.external && (s.base
         ? currentPath === s.base || currentPath.startsWith(s.base + '/')
-        : currentPath === '/');
+        : currentPath === '/'));
     const activeSection = sections.find(inSection) ?? null;
 
     // Longest match wins, so /dyndns/zones/example.org still marks "Zone
