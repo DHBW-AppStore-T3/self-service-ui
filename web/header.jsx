@@ -35,6 +35,31 @@ function PendingDot({ ml = 0 }) {
 // A vertical list gets the same marker turned 90°: an accent on the leading
 // edge. A full-width underline down there would read as a divider between
 // items, not as "this is the one you are on".
+// Opens the App-Store in a popup, authenticated via a backend-minted handoff
+// token instead of a bare email. window.open('', ...) happens BEFORE the
+// await: an await ahead of it consumes the click's user-gesture in some
+// browsers and the popup gets blocked. The empty popup opens immediately and
+// is only pointed at the App-Store once the mint succeeds.
+async function openWithSso(url) {
+    const popup = window.open('', 'dhbw-app-store');
+    try {
+        const res = await fetch('/api/appstore/handoff/mint', {
+            method: 'POST',
+            credentials: 'include',
+        });
+        if (!res.ok) throw new Error('handoff mint failed');
+        const { email, handoff_token: handoffToken } = await res.json();
+        const dest = new URL(url);
+        dest.searchParams.set('handoff', '1');
+        dest.searchParams.set('email', email);
+        dest.searchParams.set('handoff_token', handoffToken);
+        if (popup) popup.location = dest.toString();
+    } catch (err) {
+        if (popup) popup.close();
+        console.error('SSO handoff to App-Store failed:', err);
+    }
+}
+
 function SubNavItem({ item, active, onClick, vertical = false }) {
     const accent = `2px solid ${active ? 'var(--mantine-color-dhbw-6)' : 'transparent'}`;
     return (
@@ -146,15 +171,21 @@ export function Header() {
                         <Group gap="4" wrap="nowrap" h={HEADER_HEIGHT}>
                             {sections.map(section => {
                                 const active = activeSection?.id === section.id;
-                                return (
-                                    <Link key={section.id} href={section.href} onClick={close}>
-                                        <Button size="sm" variant={active ? 'light' : 'subtle'}
-                                            color={active ? undefined : 'gray'}
-                                            fw={active ? 600 : 500}>
-                                            {section.label}
-                                            {section.dot && <PendingDot ml="6" />}
-                                        </Button>
-                                    </Link>
+                                const btn = (
+                                    <Button size="sm" variant={active ? 'light' : 'subtle'}
+                                        color={active ? undefined : 'gray'}
+                                        fw={active ? 600 : 500}>
+                                        {section.label}
+                                        {section.dot && <PendingDot ml="6" />}
+                                    </Button>
+                                );
+                                return section.external ? (
+                                    <Button key={section.id} size="sm" variant="subtle" color="gray" fw={500}
+                                        onClick={() => openWithSso(section.href)}>
+                                        {section.label}
+                                    </Button>
+                                ) : (
+                                    <Link key={section.id} href={section.href} onClick={close}>{btn}</Link>
                                 );
                             })}
                         </Group>
@@ -227,15 +258,23 @@ export function Header() {
                         {sections.map((section, index) => (
                             <Box key={section.id}>
                                 {index > 0 && <Divider mb="xs" />}
-                                <Link href={section.href} onClick={close}>
+                                {section.external ? (
                                     <Button size="sm" fullWidth justify="flex-start"
-                                        variant={activeSection?.id === section.id ? 'light' : 'subtle'}
-                                        color={activeSection?.id === section.id ? undefined : 'gray'}
-                                        fw={600}>
+                                        variant="subtle" color="gray" fw={600}
+                                        onClick={() => { close(); openWithSso(section.href); }}>
                                         {section.label}
-                                        {section.dot && <PendingDot ml="6" />}
                                     </Button>
-                                </Link>
+                                ) : (
+                                    <Link href={section.href} onClick={close}>
+                                        <Button size="sm" fullWidth justify="flex-start"
+                                            variant={activeSection?.id === section.id ? 'light' : 'subtle'}
+                                            color={activeSection?.id === section.id ? undefined : 'gray'}
+                                            fw={600}>
+                                            {section.label}
+                                            {section.dot && <PendingDot ml="6" />}
+                                        </Button>
+                                    </Link>
+                                )}
                                 {/* Indented under their category: the whole navigation
                                     is open at once here, and the offset is what keeps
                                     the two levels apart. */}

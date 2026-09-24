@@ -24,6 +24,12 @@ export const dnsZonesEnabled = Boolean(window?.appconfig?.dynamicZonesBaseUrl);
 // At least one API has to be there for a token to be issuable at all.
 export const apiTokensEnabled = dnsZonesEnabled || cloudProjectsEnabled;
 
+// DHBW App-Store nav entry — same "stated as a fact, not inferred" reasoning
+// as the two sections above. Empty base URL means the deployment has no
+// App-Store integration configured, not that a request failed.
+export const appstoreBaseUrl = window?.appconfig?.appstoreBaseUrl || '';
+export const appstoreEnabled = Boolean(appstoreBaseUrl);
+
 // Both APIs also speak MCP, so an AI assistant can work on someone's behalf.
 // SEPARATE values, not derived from the base URLs: those may be the BFF paths,
 // which authenticate browser sessions with cookies and answer a bearer token

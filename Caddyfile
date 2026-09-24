@@ -39,6 +39,10 @@
         header Cache-Control "no-store"
         reverse_proxy {$CLOUD_RESOURCES_UPSTREAM:openstack-management-api-openstack-management:8083}
     }
+    handle_path /api/appstore/* {
+        header Cache-Control "no-store"
+        reverse_proxy {$APPSTORE_UPSTREAM:app-store-backend:8000}
+    }
 
     # Everything else: the SPA (with client-side routing fallback to index.html).
     # Hashed build assets (/assets/*) are immutable -> cache them long. index.html

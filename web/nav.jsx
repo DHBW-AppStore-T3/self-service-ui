@@ -1,5 +1,5 @@
 import { useLocation } from 'wouter';
-import { apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
+import { apiTokensEnabled, appstoreBaseUrl, appstoreEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
 import { TOKEN_SCOPES, tokenScopePath } from '/tokens/scopes.js';
 import { useCloudStatus } from '/projects/cloud-status.jsx';
 import { useDnsPolicyStatus } from '/dyndns/use-policy.jsx';
@@ -85,11 +85,20 @@ export function useNav() {
             // stacked on one page did.
             items: TOKEN_SCOPES.map(s => ({ label: s.label, href: tokenScopePath(s) })),
         },
+        // External: opens the App-Store in its own tab/popup via the SSO
+        // handoff (see header.jsx's openWithSso), not a route in this SPA.
+        appstoreEnabled && {
+            id: 'app-store',
+            label: 'DHBW App-Store',
+            href: appstoreBaseUrl,
+            external: true,
+            items: [],
+        },
     ].filter(Boolean).map(s => ({ ...s, href: s.href ?? s.items[0]?.href ?? '/' }));
 
-    const inSection = (s) => (s.base
+    const inSection = (s) => (!s.external && (s.base
         ? currentPath === s.base || currentPath.startsWith(s.base + '/')
-        : currentPath === '/');
+        : currentPath === '/'));
     const activeSection = sections.find(inSection) ?? null;
 
     // Longest match wins, so /dyndns/zones/example.org still marks "Zone
