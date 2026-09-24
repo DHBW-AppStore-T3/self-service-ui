@@ -36,6 +36,12 @@ selfServiceUI:
   # default applies.
   dynamicZonesUpstream: ""
   cloudResourcesUpstream: ""
+  # DHBW App-Store base URL, shown as a nav entry. Empty -> nav link hidden
+  # (same "empty -> hidden" convention as cloudResourcesBaseUrl above).
+  appstoreBaseUrl: ""
+  # In-cluster address Caddy forwards /api/appstore/* to. Empty -> the image
+  # default applies (same reasoning as cloudResourcesUpstream above).
+  appstoreUpstream: ""
 
 #------------------------------------
 # OIDC/Auth Configuration
