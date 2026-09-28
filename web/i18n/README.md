@@ -22,7 +22,7 @@ time; one big file per language would be a merge conflict on every branch.
 
 ## German
 
-* Duzen ("deine Projekte"), the readers are mostly students.
+* Neutral, without addressing the reader: infinitives ("Bitte ein Budget wählen"), passive or "die eigenen Projekte" instead of "deine"/"Ihre". Where an address cannot be avoided, "Sie" — e.g. the mail to zone owners.
 * Terms that are the product's own or the protocol's stay untranslated: Budget,
   Projekt, Quota, Token, Zone, TSIG, AXFR, DNS, MCP, OpenStack, ArgoCD.
 * Everything else is German, including "Anfrage" (request), "genehmigen"
