@@ -423,5 +423,11 @@
         "incoming": "+{{count}} kommt hinzu",
         "ofLimit": "{{used}} / {{limit}}",
         "ofLimitWith": "{{used}} ({{extra}}) / {{limit}}"
+    },
+    "relations": {
+        "dozent": "Dozent:in",
+        "studierende": "Studierende",
+        "studiengangsleiter": "Studiengangsleitung",
+        "sekretariat": "Sekretariat"
     }
 }
