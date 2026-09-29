@@ -123,4 +123,12 @@ describe('buildImportRows', () => {
             [6, 'user:c@dhbw.de', 'existing', null, ''],
         ]);
     });
+
+    it('re-judges duplicates once rows are removed', () => {
+        const table = parseImportText('a@dhbw.de\nb@dhbw.de\na@dhbw.de');
+        const rows = buildImportRows(table, {
+            hasHeader: false, tokenColumn: 0, roleColumn: null, roles: ROLES, existing: [], removed: new Set([1]),
+        });
+        expect(rows.map(r => [r.line, r.status])).toEqual([[2, 'new'], [3, 'new']]);
+    });
 });

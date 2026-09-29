@@ -21,14 +21,30 @@ const paste = (text) => {
 describe('PrincipalImportModal', () => {
     afterEach(cleanup);
 
-    it('hands over new tokens only', () => {
+    it('imports only once every entry that cannot be added is removed', () => {
         const onImport = vi.fn();
         renderModal({ onImport, existing: ['user:b@dhbw.de'] });
 
-        paste('A <a@dhbw.de>; b@dhbw.de; group:wwi23seb; kaputt');
-        fireEvent.click(screen.getByRole('button', { name: 'Add 2 entries' }));
+        paste('A <a@dhbw.de>; b@dhbw.de; group:wwi23seb; kaputt; a@dhbw.de');
+        const submit = screen.getByRole('button', { name: 'Add 2 entries' });
+        expect(submit.disabled).toBe(true);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Remove 3 entries that cannot be added' }));
+        expect(submit.disabled).toBe(false);
+        fireEvent.click(submit);
 
         expect(onImport).toHaveBeenCalledWith([{ token: 'user:a@dhbw.de' }, { token: 'group:wwi23seb' }]);
+    });
+
+    it('removes single rows, and the duplicate of a removed row becomes new', () => {
+        const onImport = vi.fn();
+        renderModal({ onImport });
+
+        paste('a@dhbw.de\nb@dhbw.de\na@dhbw.de');
+        fireEvent.click(screen.getAllByRole('button', { name: 'Remove user:a@dhbw.de' })[0]);
+        fireEvent.click(screen.getByRole('button', { name: 'Add 2 entries' }));
+
+        expect(onImport).toHaveBeenCalledWith([{ token: 'user:b@dhbw.de' }, { token: 'user:a@dhbw.de' }]);
     });
 
     it('takes roles from the CSV and holds back rows without one', () => {

@@ -467,6 +467,13 @@
         "status_invalid": "Ungültig",
         "chooseRole": "Rolle wählen",
         "roleUnknown": "„{{value}}“ ist keine bekannte Rolle",
-        "missingRole": "Jede ausgewählte Zeile braucht eine Rolle."
+        "missingRole": "Jede ausgewählte Zeile braucht eine Rolle.",
+        "removeBlocked_one": "{{count}} nicht übernehmbaren Eintrag entfernen",
+        "removeBlocked_other": "{{count}} nicht übernehmbare Einträge entfernen",
+        "removeSelected_one": "{{count}} ausgewählten Eintrag entfernen",
+        "removeSelected_other": "{{count}} ausgewählte Einträge entfernen",
+        "removeRow": "{{entry}} entfernen",
+        "blockedHint": "Ungültige, doppelte und schon vorhandene Einträge müssen vor dem Import entfernt werden.",
+        "allRemoved": "Alle Einträge wurden entfernt."
     }
 }

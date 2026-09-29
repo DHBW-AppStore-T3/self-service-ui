@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Alert, Badge, Button, Checkbox, Group, Modal, ScrollArea, Select, Stack, Table, Text, Textarea } from '@mantine/core';
+import { ActionIcon, Alert, Badge, Button, Checkbox, Group, Modal, ScrollArea, Select, Stack, Table, Text, Textarea } from '@mantine/core';
 import { Dropzone } from '@mantine/dropzone';
-import { FileSpreadsheet, Upload, X } from 'lucide-react';
+import { FileSpreadsheet, Trash2, Upload, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { COLOR, formatRoleLabel } from './util-project.jsx';
 import {
@@ -32,6 +32,10 @@ const STATUS_COLOR = {
  * previews every row with its status, lets the column be chosen and — when
  * `roles` is given — a role be set per row or for all of them.
  *
+ * Nothing is left out silently: rows that cannot be added (invalid, duplicate,
+ * already on the list) have to be removed in the preview before the import is
+ * possible, so what is handed over is exactly what the table shows.
+ *
  * It saves nothing itself: onImport hands the chosen entries to the form that
  * opened it, which saves them like anything else added there.
  *
@@ -60,11 +64,12 @@ export function PrincipalImportModal({ onClose, onImport, existing = [], roles =
     const [roleColumn, setRoleColumn] = useState(null);
     // Per-row choices, keyed by the row's line in the input, and cleared
     // whenever the column settings change what the rows are.
-    const [excluded, setExcluded] = useState(() => new Set());
+    const [removed, setRemoved] = useState(() => new Set());
+    const [selected, setSelected] = useState(() => new Set());
     const [roleOverride, setRoleOverride] = useState({});
     const [bulkRole, setBulkRole] = useState(fallbackRole);
 
-    const resetChoices = () => { setExcluded(new Set()); setRoleOverride({}); };
+    const resetChoices = () => { setRemoved(new Set()); setSelected(new Set()); setRoleOverride({}); };
 
     const preview = (input) => {
         const parsed = parseImportText(input);
@@ -97,36 +102,43 @@ export function PrincipalImportModal({ onClose, onImport, existing = [], roles =
     };
 
     const rows = useMemo(() => (table
-        ? buildImportRows(table, { hasHeader, tokenColumn, roleColumn, roles, existing })
-        : []), [table, hasHeader, tokenColumn, roleColumn, roles, existing]);
+        ? buildImportRows(table, { hasHeader, tokenColumn, roleColumn, roles, existing, removed })
+        : []), [table, hasHeader, tokenColumn, roleColumn, roles, existing, removed]);
 
     // A role column that names no role for a row leaves it open, so the gap is
     // visible; without a role column every row starts on the default.
     const roleOf = (row) => roleOverride[row.line] ?? row.role ?? (roleColumn === null ? fallbackRole : null);
-    const selectable = rows.filter(r => r.status === 'new');
-    const chosen = selectable.filter(r => !excluded.has(r.line));
-    const missingRole = withRole && chosen.some(r => !roleOf(r));
+    const fresh = rows.filter(r => r.status === 'new');
+    const blocked = rows.filter(r => r.status !== 'new');
+    const missingRole = withRole && fresh.some(r => !roleOf(r));
     const counts = rows.reduce((acc, r) => ({ ...acc, [r.status]: (acc[r.status] ?? 0) + 1 }), {});
+    const canImport = rows.length > 0 && blocked.length === 0 && !missingRole;
 
-    const toggle = (line) => setExcluded(prev => {
+    const selectedRows = rows.filter(r => selected.has(r.line));
+    const allSelected = rows.length > 0 && selectedRows.length === rows.length;
+    const toggle = (line) => setSelected(prev => {
         const next = new Set(prev);
         if (next.has(line)) next.delete(line); else next.add(line);
         return next;
     });
-    const allChosen = selectable.length > 0 && chosen.length === selectable.length;
-    const toggleAll = () => setExcluded(allChosen ? new Set(selectable.map(r => r.line)) : new Set());
+    const toggleAll = () => setSelected(allSelected ? new Set() : new Set(rows.map(r => r.line)));
+
+    const remove = (lines) => {
+        setRemoved(prev => new Set([...prev, ...lines]));
+        setSelected(prev => new Set([...prev].filter(line => !lines.includes(line))));
+    };
 
     const applyRole = (onlyMissing) => {
         if (!bulkRole) return;
         setRoleOverride(prev => {
             const next = { ...prev };
-            for (const r of selectable) if (!onlyMissing || !roleOf(r)) next[r.line] = bulkRole;
+            for (const r of fresh) if (!onlyMissing || !roleOf(r)) next[r.line] = bulkRole;
             return next;
         });
     };
 
     const submit = () => {
-        onImport(chosen.map(r => (withRole ? { token: r.token, role: roleOf(r) } : { token: r.token })));
+        onImport(fresh.map(r => (withRole ? { token: r.token, role: roleOf(r) } : { token: r.token })));
         onClose();
     };
 
@@ -223,13 +235,28 @@ export function PrincipalImportModal({ onClose, onImport, existing = [], roles =
                 {counts.invalid > 0 && <Badge color={STATUS_COLOR.invalid} variant="light">{t('projects.principalImport.countInvalid', { count: counts.invalid })}</Badge>}
             </Group>
 
+            {(blocked.length > 0 || selectedRows.length > 0) && (
+                <Group gap="xs">
+                    {blocked.length > 0 && (
+                        <Button size="xs" variant="light" color={COLOR.negative} leftSection={<Trash2 size={14} />} onClick={() => remove(blocked.map(r => r.line))}>
+                            {t('projects.principalImport.removeBlocked', { count: blocked.length })}
+                        </Button>
+                    )}
+                    {selectedRows.length > 0 && (
+                        <Button size="xs" variant="default" leftSection={<Trash2 size={14} />} onClick={() => remove(selectedRows.map(r => r.line))}>
+                            {t('projects.principalImport.removeSelected', { count: selectedRows.length })}
+                        </Button>
+                    )}
+                </Group>
+            )}
+
             {isTruncated(table, hasHeader) && (
                 <Alert color={COLOR.attention} variant="light">
                     {t('projects.principalImport.truncated', { max: IMPORT_MAX_ROWS })}
                 </Alert>
             )}
 
-            {withRole && selectable.length > 0 && (
+            {withRole && fresh.length > 0 && (
                 <Group gap="xs" align="center">
                     <Text size="sm">{t('projects.principalImport.bulkRole')}</Text>
                     <Select
@@ -254,9 +281,9 @@ export function PrincipalImportModal({ onClose, onImport, existing = [], roles =
                             <Table.Th w={36}>
                                 <Checkbox
                                     size="xs"
-                                    checked={allChosen}
-                                    indeterminate={chosen.length > 0 && !allChosen}
-                                    disabled={selectable.length === 0}
+                                    checked={allSelected}
+                                    indeterminate={selectedRows.length > 0 && !allSelected}
+                                    disabled={rows.length === 0}
                                     onChange={toggleAll}
                                     aria-label={t('projects.principalImport.selectAll')}
                                 />
@@ -265,6 +292,7 @@ export function PrincipalImportModal({ onClose, onImport, existing = [], roles =
                             <Table.Th>{t('projects.principalImport.entry')}</Table.Th>
                             <Table.Th>{t('projects.principalImport.status')}</Table.Th>
                             {withRole && <Table.Th w={170}>{t('projects.memberEditor.openstackRole')}</Table.Th>}
+                            <Table.Th w={40} />
                         </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
@@ -272,12 +300,11 @@ export function PrincipalImportModal({ onClose, onImport, existing = [], roles =
                             const isNew = r.status === 'new';
                             const role = roleOf(r);
                             return (
-                                <Table.Tr key={r.line} style={isNew ? undefined : { opacity: 0.6 }}>
+                                <Table.Tr key={r.line}>
                                     <Table.Td>
                                         <Checkbox
                                             size="xs"
-                                            checked={isNew && !excluded.has(r.line)}
-                                            disabled={!isNew}
+                                            checked={selected.has(r.line)}
                                             onChange={() => toggle(r.line)}
                                             aria-label={r.token ?? r.raw}
                                         />
@@ -304,7 +331,7 @@ export function PrincipalImportModal({ onClose, onImport, existing = [], roles =
                                                         value={role}
                                                         placeholder={t('projects.principalImport.chooseRole')}
                                                         onChange={(v) => setRoleOverride(prev => ({ ...prev, [r.line]: v }))}
-                                                        error={!role && !excluded.has(r.line)}
+                                                        error={!role}
                                                         comboboxProps={{ zIndex: 400 }}
                                                         aria-label={t('projects.memberEditor.openstackRole')}
                                                     />
@@ -317,6 +344,16 @@ export function PrincipalImportModal({ onClose, onImport, existing = [], roles =
                                             )}
                                         </Table.Td>
                                     )}
+                                    <Table.Td>
+                                        <ActionIcon
+                                            variant="subtle"
+                                            color="gray"
+                                            onClick={() => remove([r.line])}
+                                            aria-label={t('projects.principalImport.removeRow', { entry: r.token ?? r.raw })}
+                                        >
+                                            <Trash2 size={16} />
+                                        </ActionIcon>
+                                    </Table.Td>
                                 </Table.Tr>
                             );
                         })}
@@ -324,6 +361,12 @@ export function PrincipalImportModal({ onClose, onImport, existing = [], roles =
                 </Table>
             </ScrollArea.Autosize>
 
+            {rows.length === 0 && (
+                <Text size="sm" c="dimmed">{t('projects.principalImport.allRemoved')}</Text>
+            )}
+            {blocked.length > 0 && (
+                <Text size="sm" c={COLOR.attention}>{t('projects.principalImport.blockedHint')}</Text>
+            )}
             {missingRole && (
                 <Text size="sm" c={COLOR.attention}>{t('projects.principalImport.missingRole')}</Text>
             )}
@@ -350,8 +393,8 @@ export function PrincipalImportModal({ onClose, onImport, existing = [], roles =
                         {step === 'input'
                             ? <Button onClick={() => preview(text)} disabled={!text.trim()}>{t('projects.principalImport.toPreview')}</Button>
                             : (
-                                <Button onClick={submit} disabled={chosen.length === 0 || missingRole}>
-                                    {t('projects.principalImport.submit', { count: chosen.length })}
+                                <Button onClick={submit} disabled={!canImport}>
+                                    {t('projects.principalImport.submit', { count: fresh.length })}
                                 </Button>
                             )}
                     </Group>

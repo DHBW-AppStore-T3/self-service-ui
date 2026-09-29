@@ -467,6 +467,13 @@
         "status_invalid": "Invalid",
         "chooseRole": "Choose a role",
         "roleUnknown": "“{{value}}” is not a known role",
-        "missingRole": "Every selected row needs a role."
+        "missingRole": "Every selected row needs a role.",
+        "removeBlocked_one": "Remove {{count}} entry that cannot be added",
+        "removeBlocked_other": "Remove {{count}} entries that cannot be added",
+        "removeSelected_one": "Remove {{count}} selected entry",
+        "removeSelected_other": "Remove {{count}} selected entries",
+        "removeRow": "Remove {{entry}}",
+        "blockedHint": "Invalid, duplicate and already listed entries have to be removed before the import.",
+        "allRemoved": "All entries have been removed."
     }
 }

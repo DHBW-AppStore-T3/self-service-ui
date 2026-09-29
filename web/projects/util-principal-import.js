@@ -204,13 +204,18 @@ export function guessColumns(rows, hasHeader, roles) {
  * list), "duplicate" (an earlier row names the same token) or "invalid".
  * role is the matched role, or null — rawRole keeps what the file said so the
  * preview can show a value it did not recognise.
+ *
+ * removed holds the lines taken out in the preview. They are skipped before
+ * the statuses are worked out, so removing the first of two equal rows turns
+ * the second into a new one.
  */
-export function buildImportRows(table, { hasHeader, tokenColumn, roleColumn, roles, existing }) {
+export function buildImportRows(table, { hasHeader, tokenColumn, roleColumn, roles, existing, removed }) {
     const data = hasHeader ? table.rows.slice(1) : table.rows;
     const firstLine = hasHeader ? 2 : 1;
     const have = new Set(existing || []);
     const seen = new Set();
     return data.slice(0, IMPORT_MAX_ROWS).flatMap((r, i) => {
+        if (removed?.has(firstLine + i)) return [];
         const raw = r[tokenColumn] ?? '';
         const parsed = normalizePrincipal(raw);
         if (!parsed) return [];
