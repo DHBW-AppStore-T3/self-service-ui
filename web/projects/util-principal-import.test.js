@@ -42,6 +42,14 @@ describe('parseImportText', () => {
             .toEqual([['A <a@dhbw.de>'], ['B <b@dhbw.de>']]);
         expect(parseImportText('a@dhbw.de b@dhbw.de').rows)
             .toEqual([['a@dhbw.de'], ['b@dhbw.de']]);
+        expect(parseImportText('a@dhbw.de\nno address here').rows)
+            .toEqual([['a@dhbw.de'], ['no address here']]);
+    });
+
+    it('reads a mixed list as one column, whatever separates the entries', () => {
+        const t = parseImportText('# comment\na@dhbw.de\nb@dhbw.de, c@dhbw.de; d@dhbw.de\nMuster, Max <m@dhbw.de>\ne@dhbw.de');
+        expect(t.delimiter).toBeNull();
+        expect(t.rows).toEqual([['a@dhbw.de'], ['b@dhbw.de'], ['c@dhbw.de'], ['d@dhbw.de'], ['Muster, Max <m@dhbw.de>'], ['e@dhbw.de']]);
     });
 
     it('parses a semicolon CSV with a BOM and quoted fields', () => {

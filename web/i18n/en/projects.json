@@ -458,7 +458,7 @@
         "applyAll": "For all",
         "applyMissing": "Only rows without a role",
         "selectAll": "Select all",
-        "line": "Row",
+        "line": "No.",
         "entry": "Entry",
         "status": "Status",
         "status_new": "New",

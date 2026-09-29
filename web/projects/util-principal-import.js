@@ -42,8 +42,9 @@ function countOutsideQuotes(line, ch) {
 }
 
 /**
- * The delimiter most of the first lines agree on, or null for a plain list with
- * one entry per line. Ties go to tab, then semicolon (what Excel writes in a
+ * The delimiter at least half of the first lines agree on — a table has it on
+ * every line — or null for a list, where a stray comma on one line is just
+ * another separator. Ties go to tab, then semicolon (what Excel writes in a
  * German locale), then comma.
  */
 export function detectDelimiter(text) {
@@ -54,7 +55,20 @@ export function detectDelimiter(text) {
         const score = lines.filter(l => countOutsideQuotes(l, d) > 0).length;
         if (score > bestScore) { best = d; bestScore = score; }
     }
-    return best;
+    return bestScore * 2 >= lines.length ? best : null;
+}
+
+// One line of a list into its entries. A display name may hold spaces and a
+// comma ("Muster, Max <max@…>"), so a line with one splits on semicolons only,
+// the way Outlook separates recipients. Otherwise commas and semicolons
+// separate, and spaces only where every part is an entry of its own — a line
+// of prose stays one (invalid) entry instead of one per word.
+function splitListLine(line) {
+    if (line.includes('<')) return line.split(';');
+    return line.split(/[,;]+/).flatMap(piece => {
+        const words = piece.trim().split(/\s+/);
+        return words.length > 1 && words.every(w => normalizePrincipal(w)?.token) ? words : [piece];
+    });
 }
 
 // RFC 4180: quoted fields may hold the delimiter, line breaks and doubled quotes.
@@ -88,9 +102,9 @@ function parseDelimited(text, delimiter) {
 
 /**
  * Parses pasted text or file content into a table of trimmed cells, dropping
- * empty lines. Without a delimiter each line is one entry, and a line of bare
- * addresses separated by spaces is split — unless it carries a display name
- * ("Max Muster <max@…>"), whose spaces belong to the name.
+ * empty lines. Without a table delimiter it is a list: one column, each line
+ * split into its entries (see splitListLine), and lines starting with # are
+ * comments.
  *
  * A single row of several cells is a list pasted on one line (Outlook's
  * "A <a@…>; B <b@…>"), so it is turned into one column.
@@ -102,9 +116,9 @@ export function parseImportText(input) {
     if (delimiter) {
         rows = parseDelimited(text, delimiter);
     } else {
-        rows = text.split(/\r?\n/).flatMap(line => (
-            line.includes('<') ? [[line]] : line.split(/\s+/).map(cell => [cell])
-        ));
+        rows = text.split(/\r?\n/)
+            .filter(line => !line.trim().startsWith('#'))
+            .flatMap(line => splitListLine(line).map(cell => [cell]));
     }
     rows = rows
         .map(r => r.map(c => c.trim()))
