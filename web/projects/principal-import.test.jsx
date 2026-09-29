@@ -39,7 +39,11 @@ describe('PrincipalImportModal', () => {
         const submit = screen.getByRole('button', { name: 'Add 2 entries' });
         expect(submit.disabled).toBe(true);
 
+        expect(screen.queryByText('“Dozent” is not a known role')).not.toBeNull();
+
         fireEvent.click(screen.getByRole('button', { name: 'Only rows without a role' }));
+        // Once the row has a role, the complaint about the file's value is moot.
+        expect(screen.queryByText('“Dozent” is not a known role')).toBeNull();
         fireEvent.click(submit);
 
         expect(onImport).toHaveBeenCalledWith([

@@ -308,7 +308,7 @@ export function PrincipalImportModal({ onClose, onImport, existing = [], roles =
                                                         comboboxProps={{ zIndex: 400 }}
                                                         aria-label={t('projects.memberEditor.openstackRole')}
                                                     />
-                                                    {r.rawRole && !r.role && (
+                                                    {r.rawRole && !role && (
                                                         <Text size="xs" c={COLOR.attention}>
                                                             {t('projects.principalImport.roleUnknown', { value: r.rawRole })}
                                                         </Text>
