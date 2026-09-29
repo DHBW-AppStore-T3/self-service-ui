@@ -9,9 +9,16 @@ zentrale Freigabe) bereits produktionsreif. Dient aktuell als
 Referenz/Inspiration, nicht als aktiv integrierter Teil des
 AppStore-Systems.
 
-## Keine geplante Integration mit dem AppStore-Backend
+## Integration mit dem AppStore-Backend (supersedes "keine geplante Integration")
 
-Anders als `moodle_appstore` (LTI-Integrationsziel) gibt es für dieses
-Repo keinen konkreten Integrationsplan — es bleibt bewusst als
-eigenständiges Vergleichsprojekt in der Org, bis eine Entscheidung für
-oder gegen eine tiefere Integration getroffen wird.
+Diese Entscheidung wurde durch die 4-Issue-Serie backend#9 / frontend#9 /
+self-service-ui#5 / deployment#43 ersetzt: self-service-ui bekommt einen
+produktionssicheren SSO-Handoff zum AppStore. `openWithSso()`
+(`web/header.jsx`) ruft vor dem Öffnen des App-Store-Popups
+`POST /api/appstore/handoff/mint` auf — von Caddy zum AppStore-Backend
+weitergeleitet (`Caddyfile`, `/api/appstore/*`), das den bereits vom
+oauth2-proxy injizierten Keycloak-Bearer gegen einen kurzlebigen,
+backend-signierten `handoff_token` eintauscht. Der App-Store-Frontend
+vertraut nie einer bloßen E-Mail-Adresse aus einem Query-Parameter,
+nur diesem Token. Helm-Default (`appstoreUpstream`/`appstoreBaseUrl`
+leer) hält das Feature deaktiviert, bis eine Umgebung es explizit setzt.

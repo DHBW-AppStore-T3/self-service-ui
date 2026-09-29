@@ -76,6 +76,13 @@ spec:
             - name: CLOUD_RESOURCES_UPSTREAM
               value: "{{ .Values.selfServiceUI.cloudResourcesUpstream }}"
             {{- end }}
+            # Empty -> App-Store nav entry hidden.
+            - name: APPSTORE_BASE_URL
+              value: "{{ .Values.selfServiceUI.appstoreBaseUrl }}"
+            {{- if .Values.selfServiceUI.appstoreUpstream }}
+            - name: APPSTORE_UPSTREAM
+              value: "{{ .Values.selfServiceUI.appstoreUpstream }}"
+            {{- end }}
             - name: OIDC_ISSUER_URL
               value: "{{ .Values.auth.oidc.issuerUrl  }}"
             - name: OIDC_CLIENT_ID

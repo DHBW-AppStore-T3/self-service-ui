@@ -12,3 +12,9 @@ Details zu diesem Repo:
 - Lebendes Übergabedokument: `claude_docs/HANDOVER.md` (zwingend zu Beginn jeder Session lesen und vor Session-Ende aktualisieren)
 - Architektur: `claude_docs/architecture.md`
 - Entscheidungen: `claude_docs/decisions.md`
+
+## Lokale Befehle
+- Dev-Server: `npm run dev`
+- Tests: `npm test`
+- Linting: `npm run lint`
+- Build: `npm run build`
