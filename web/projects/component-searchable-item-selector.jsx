@@ -18,6 +18,7 @@ export function SearchableItemSelector({
     error,
     isActive = true,
     onFocus,
+    searchAction = null,
 }) {
     const { t } = useTranslation();
     const addLabel = buttonLabel ?? t('projects.forms.add');
@@ -25,13 +26,17 @@ export function SearchableItemSelector({
         <div>
             <Text fw={600} mb="xs">{label}</Text>
             <Stack gap="sm">
-                <TextInput
-                    placeholder={placeholder ?? t('projects.itemSelector.placeholder')}
-                    onChange={(e) => onSearch(e.target.value)}
-                    onFocus={onFocus}
-                    description={searchDescription ?? t('projects.itemSelector.searchHint')}
-                    rightSection={isSearching && <Loader size="xs" />}
-                />
+                <Group gap="xs" align="flex-end" wrap="nowrap">
+                    <TextInput
+                        style={{ flex: 1 }}
+                        placeholder={placeholder ?? t('projects.itemSelector.placeholder')}
+                        onChange={(e) => onSearch(e.target.value)}
+                        onFocus={onFocus}
+                        description={searchDescription ?? t('projects.itemSelector.searchHint')}
+                        rightSection={isSearching && <Loader size="xs" />}
+                    />
+                    {searchAction}
+                </Group>
 
                 {searchResults.length > 0 && isActive && (
                     <Paper p="sm" withBorder style={{ maxHeight: '200px', overflowY: 'auto' }}>

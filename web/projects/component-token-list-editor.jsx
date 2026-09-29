@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Badge, Button, Group, Stack, Text } from '@mantine/core';
+import { ListPlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PrincipalTokenAutocomplete } from './component-principal-token-autocomplete.jsx';
+import { PrincipalImportModal } from './modal-principal-import.jsx';
 import { tokenDisplay, useTokenLabels } from './token-labels.jsx';
 
 // TokenListEditor edits a plain list of user:/group: tokens (admin scope,
@@ -10,6 +12,7 @@ import { tokenDisplay, useTokenLabels } from './token-labels.jsx';
 export function TokenListEditor({ label, description, tokens, onChange, placeholder, error }) {
     const { t } = useTranslation();
     const [draft, setDraft] = useState('');
+    const [importing, setImporting] = useState(false);
     const labels = useTokenLabels(tokens);
 
     const add = (raw) => {
@@ -21,6 +24,11 @@ export function TokenListEditor({ label, description, tokens, onChange, placehol
         if (!token.includes(':') && token.includes('@')) token = 'user:' + token;
         if (!tokens.includes(token)) onChange([...tokens, token]);
         setDraft('');
+    };
+
+    const importTokens = (entries) => {
+        const added = entries.map(e => e.token).filter(token => !tokens.includes(token));
+        if (added.length) onChange([...tokens, ...added]);
     };
 
     const remove = (token) => onChange(tokens.filter(existing => existing !== token));
@@ -42,7 +50,18 @@ export function TokenListEditor({ label, description, tokens, onChange, placehol
                     />
                 </div>
                 <Button variant="light" onClick={() => add()} disabled={!draft.trim()}>{t('projects.forms.add')}</Button>
+                <Button variant="default" leftSection={<ListPlus size={16} />} onClick={() => setImporting(true)}>
+                    {t('projects.principalImport.open')}
+                </Button>
             </Group>
+
+            {importing && (
+                <PrincipalImportModal
+                    existing={tokens}
+                    onImport={importTokens}
+                    onClose={() => setImporting(false)}
+                />
+            )}
 
             {tokens.length === 0
                 ? <Text size="xs" c="dimmed">{t('projects.tokenList.empty')}</Text>
