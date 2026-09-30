@@ -45,7 +45,7 @@ Both areas also include the interactive API documentation of the service behind 
 
 ### Cloud Projects
 
-**My Projects** — first the projects a person owns or administers: what they cost, which budget pays for them, who else administers them, and what a pending change would do. Below them, set apart, the budgets they may draw from for new ones, each saying how much is theirs right away and whether a project there needs an approval.
+**My Projects** — first the projects a person owns, then those they administer with someone else (marked *Shared*): what they cost, which budget pays for them, who has access and who administers them, and what a pending change would do. Below them, set apart, the budgets they may draw from for new ones, each saying how much is theirs right away and whether a project there needs an approval.
 
 ![My Projects](docs/img/01-my-projects.webp)
 

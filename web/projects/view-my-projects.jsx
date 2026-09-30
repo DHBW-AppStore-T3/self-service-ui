@@ -124,7 +124,8 @@ export function MyProjectsView() {
             )}
 
             <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                {projects.items.map(node => (
+                {/* Own projects first, the shared ones after them. */}
+                {[...ownProjects, ...projects.items.filter(n => !ownProjects.includes(n))].map(node => (
                     <ProjectCard
                         key={node.id}
                         node={node}

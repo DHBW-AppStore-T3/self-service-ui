@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowRightLeft, Check, ExternalLink, Eye, FolderInput, Pencil, Rocket, X } from 'lucide-react';
+import { AlertTriangle, ArrowRightLeft, Check, ExternalLink, Eye, FolderInput, Pencil, Rocket, Users, X } from 'lucide-react';
 import { Alert, Anchor, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, TokenBadgeList } from './component-common.jsx';
 import { COLOR, expiryTone, expiryValue, getAuthUserEmail, isImported, isProvisioning, openstackProjectUrl, overageEntries, overageText, ownerEmail, resourceSummaryText } from './util-project.jsx';
@@ -15,6 +15,9 @@ import { formatDate } from '../format-date.js';
 // perspective:
 //   'owner'    the viewer owns this project (My Projects)
 //   'manager'  the viewer decides on it (Approvals)
+// How many members a card names before it counts the rest.
+const MEMBERS_SHOWN = 5;
+
 export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction }) {
     const { t } = useTranslation();
     const act = (action) => onAction?.(action, node);
@@ -32,14 +35,18 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
     const isManager = perspective === 'manager';
 
     const createdDate = node.created_at ? formatDate(node.created_at) : '';
-    const authorizedCount = (node.authorized_users || []).length;
     const owner = ownerEmail(node);
     // In My Projects a card is either the viewer's own project or one they
     // administer with its owner — then who that owner is belongs on it too.
     const { user } = useAuth();
     const me = getAuthUserEmail(user).toLowerCase();
-    const showOwner = owner && (isManager || owner.toLowerCase() !== me);
+    const shared = !isManager && !!owner && owner.toLowerCase() !== me;
+    const showOwner = owner && (isManager || shared);
     const admins = node.admin_scope || [];
+    // A few members by name say more than a count: "Owner + 1" read as if the
+    // owner were one of two people, whoever the one was.
+    const memberTokens = (node.authorized_users || []).map(u => u.token);
+    const shownMembers = memberTokens.slice(0, MEMBERS_SHOWN);
 
     // Resources shown in the summary line: the proposed limit while a change
     // awaits approval, the current limit otherwise.
@@ -64,6 +71,13 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                 <Group justify="space-between" mb="xs">
                     <Group gap="xs">
                         <NodeStatusBadge status={node.status} provisioning={provisioning} />
+                        {shared && (
+                            <Tooltip label={t('projects.projectCard.sharedHint', { owner })}>
+                                <Badge color={COLOR.identity} variant="outline" leftSection={<Users size="11" />} style={{ cursor: 'default' }}>
+                                    {t('projects.projectCard.shared')}
+                                </Badge>
+                            </Tooltip>
+                        )}
                         {node.os_overcommitted && (
                             <Tooltip label={overage.length > 0
                                 ? t('projects.projectCard.overcommittedWithAmount', { amount: overageText(overage) })
@@ -145,10 +159,16 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         </FactRow>
                     )}
 
-                    {authorizedCount > 0 && (
+                    {memberTokens.length > 0 && (
                         <FactRow label={t('projects.fact.members')}>
-                            {/* A count beside a label needs no plural of its own. */}
-                            {t('projects.projectCard.ownerPlus', { count: authorizedCount })}
+                            <Group gap="xs" wrap="wrap">
+                                <TokenBadgeList tokens={shownMembers} size="xs" />
+                                {memberTokens.length > shownMembers.length && (
+                                    <Text size="xs" c="dimmed">
+                                        {t('projects.projectCard.membersMore', { count: memberTokens.length - shownMembers.length })}
+                                    </Text>
+                                )}
+                            </Group>
                         </FactRow>
                     )}
                 </Stack>
