@@ -6,6 +6,7 @@ import { PrincipalTokenAutocomplete } from './component-principal-token-autocomp
 import { PrincipalImportModal } from './modal-principal-import.jsx';
 import { tokenDisplay, useTokenLabels } from './token-labels.jsx';
 import { COLOR } from './util-project.jsx';
+import { canonicalToken } from './util-principal-import.js';
 
 // EditorHeading is the heading of a list editor — the same size and weight for
 // every list of people on a form, so two of them side by side read as peers.
@@ -32,12 +33,11 @@ export function TokenListEditor({ label, description, tokens, onChange, placehol
     const labels = useTokenLabels(tokens);
 
     const add = (raw) => {
-        let token = (raw ?? draft).trim();
-        if (!token) return;
         // A bare email means a person: store it as the user: token it has to be
         // to ever match. The badge strips the prefix for display, so an
         // unprefixed address would look identical — and silently never grant.
-        if (!token.includes(':') && token.includes('@')) token = 'user:' + token;
+        const token = canonicalToken(raw ?? draft);
+        if (!token) return;
         if (!tokens.includes(token)) onChange([...tokens, token]);
         setDraft('');
     };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-    buildImportRows, decodeImportFile, detectDelimiter, detectHeader, guessColumns,
+    buildImportRows, canonicalToken, decodeImportFile, detectDelimiter, detectHeader, guessColumns,
     matchRole, normalizePrincipal, parseImportText,
 } from './util-principal-import.js';
 
@@ -28,6 +28,16 @@ describe('normalizePrincipal', () => {
     it('rejects what is neither, and skips empty cells', () => {
         expect(normalizePrincipal('Max Muster')).toEqual({ error: 'invalid' });
         expect(normalizePrincipal('   ')).toBeNull();
+    });
+});
+
+describe('canonicalToken', () => {
+    it('lowercases the address in a user token, bare or prefixed', () => {
+        expect(canonicalToken(' Friedemann.Schwenkreis@DHBW-Stuttgart.de ')).toBe('user:friedemann.schwenkreis@dhbw-stuttgart.de');
+        expect(canonicalToken('USER:A.B@X.de')).toBe('user:a.b@x.de');
+    });
+    it('lowercases a group token too', () => {
+        expect(canonicalToken(' group:Leiter-ZWR ')).toBe('group:leiter-zwr');
     });
 });
 

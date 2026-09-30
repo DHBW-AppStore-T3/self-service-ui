@@ -141,7 +141,7 @@ export function normalizePrincipal(cell) {
 
     const group = /^group:(.*)$/i.exec(s);
     if (group) {
-        const token = ('group:' + group[1].trim()).replace(/#member$/, '');
+        const token = ('group:' + group[1].trim().toLowerCase()).replace(/#member$/, '');
         return GROUP_TOKEN.test(token) ? { token } : { error: 'invalid' };
     }
 
@@ -149,6 +149,18 @@ export function normalizePrincipal(cell) {
     if (angle) s = angle[1];
     s = s.trim().replace(/^user:/i, '').replace(/^mailto:/i, '').trim().toLowerCase();
     return isEmail(s) ? { token: 'user:' + s } : { error: 'invalid' };
+}
+
+/**
+ * The one spelling a token is stored in, the same rule as the API's: trimmed
+ * and lowercased as a whole, because no token tells two things apart by case —
+ * "A.B@x" and "a.b@x" are one person, "group:Leiter-ZWR" is "group:leiter-zwr".
+ * A bare address becomes the user: token it has to be to ever match.
+ */
+export function canonicalToken(raw) {
+    let token = String(raw ?? '').trim().toLowerCase();
+    if (!token.includes(':') && token.includes('@')) token = 'user:' + token;
+    return token;
 }
 
 /** The role a cell names, matched case-insensitively against the known roles. */
