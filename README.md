@@ -53,9 +53,9 @@ Both areas also include the interactive API documentation of the service behind 
 
 ![Requesting a project](docs/img/02-request-project.webp)
 
-**Project admins and access** — the *Members* tab has two lists. *Project admins* administer the project together with the owner, which gives them no access in OpenStack; *Access in OpenStack* is who gets into the project there, and with which role.
+**Access and project admins** — the *Members* tab has two separate boxes. *Access in OpenStack* is who gets into the project there, and with which role; *Project admins* administer the project here together with the owner, which gives them no access in OpenStack.
 
-![Project admins and access in OpenStack](docs/img/15-project-admins.webp)
+![Access in OpenStack and project admins](docs/img/15-project-admins.webp)
 
 **Importing a list** — every list of people or groups takes a pasted list or a CSV/text file as well. The preview picks the columns (a header is recognised, and roles are taken from a role column), marks each entry as new, duplicate, invalid or already on the list, and adds nothing until every remaining entry can be added.
 

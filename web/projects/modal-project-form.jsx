@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Badge, Group, Select, Stack, Table, Text, Textarea, TextInput } from '@mantine/core';
+import { Alert, Badge, Group, Paper, Select, Stack, Table, Text, Textarea, TextInput } from '@mantine/core';
 import { Clock, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
@@ -501,27 +501,37 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         </Stack>
     );
 
+    // Two separate things, so two separate boxes of the same make: who gets
+    // into the project in OpenStack, and who administers it here with the
+    // owner. Access first — it is what most people come to this tab for.
     const membersTab = (
-        <Stack gap="lg">
-        <TokenListEditor
-            label={t('projects.projectForm.admins')}
-            description={t('projects.projectForm.adminsHint')}
-            tokens={form.values.adminScope}
-            onChange={(tokens) => form.setFieldValue('adminScope', tokens)}
-        />
-        <TokenRoleEditor
-            label={t('projects.projectForm.access')}
-            authorizedUsers={authorizedUsers}
-            onAddToken={(token, role) => form.setFieldValue('authorizedUsers', u => u.some(x => x.token === token) ? u : [...u, { token, openstack_role: role }])}
-            onRemoveToken={(token) => form.setFieldValue('authorizedUsers', u => u.filter(x => x.token !== token))}
-            onOpenstackRoleChange={(token, role) => form.setFieldValue('authorizedUsers', u => u.map(x => x.token === token ? { ...x, openstack_role: role || 'member' } : x))}
-            searchResults={tokenSearchResults}
-            isSearching={isSearchingTokens}
-            onSearch={handleSearchTokens}
-            roles={openstackRoles || []}
-            defaultOpenstackRole="member"
-            emptyMessage={t('projects.projectForm.membersEmpty')}
-        />
+        <Stack gap="md">
+            <Paper withBorder radius="md" p="md">
+                <TokenRoleEditor
+                    label={t('projects.projectForm.access')}
+                    description={t('projects.projectForm.accessHint')}
+                    authorizedUsers={authorizedUsers}
+                    onAddToken={(token, role) => form.setFieldValue('authorizedUsers', u => u.some(x => x.token === token) ? u : [...u, { token, openstack_role: role }])}
+                    onRemoveToken={(token) => form.setFieldValue('authorizedUsers', u => u.filter(x => x.token !== token))}
+                    onOpenstackRoleChange={(token, role) => form.setFieldValue('authorizedUsers', u => u.map(x => x.token === token ? { ...x, openstack_role: role || 'member' } : x))}
+                    searchResults={tokenSearchResults}
+                    isSearching={isSearchingTokens}
+                    onSearch={handleSearchTokens}
+                    roles={openstackRoles || []}
+                    defaultOpenstackRole="member"
+                    emptyMessage={t('projects.projectForm.membersEmpty')}
+                />
+            </Paper>
+            <Paper withBorder radius="md" p="md">
+                <TokenListEditor
+                    label={t('projects.projectForm.admins')}
+                    description={t('projects.projectForm.adminsHint')}
+                    tokens={form.values.adminScope}
+                    onChange={(tokens) => form.setFieldValue('adminScope', tokens)}
+                    listAs="rows"
+                    emptyMessage={t('projects.projectForm.adminsEmpty')}
+                />
+            </Paper>
         </Stack>
     );
 

@@ -314,8 +314,10 @@
         "outcomeWaitingChange": "A manager decides. Until then the project keeps its current resources.",
         "outcomeWaiting": "A manager of this budget decides on this request.",
         "admins": "Project admins",
-        "adminsHint": "Administer the project together with the owner: rename it, request changes, edit this list and release it. They get no OpenStack access from this — add them below for that.",
-        "access": "Access in OpenStack"
+        "adminsHint": "Administer the project here together with the owner: rename it, request changes, edit this list and release it. This gives no access in OpenStack.",
+        "access": "Access in OpenStack",
+        "accessHint": "Who gets into the project in OpenStack, and with which role.",
+        "adminsEmpty": "Nobody besides the owner."
     },
     "quotaInputs": {
         "filter": "Filter resources",

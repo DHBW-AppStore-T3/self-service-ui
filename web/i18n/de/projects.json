@@ -314,8 +314,10 @@
         "outcomeWaitingChange": "Eine verwaltende Person entscheidet. Bis dahin behält das Projekt seine jetzigen Ressourcen.",
         "outcomeWaiting": "Eine Person, die dieses Budget verwaltet, entscheidet über diese Anfrage.",
         "admins": "Projekt-Admins",
-        "adminsHint": "Verwalten das Projekt zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt freigeben. Zugang in OpenStack erhalten sie dadurch nicht – dafür unten eintragen.",
-        "access": "Zugang in OpenStack"
+        "adminsHint": "Verwalten das Projekt hier zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt freigeben. Zugang in OpenStack entsteht dadurch nicht.",
+        "access": "Zugang in OpenStack",
+        "accessHint": "Wer in OpenStack Zugang zum Projekt erhält, und mit welcher Rolle.",
+        "adminsEmpty": "Niemand außer dem Owner."
     },
     "quotaInputs": {
         "filter": "Ressourcen filtern",
