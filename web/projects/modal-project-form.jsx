@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Alert, Badge, Group, Paper, Select, Stack, Table, Text, Textarea, TextInput } from '@mantine/core';
 import { Clock, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -10,10 +10,11 @@ import { useForm } from '@mantine/form';
 import { NodeChangesDiff, TerminationDatePicker, TokenBadgeList } from './component-common.jsx';
 import { formatDate } from '../format-date.js';
 import { FormModal, FormTabs } from './component-form-modal.jsx';
-import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
+import { QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenRoleEditor } from './component-token-role-editor.jsx';
 import { TokenListEditor } from './component-token-list-editor.jsx';
-import { autoApproveHeadroom, changeOutcome, COLOR, hasAutoApprove, isAvailability, isPoolAutoApprove, requestOutcome, resourceSummaryText, visibleResources } from './util-project.jsx';
+import { canonicalToken } from './util-principal-import.js';
+import { autoApproveHeadroom, changeOutcome, COLOR, defaultsWithin, hasAutoApprove, isAvailability, isPoolAutoApprove, requestOutcome, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
 
 const DEFAULT_TERM_DAYS = 90;
 
@@ -211,6 +212,19 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         return ok ? h : null;
     };
 
+    // What an untouched form asks for under a budget: the most its auto-approve
+    // grants on the spot, else the catalogue's defaults within what the budget
+    // has room for (a pool's headroom is exactly that room).
+    const initialQuotaFor = (id) => {
+        const budget = budgetById(id);
+        return usableHeadroomFor(id)
+            ?? defaultsWithin(resources, headroomFor(id) ?? (budget ? roomIn(budget, resources) : null));
+    };
+    // Set once the person types a number; from then on a budget switch no
+    // longer replaces the defaults — overwriting typed values would be worse
+    // than a stale form.
+    const quotaTouched = useRef(false);
+
     // Reading the clock is a side effect, so it happens once in a lazy
     // initialiser rather than on every render. The dialog is remounted per
     // opening (see the `key` at the call sites), so once = per opening.
@@ -239,8 +253,9 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 reason: '',
                 // A budget that approves instantly starts filled with the most
                 // it would grant, so the common case is one click — unless the
-                // allowance is (partly) used up: then the defaults stay.
-                quota: usableHeadroomFor(initialParentId) ?? defaultQuota(resources),
+                // allowance is (partly) used up: then the defaults stay, capped
+                // to what the budget can still give.
+                quota: initialQuotaFor(initialParentId),
                 terminationDate: withinBudget(defaultEnd, initialParentId),
                 authorizedUsers: [],
                 adminScope: [],
@@ -284,14 +299,14 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     const offered = offeredFor(parentId);
 
     // Picking a budget with auto-approve fills the resources with the most it
-    // would grant on the spot. Any other budget leaves the numbers alone —
-    // overwriting carefully typed values with a default would be worse than a
-    // stale form.
+    // would grant on the spot. Any other budget refits the defaults to its room
+    // while nobody has typed a number yet, and otherwise leaves them alone.
     const selectBudget = (id) => {
         form.setFieldValue('parentId', id);
         form.clearFieldError('parentId');
         const headroom = usableHeadroomFor(id);
         if (headroom) form.setFieldValue('quota', headroom);
+        else if (!quotaTouched.current) form.setFieldValue('quota', initialQuotaFor(id));
         // A budget that ends sooner pulls the date in with it.
         const date = withinBudget(form.values.terminationDate, id);
         if (date !== form.values.terminationDate) form.setFieldValue('terminationDate', date);
@@ -328,9 +343,9 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         // participants, while a pattern member (student) or an address new to
         // the platform is still a valid user: token. Same normalization as
         // TokenListEditor — and kept even when the directory is unreachable.
-        const typed = query.trim().replace(/^user:/, '');
+        const typed = query.trim().replace(/^user:/i, '');
         const typedToken = (typed.includes('@') && !typed.includes(':') && !/\s/.test(typed))
-            ? 'user:' + typed : null;
+            ? canonicalToken(typed) : null;
         setIsSearchingTokens(true);
         try {
             // No second filter on the query here: the API already matched, and a
@@ -496,7 +511,11 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 resources={offered}
                 value={quota}
                 errors={Object.fromEntries((resources || []).map(r => [r.id, form.errors[`quota.${r.id}`]]))}
-                onChange={(id, v) => { form.setFieldValue(`quota.${id}`, v); form.clearFieldError(`quota.${id}`); }}
+                onChange={(id, v) => {
+                    quotaTouched.current = true;
+                    form.setFieldValue(`quota.${id}`, v);
+                    form.clearFieldError(`quota.${id}`);
+                }}
             />
         </Stack>
     );
@@ -511,7 +530,10 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     label={t('projects.projectForm.access')}
                     description={t('projects.projectForm.accessHint')}
                     authorizedUsers={authorizedUsers}
-                    onAddToken={(token, role) => form.setFieldValue('authorizedUsers', u => u.some(x => x.token === token) ? u : [...u, { token, openstack_role: role }])}
+                    onAddToken={(raw, role) => {
+                        const token = canonicalToken(raw);
+                        form.setFieldValue('authorizedUsers', u => u.some(x => x.token === token) ? u : [...u, { token, openstack_role: role }]);
+                    }}
                     onRemoveToken={(token) => form.setFieldValue('authorizedUsers', u => u.filter(x => x.token !== token))}
                     onOpenstackRoleChange={(token, role) => form.setFieldValue('authorizedUsers', u => u.map(x => x.token === token ? { ...x, openstack_role: role || 'member' } : x))}
                     searchResults={tokenSearchResults}

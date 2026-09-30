@@ -181,6 +181,27 @@ export function freeAmount(node, resourceId) {
     return cap - usedAmount(node, resourceId);
 }
 
+// roomIn is what a budget still has free, per quantity — the most a request
+// there could ever be granted.
+export function roomIn(budget, resources) {
+    return Object.fromEntries((resources || [])
+        .filter(r => !isAvailability(r))
+        .map(r => [r.id, freeAmount(budget, r.id)]));
+}
+
+// defaultsWithin fills a request with the catalogue's defaults, each capped to
+// what `room` leaves: a default larger than the budget holds would open the
+// form asking for more than it can grant — 16 GB of RAM from a budget of 8.
+// Where even the minimum does not fit, the default stays and validation says
+// why; a silent zero would read as a choice.
+export function defaultsWithin(resources, room) {
+    return Object.fromEntries((resources || []).map(r => {
+        const value = r.default ?? 0;
+        const cap = isAvailability(r) ? Infinity : (room?.[r.id] ?? Infinity);
+        return [r.id, cap >= (r.min ?? 0) ? Math.min(value, cap) : value];
+    }));
+}
+
 // True when the requested quota fits into the budget's remaining capacity.
 //
 // Availabilities are skipped: they consume nothing, so "does it fit" is not a

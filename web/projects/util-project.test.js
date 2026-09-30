@@ -30,6 +30,8 @@ import {
     statusLabel,
     usedAmount,
     visibleResources,
+    defaultsWithin,
+    roomIn,
 } from './util-project.jsx';
 
 const RESOURCES = [
@@ -604,5 +606,24 @@ describe('openstackProjectUrl', () => {
         for (const status of ['pending', 'released', 'rejected', 'imported']) {
             expect(openstackProjectUrl('https://x', { ...node, status })).toBeNull();
         }
+    });
+});
+
+describe('defaultsWithin', () => {
+    const catalogue = [
+        { id: 'cores', default: 4, min: 1 },
+        { id: 'ram', default: 16, min: 1 },
+        { id: 'storage', default: 50, min: 1 },
+    ];
+
+    it('caps each default to what the budget has room for', () => {
+        // The Prof-Schwenkreis case: a pool of 4 cores, 8 GB, 50 GB.
+        const budget = { limit: { cores: 4, ram: 8, storage: 50 } };
+        expect(defaultsWithin(catalogue, roomIn(budget, catalogue))).toEqual({ cores: 4, ram: 8, storage: 50 });
+    });
+
+    it('keeps the defaults without a bound, and where not even the minimum fits', () => {
+        expect(defaultsWithin(catalogue, null)).toEqual({ cores: 4, ram: 16, storage: 50 });
+        expect(defaultsWithin(catalogue, { cores: 0, ram: 32 })).toEqual({ cores: 4, ram: 16, storage: 50 });
     });
 });
