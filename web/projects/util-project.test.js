@@ -11,6 +11,7 @@ import {
     expiryTone,
     freeAmount,
     groupResources,
+    headroomExhaustedBy,
     isAvailability,
     isExpired,
     isProvisioning,
@@ -111,6 +112,32 @@ describe('quotaFits', () => {
 
     it('treats a resource the request omits as zero', () => {
         expect(quotaFits(budget, { cpu: 6 }, RESOURCES)).toBe(true);
+    });
+});
+
+describe('headroomExhaustedBy', () => {
+    const budget = {
+        id: 'b1',
+        limit: { cpu: 10, ram: 64 },
+        usage: { approved: { limit: { cpu: 4 } } },
+        auto_approve: { per_requester_limit: { cpu: 4, ram: 8 } },
+    };
+
+    it('names the own projects when they hold the whole share', () => {
+        const mine = [{ parent_id: 'b1', status: 'approved', limit: { cpu: 4, ram: 8 } }];
+        expect(headroomExhaustedBy(budget, RESOURCES, mine)).toBe('share');
+    });
+
+    it('names the budget when it has nothing left for anyone', () => {
+        const full = { ...budget, usage: { approved: { limit: { cpu: 10 } } } };
+        expect(headroomExhaustedBy(full, RESOURCES, [])).toBe('budget');
+        const pool = { ...full, auto_approve: {} };
+        expect(headroomExhaustedBy(pool, RESOURCES, [])).toBe('budget');
+    });
+
+    it('has no reason when the share was zero to begin with', () => {
+        const none = { ...budget, auto_approve: { per_requester_limit: { cpu: 0 } } };
+        expect(headroomExhaustedBy(none, RESOURCES, [])).toBeNull();
     });
 });
 

@@ -1,7 +1,8 @@
 import { AlertTriangle, ArrowRightLeft, Check, ExternalLink, Eye, FolderInput, Pencil, Rocket, X } from 'lucide-react';
 import { Alert, Anchor, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
-import { FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge } from './component-common.jsx';
-import { COLOR, expiryTone, expiryValue, isImported, isProvisioning, openstackProjectUrl, overageEntries, overageText, ownerEmail, resourceSummaryText } from './util-project.jsx';
+import { FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, TokenBadgeList } from './component-common.jsx';
+import { COLOR, expiryTone, expiryValue, getAuthUserEmail, isImported, isProvisioning, openstackProjectUrl, overageEntries, overageText, ownerEmail, resourceSummaryText } from './util-project.jsx';
+import { useAuth } from '/providers/auth.jsx';
 import { useTranslation } from 'react-i18next';
 import { useProjectConfig } from './projects.jsx';
 import { formatDate } from '../format-date.js';
@@ -33,6 +34,12 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
     const createdDate = node.created_at ? formatDate(node.created_at) : '';
     const authorizedCount = (node.authorized_users || []).length;
     const owner = ownerEmail(node);
+    // In My Projects a card is either the viewer's own project or one they
+    // administer with its owner — then who that owner is belongs on it too.
+    const { user } = useAuth();
+    const me = getAuthUserEmail(user).toLowerCase();
+    const showOwner = owner && (isManager || owner.toLowerCase() !== me);
+    const admins = node.admin_scope || [];
 
     // Resources shown in the summary line: the proposed limit while a change
     // awaits approval, the current limit otherwise.
@@ -96,9 +103,15 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
 
                 {/* ── Key facts ──────────────────────────────────────────── */}
                 <Stack gap="6" mb="xs">
-                    {isManager && owner && (
+                    {showOwner && (
                         <FactRow label={t('projects.fact.owner')}>
                             <PersonBadge email={owner} size="xs" />
+                        </FactRow>
+                    )}
+
+                    {admins.length > 0 && (
+                        <FactRow label={t('projects.fact.admins')}>
+                            <TokenBadgeList tokens={admins} size="xs" />
                         </FactRow>
                     )}
 

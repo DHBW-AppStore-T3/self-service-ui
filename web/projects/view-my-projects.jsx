@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
-import { Alert, Button, Group, SimpleGrid, Stack, Text } from '@mantine/core';
+import { Alert, Button, Divider, Group, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
@@ -16,7 +16,7 @@ import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 import { useTranslation } from 'react-i18next';
-import { COLOR, getAuthUserEmail } from './util-project.jsx';
+import { COLOR, getAuthUserEmail, ownerEmail } from './util-project.jsx';
 
 // MyProjectsView lists the projects the signed-in user owns and lets them
 // request new ones, propose changes and release finished projects. Above them
@@ -73,6 +73,11 @@ export function MyProjectsView() {
     const projects = projectsQuery.data ?? { items: [], total: 0 };
     const myBudgets = myBudgetsQuery.data?.items ?? [];
     const eligibleBudgets = eligibleQuery.data?.items ?? [];
+    // The list also holds projects the viewer only administers. What counts
+    // against a per-person share is what they OWN — the server sums by owner —
+    // so only those go into the arithmetic below.
+    const me = getAuthUserEmail(user).toLowerCase();
+    const ownProjects = projects.items.filter(n => ownerEmail(n).toLowerCase() === me);
     const canRequest = myBudgets.length > 0 || eligibleBudgets.length > 0;
     // The offers are what the user may REQUEST from; budgets they manage live
     // in "My Budgets" and would only repeat themselves here.
@@ -91,13 +96,12 @@ export function MyProjectsView() {
                 </Button>
             </Group>
 
-            <BudgetOffers
-                budgets={offers}
-                resources={resources}
-                myProjects={projects.items}
-                onNewProject={(b) => setNewProjectBudget(b.id)}
-                onRequestBudget={(b) => setBudgetRequestFrom(b)}
-            />
+            {/* Two sections, the projects first: they are what this page is
+                about, and the budgets below are where more of them come from.
+                Before, the budget cards came first under a small caption and the
+                project cards followed without one, so the two read as one list. */}
+            <Stack gap="xs">
+                <Title order={4}>{t('projects.myProjects.heading', { count: projects.total })}</Title>
 
             {/* One person's own projects fit in one request. If that ever stops
                 being true, say it — a missing project is worse than a long list. */}
@@ -131,6 +135,17 @@ export function MyProjectsView() {
                     />
                 ))}
             </SimpleGrid>
+            </Stack>
+
+            {offers.length > 0 && <Divider my="sm" />}
+
+            <BudgetOffers
+                budgets={offers}
+                resources={resources}
+                myProjects={ownProjects}
+                onNewProject={(b) => setNewProjectBudget(b.id)}
+                onRequestBudget={(b) => setBudgetRequestFrom(b)}
+            />
 
             {/* ── Dialogs (one instance per view) ────────────────────────── */}
             <ProjectFormModal
@@ -141,7 +156,7 @@ export function MyProjectsView() {
                 openstackRoles={config.openstackRoles}
                 myBudgets={myBudgets}
                 eligibleBudgets={eligibleBudgets}
-                myProjects={projects.items}
+                myProjects={ownProjects}
                 initialBudgetId={newProjectBudget || null}
             />
             {/* The budgets go in here too: they are how the dialog knows what
@@ -155,7 +170,7 @@ export function MyProjectsView() {
                 node={dlg.node}
                 myBudgets={myBudgets}
                 eligibleBudgets={eligibleBudgets}
-                myProjects={projects.items}
+                myProjects={ownProjects}
             />
             <BudgetFormModal
                 key={`budget-request:${budgetRequestFrom?.id ?? 'closed'}`}

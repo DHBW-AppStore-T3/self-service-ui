@@ -12,6 +12,7 @@ import { formatDate } from '../format-date.js';
 import { FormModal, FormTabs } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenRoleEditor } from './component-token-role-editor.jsx';
+import { TokenListEditor } from './component-token-list-editor.jsx';
 import { autoApproveHeadroom, changeOutcome, COLOR, hasAutoApprove, isAvailability, isPoolAutoApprove, requestOutcome, resourceSummaryText, visibleResources } from './util-project.jsx';
 
 const DEFAULT_TERM_DAYS = 90;
@@ -230,6 +231,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     ? new Date(node.pending?.termination_date || node.termination_date)
                     : null,
                 authorizedUsers: node.pending?.authorized_users || node.authorized_users || [],
+                adminScope: node.admin_scope || [],
             }
             : {
                 parentId: initialParentId,
@@ -241,6 +243,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 quota: usableHeadroomFor(initialParentId) ?? defaultQuota(resources),
                 terminationDate: withinBudget(defaultEnd, initialParentId),
                 authorizedUsers: [],
+                adminScope: [],
             },
         validate: (values) => ({
             name: (values.name || '').trim().length < 3
@@ -356,14 +359,19 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     limit: values.quota,
                     termination_date: iso,
                     authorized_users: values.authorizedUsers,
+                    admin_scope: values.adminScope,
                 });
             }
             let result;
-            // A rename takes effect immediately and on its own — dragging a
-            // typo fix through the approval cycle would park the project in
-            // change_pending until a manager gets around to it.
-            if (values.name.trim() !== (node.name || '')) {
-                result = await api.updateNode(node.id, { name: values.name.trim() });
+            // A rename and the admins take effect immediately and on their own —
+            // neither costs anything, and dragging them through the approval
+            // cycle would park the project in change_pending until a manager
+            // gets around to it.
+            const direct = {};
+            if (values.name.trim() !== (node.name || '')) direct.name = values.name.trim();
+            if (JSON.stringify(values.adminScope) !== JSON.stringify(node.admin_scope || [])) direct.admin_scope = values.adminScope;
+            if (Object.keys(direct).length > 0) {
+                result = await api.updateNode(node.id, direct);
             }
             // Everything with resource consequences still needs a decision —
             // but only when it actually differs, so renaming alone does not
@@ -494,8 +502,15 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     );
 
     const membersTab = (
+        <Stack gap="lg">
+        <TokenListEditor
+            label={t('projects.projectForm.admins')}
+            description={t('projects.projectForm.adminsHint')}
+            tokens={form.values.adminScope}
+            onChange={(tokens) => form.setFieldValue('adminScope', tokens)}
+        />
         <TokenRoleEditor
-            label=""
+            label={t('projects.projectForm.access')}
             authorizedUsers={authorizedUsers}
             onAddToken={(token, role) => form.setFieldValue('authorizedUsers', u => u.some(x => x.token === token) ? u : [...u, { token, openstack_role: role }])}
             onRemoveToken={(token) => form.setFieldValue('authorizedUsers', u => u.filter(x => x.token !== token))}
@@ -507,6 +522,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             defaultOpenstackRole="member"
             emptyMessage={t('projects.projectForm.membersEmpty')}
         />
+        </Stack>
     );
 
     return (

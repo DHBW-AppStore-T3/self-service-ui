@@ -221,17 +221,7 @@ export function autoApproveHeadroom(budget, resources, myProjects) {
     if (!hasAutoApprove(budget)) return null;
     const pool = isPoolAutoApprove(budget);
     const perRequester = budget.auto_approve.per_requester_limit || {};
-
-    const mine = {};
-    for (const project of myProjects || []) {
-        if (project?.parent_id !== budget.id) continue;
-        // Same definition of "active" the server uses for this sum.
-        if (project.status !== 'approved' && project.status !== 'change_pending') continue;
-        for (const r of resources || []) {
-            if (isAvailability(r)) continue;
-            mine[r.id] = (mine[r.id] || 0) + (project.limit?.[r.id] || 0);
-        }
-    }
+    const mine = activeUsageUnder(budget, resources, myProjects);
 
     const out = {};
     for (const r of resources || []) {
@@ -243,6 +233,38 @@ export function autoApproveHeadroom(budget, resources, myProjects) {
         out[r.id] = Math.max(0, Math.min(personal, free));
     }
     return out;
+}
+
+// activeUsageUnder sums what the caller's active projects under this budget
+// hold — the same definition of "active" the server uses for the per-person sum.
+function activeUsageUnder(budget, resources, myProjects) {
+    const mine = {};
+    for (const project of myProjects || []) {
+        if (project?.parent_id !== budget.id) continue;
+        if (project.status !== 'approved' && project.status !== 'change_pending') continue;
+        for (const r of resources || []) {
+            if (isAvailability(r)) continue;
+            mine[r.id] = (mine[r.id] || 0) + (project.limit?.[r.id] || 0);
+        }
+    }
+    return mine;
+}
+
+// headroomExhaustedBy says why autoApproveHeadroom came out empty: 'share' when
+// the caller's own projects hold their whole per-person share, 'budget' when the
+// budget itself has nothing left, null when there was never anything to take
+// (a share of zero) — the one case where "nothing" is the honest answer.
+export function headroomExhaustedBy(budget, resources, myProjects) {
+    if (!hasAutoApprove(budget)) return null;
+    const counted = (resources || []).filter(r => !isAvailability(r));
+    if (!isPoolAutoApprove(budget)) {
+        const perRequester = budget.auto_approve.per_requester_limit || {};
+        const granted = counted.filter(r => (perRequester[r.id] ?? 0) > 0);
+        if (granted.length === 0) return null;
+        const mine = activeUsageUnder(budget, counted, myProjects);
+        if (granted.every(r => (mine[r.id] || 0) >= perRequester[r.id])) return 'share';
+    }
+    return counted.some(r => freeAmount(budget, r.id) <= 0) ? 'budget' : null;
 }
 
 // beyondAutoApproveRefused reports whether the budget refuses requests its

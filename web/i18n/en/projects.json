@@ -169,7 +169,8 @@
         "resources": "Resources",
         "members": "Members",
         "owner": "Owner",
-        "inUse": "In use"
+        "inUse": "In use",
+        "admins": "Admins"
     },
     "forms": {
         "add": "Add",
@@ -241,16 +242,20 @@
         "intro": "A project is your own space in the DHBW cloud with the resources you request.",
         "shown": "Projects shown: {{shown}}/{{total}}",
         "noneCanRequest": "You don't have any projects yet. Click “New project” to get started — budgets marked “Instant” create it right away.",
-        "none": "You don't have any projects yet, and no budget currently accepts requests from you. Ask your lecturer or administrator to add you to a budget."
+        "none": "You don't have any projects yet, and no budget currently accepts requests from you. Ask your lecturer or administrator to add you to a budget.",
+        "heading": "My projects ({{count}})"
     },
     "offers": {
-        "heading": "Budgets you can use",
+        "heading": "Budgets for new projects",
         "instant": "Instant",
         "onRequest": "On request",
         "yoursRightAway": "Yours right away",
         "stillFree": "Still free here",
         "everyProject": "Every project",
-        "nothing": "Nothing"
+        "nothing": "Nothing",
+        "headingHint": "New projects are paid from one of these budgets. Each card says how much is available right away.",
+        "shareInUse": "None left — your share ({{share}}) is in use by your projects",
+        "budgetUsedUp": "None left — the budget is fully used"
     },
     "principalSearch": {
         "placeholder": "e.g. group:cs-students",
@@ -307,7 +312,10 @@
         "outcomeWaitingPolicyChange": "More than this budget approves automatically. A manager decides, and until then the project keeps its current resources.",
         "outcomeWaitingPolicy": "More than this budget approves automatically. A manager of this budget decides.",
         "outcomeWaitingChange": "A manager decides. Until then the project keeps its current resources.",
-        "outcomeWaiting": "A manager of this budget decides on this request."
+        "outcomeWaiting": "A manager of this budget decides on this request.",
+        "admins": "Project admins",
+        "adminsHint": "Administer the project together with the owner: rename it, request changes, edit this list and release it. They get no OpenStack access from this — add them below for that.",
+        "access": "Access in OpenStack"
     },
     "quotaInputs": {
         "filter": "Filter resources",
@@ -467,7 +475,7 @@
         "status_invalid": "Invalid",
         "chooseRole": "Choose a role",
         "roleUnknown": "“{{value}}” is not a known role",
-        "missingRole": "Every selected row needs a role.",
+        "missingRole": "Every entry needs a role.",
         "removeBlocked_one": "Remove {{count}} entry that cannot be added",
         "removeBlocked_other": "Remove {{count}} entries that cannot be added",
         "removeSelected_one": "Remove {{count}} selected entry",

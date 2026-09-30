@@ -169,7 +169,8 @@
         "resources": "Ressourcen",
         "members": "Mitglieder",
         "owner": "Verantwortlich",
-        "inUse": "In Benutzung"
+        "inUse": "In Benutzung",
+        "admins": "Admins"
     },
     "forms": {
         "add": "Hinzufügen",
@@ -241,16 +242,20 @@
         "intro": "Ein Projekt ist ein eigener Bereich in der DHBW-Cloud, mit den angefragten Ressourcen.",
         "shown": "Gezeigte Projekte: {{shown}}/{{total}}",
         "noneCanRequest": "Noch keine Projekte. Über „Neues Projekt“ geht es los — Budgets mit „Sofort“ legen es direkt an.",
-        "none": "Noch keine Projekte, und derzeit nimmt kein Budget Anfragen an. Den Zugang zu einem Budget richtet die Lehrkraft oder die Administration ein."
+        "none": "Noch keine Projekte, und derzeit nimmt kein Budget Anfragen an. Den Zugang zu einem Budget richtet die Lehrkraft oder die Administration ein.",
+        "heading": "Meine Projekte ({{count}})"
     },
     "offers": {
-        "heading": "Nutzbare Budgets",
+        "heading": "Budgets für neue Projekte",
         "instant": "Sofort",
         "onRequest": "Auf Anfrage",
         "yoursRightAway": "Sofort verfügbar",
         "stillFree": "Hier noch frei",
         "everyProject": "Jedes Projekt",
-        "nothing": "Nichts"
+        "nothing": "Nichts",
+        "headingHint": "Neue Projekte werden aus einem dieser Budgets bezahlt. Jede Karte zeigt, wie viel sofort verfügbar ist.",
+        "shareInUse": "Nichts mehr frei – der eigene Anteil ({{share}}) ist durch die eigenen Projekte belegt",
+        "budgetUsedUp": "Nichts mehr frei – das Budget ist ausgeschöpft"
     },
     "principalSearch": {
         "placeholder": "z. B. group:cs-students",
@@ -307,7 +312,10 @@
         "outcomeWaitingPolicyChange": "Mehr, als dieses Budget automatisch genehmigt. Eine verwaltende Person entscheidet; bis dahin behält das Projekt seine jetzigen Ressourcen.",
         "outcomeWaitingPolicy": "Mehr, als dieses Budget automatisch genehmigt. Eine Person, die dieses Budget verwaltet, entscheidet.",
         "outcomeWaitingChange": "Eine verwaltende Person entscheidet. Bis dahin behält das Projekt seine jetzigen Ressourcen.",
-        "outcomeWaiting": "Eine Person, die dieses Budget verwaltet, entscheidet über diese Anfrage."
+        "outcomeWaiting": "Eine Person, die dieses Budget verwaltet, entscheidet über diese Anfrage.",
+        "admins": "Projekt-Admins",
+        "adminsHint": "Verwalten das Projekt zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt freigeben. Zugang in OpenStack erhalten sie dadurch nicht – dafür unten eintragen.",
+        "access": "Zugang in OpenStack"
     },
     "quotaInputs": {
         "filter": "Ressourcen filtern",
@@ -467,7 +475,7 @@
         "status_invalid": "Ungültig",
         "chooseRole": "Rolle wählen",
         "roleUnknown": "„{{value}}“ ist keine bekannte Rolle",
-        "missingRole": "Jede ausgewählte Zeile braucht eine Rolle.",
+        "missingRole": "Jeder Eintrag braucht eine Rolle.",
         "removeBlocked_one": "{{count}} nicht übernehmbaren Eintrag entfernen",
         "removeBlocked_other": "{{count}} nicht übernehmbare Einträge entfernen",
         "removeSelected_one": "{{count}} ausgewählten Eintrag entfernen",
