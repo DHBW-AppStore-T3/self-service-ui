@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { autoApproveHeadroom, changeOutcome, isPoolAutoApprove, requestOutcome } from './util-project.jsx';
+import { autoApproveHeadroom, changeOutcome, isPoolAutoApprove, latestProjectEnd, requestOutcome } from './util-project.jsx';
 
 const RESOURCES = [
     { id: 'cpu', name: 'Cores' },
@@ -126,5 +126,45 @@ describe('a budget that takes no requests beyond auto-approve', () => {
 
     it('means nothing without auto-approve', () => {
         expect(requestOutcome({ budget: hard(budget()), quota: { cpu: 1 }, resources: RESOURCES, myProjects: [] })).toBe('approval');
+    });
+});
+
+describe('a budget that leaves extensions to its managers', () => {
+    const noExt = (b) => ({ ...b, auto_approve_extensions: false });
+    const project = { id: 'p1', parent_id: 'b1', status: 'approved', limit: { cpu: 2, ram: 8 }, termination_date: '2027-03-31T00:00:00Z' };
+    const change = (b, quota, terminationDate) =>
+        changeOutcome({ node: project, budget: b, quota, terminationDate, resources: RESOURCES, myProjects: [project] });
+
+    it('sends an extension to a manager but still grants growth on the spot', () => {
+        expect(change(noExt(pool()), { cpu: 2, ram: 8 }, '2027-06-30T00:00:00Z')).toBe('approval');
+        expect(change(noExt(pool()), { cpu: 4, ram: 8 }, project.termination_date)).toBe('instant');
+    });
+
+    it('lets an extension wait even under a hard limit', () => {
+        const b = noExt({ ...pool(), allow_requests_beyond_auto_approve: false });
+        expect(change(b, { cpu: 2, ram: 8 }, '2027-06-30T00:00:00Z')).toBe('approval');
+        expect(change(b, { cpu: 9, ram: 8 }, '2027-06-30T00:00:00Z')).toBe('blocked');
+    });
+});
+
+describe('latestProjectEnd', () => {
+    const now = Date.parse('2026-10-01T12:00:00Z');
+    const day = 24 * 60 * 60 * 1000;
+
+    it('is nothing where neither an end nor a term bounds the project', () => {
+        expect(latestProjectEnd(budget(), now)).toBeNull();
+        expect(latestProjectEnd(null, now)).toBeNull();
+    });
+
+    it('is the term from today where that comes first, and says so', () => {
+        expect(latestProjectEnd(budget({ max_project_term_days: 180 }), now))
+            .toEqual({ date: new Date(now + 180 * day), term: 180 });
+        expect(latestProjectEnd(budget({ max_project_term_days: 30, termination_date: '2027-12-31T00:00:00Z' }), now))
+            .toEqual({ date: new Date(now + 30 * day), term: 30 });
+    });
+
+    it('is the budget\'s end where that comes first', () => {
+        expect(latestProjectEnd(budget({ max_project_term_days: 180, termination_date: '2026-11-30T00:00:00Z' }), now))
+            .toEqual({ date: new Date('2026-11-30T00:00:00Z'), term: null });
     });
 });

@@ -1,7 +1,7 @@
 import { Clock, Inbox, Plus, Zap } from 'lucide-react';
 import { Badge, Button, Card, Group, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { FactRow, TokenBadgeList } from './component-common.jsx';
+import { FactRow, formatTerm, TokenBadgeList } from './component-common.jsx';
 import {
     autoApproveHeadroom, beyondAutoApproveRefused, COLOR, expiryTone, expiryValue, freeAmount, hasAutoApprove, headroomExhaustedBy,
     isAvailability, resourceSummaryText, UNLIMITED_QUOTA, visibleResources,
@@ -89,6 +89,11 @@ function BudgetOfferCard({ budget, resources, myProjects, onNewProject, onReques
                             : `${expiryTone(budget.termination_date)}.7`}>
                             {expiryValue(t, budget.termination_date)}
                         </Text>
+                    </FactRow>
+                )}
+                {budget.max_project_term_days && (
+                    <FactRow label={t('projects.maxTerm.fact')}>
+                        <Text size="xs">{t('projects.maxTerm.factValue', { duration: formatTerm(t, budget.max_project_term_days) })}</Text>
                     </FactRow>
                 )}
             </Stack>

@@ -6,7 +6,7 @@ import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { useApiMutation } from '/helper/query-state.jsx';
 import { useForm } from '@mantine/form';
-import { TerminationDatePicker } from './component-common.jsx';
+import { MaxTermInput, TerminationDatePicker } from './component-common.jsx';
 import { formatDate } from '../format-date.js';
 import { FormModal, FormTabs } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
@@ -60,6 +60,8 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         const end = boundFor(parentId)?.termination_date;
         return end ? new Date(end) : null;
     };
+    // Its maximum project term likewise: this one may only be shorter.
+    const termOf = (parentId) => boundFor(parentId)?.max_project_term_days ?? null;
 
     const [activeTab, setActiveTab] = useState(TAB_DETAILS);
 
@@ -77,10 +79,12 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 eligibleRequesters: node.eligible_requesters || [],
                 allowSubBudgetRequests: node.allow_sub_budget_requests !== false,
                 allowRequestsBeyond: node.allow_requests_beyond_auto_approve !== false,
+                autoApproveExtensions: node.auto_approve_extensions !== false,
                 autoApproveEnabled: !!node.auto_approve,
                 autoApproveIndividual: !!node.auto_approve && !isPoolAutoApprove(node),
                 autoApproveQuota: { ...(node.auto_approve?.per_requester_limit || defaultQuota(resources)) },
                 terminationDate: node.termination_date ? new Date(node.termination_date) : null,
+                maxTermDays: node.max_project_term_days ?? null,
             }
             : {
                 parentId: parent?.id ?? eligibleBudgets[0]?.id ?? null,
@@ -101,6 +105,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 allowSubBudgetRequests: false,
                 // As before the switch existed: beyond auto-approve, a manager decides.
                 allowRequestsBeyond: true,
+                autoApproveExtensions: true,
                 autoApproveEnabled: false,
                 // A pool unless said otherwise: the budget's own cap already
                 // bounds it, and a per-person limit only matters once several
@@ -109,6 +114,8 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 autoApproveQuota: defaultQuota(resources),
                 // A budget under one that ends ends with it, unless told sooner.
                 terminationDate: endOf(parent?.id ?? eligibleBudgets[0]?.id ?? null),
+                // Under a budget that limits its projects, so does this one.
+                maxTermDays: termOf(parent?.id ?? eligibleBudgets[0]?.id ?? null),
             },
         validate: (values) => ({
             name: (values.name || '').trim().length < 3
@@ -138,7 +145,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         }),
     });
 
-    const { quota, adminScope, eligibleRequesters, autoApproveEnabled, autoApproveIndividual, autoApproveQuota, allowRequestsBeyond } = form.values;
+    const { quota, adminScope, eligibleRequesters, autoApproveEnabled, autoApproveIndividual, autoApproveQuota, allowRequestsBeyond, autoApproveExtensions } = form.values;
     const offered = visibleResources(resources, scopeFor(form.values.parentId));
 
     // The budget the new one would draw from: the picked one when requesting,
@@ -205,6 +212,13 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         if (values.allowRequestsBeyond !== (node.allow_requests_beyond_auto_approve !== false)) {
             body.allow_requests_beyond_auto_approve = values.allowRequestsBeyond;
         }
+        if (values.autoApproveExtensions !== (node.auto_approve_extensions !== false)) {
+            body.auto_approve_extensions = values.autoApproveExtensions;
+        }
+        if (values.maxTermDays !== (node.max_project_term_days ?? null)) {
+            if (values.maxTermDays) body.max_project_term_days = values.maxTermDays;
+            else body.clear_max_project_term_days = true;
+        }
         const policy = autoApprovePolicy(values);
         if (policy) {
             const prev = JSON.stringify(node.auto_approve?.per_requester_limit || {});
@@ -241,7 +255,9 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 eligible_requesters: values.eligibleRequesters,
                 allow_sub_budget_requests: values.allowSubBudgetRequests,
                 allow_requests_beyond_auto_approve: values.allowRequestsBeyond,
+                auto_approve_extensions: values.autoApproveExtensions,
                 auto_approve: autoApprovePolicy(values),
+                max_project_term_days: values.maxTermDays,
                 termination_date: values.terminationDate ? values.terminationDate.toISOString() : null,
             });
         },
@@ -282,6 +298,10 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                         const bound = endOf(id);
                         const date = form.values.terminationDate;
                         if (bound && (!date || date > bound)) form.setFieldValue('terminationDate', bound);
+                        // And it may limit its projects more tightly.
+                        const term = termOf(id);
+                        const days = form.values.maxTermDays;
+                        if (term && (!days || days > term)) form.setFieldValue('maxTermDays', term);
                     }}
                 />
             )}
@@ -321,6 +341,12 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                     </Text>
                 </Alert>
             )}
+
+            <MaxTermInput
+                value={form.values.maxTermDays}
+                bound={termOf(form.values.parentId)}
+                onChange={(d) => form.setFieldValue('maxTermDays', d)}
+            />
         </Stack>
     );
 
@@ -433,6 +459,14 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                                 : t('projects.budgetForm.allowBeyondOff')}
                             disabled={!autoApproveEnabled || !hasRequesters}
                             {...form.getInputProps('allowRequestsBeyond', { type: 'checkbox' })}
+                        />
+                        <Switch
+                            label={t('projects.budgetForm.autoApproveExtensions')}
+                            description={autoApproveExtensions
+                                ? t('projects.budgetForm.autoApproveExtensionsOn')
+                                : t('projects.budgetForm.autoApproveExtensionsOff')}
+                            disabled={!autoApproveEnabled || !hasRequesters}
+                            {...form.getInputProps('autoApproveExtensions', { type: 'checkbox' })}
                         />
                         <Switch
                             label={t('projects.budgetForm.individual')}

@@ -1,6 +1,6 @@
 import { Check, Eye, FolderInput, FolderOpen, Pencil, Plus, Trash2, X, Zap } from 'lucide-react';
 import { Badge, Button, Card, Divider, Group, Stack, Text } from '@mantine/core';
-import { FactRow, NodeChangesDiff, NodeStatusBadge, NodeUsageBars, PersonBadge, TokenBadgeList } from './component-common.jsx';
+import { FactRow, formatTerm, NodeChangesDiff, NodeStatusBadge, NodeUsageBars, PersonBadge, TokenBadgeList } from './component-common.jsx';
 import { useTranslation } from 'react-i18next';
 import { autoApproveFacts, COLOR, expiryTone, expiryValue, hasAutoApprove } from './util-project.jsx';
 
@@ -102,6 +102,11 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
                                 : `${expiryTone(node.termination_date)}.7`}>
                                 {expiryValue(t, node.termination_date)}
                             </Text>
+                        </FactRow>
+                    )}
+                    {node.max_project_term_days && (
+                        <FactRow label={t('projects.maxTerm.fact')}>
+                            <Text size="xs">{t('projects.maxTerm.factValue', { duration: formatTerm(t, node.max_project_term_days) })}</Text>
                         </FactRow>
                     )}
                 </Stack>

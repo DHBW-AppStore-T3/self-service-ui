@@ -345,6 +345,20 @@ export function requestOutcome({ budget, manages, quota, resources, myProjects }
 //
 // `manages`: the viewer manages the budget — the hard limit of a budget that
 // takes no requests beyond its auto-approve does not bind them.
+// latestProjectEnd is the latest a project under budget may end at `now`:
+// the budget's end, or now plus the longest term the budget gives its projects
+// (max_project_term_days), whichever comes first. `term` is set when the term is
+// what binds, so a form can say so. Null where neither exists — a project there
+// may run open-ended. Budgets carry the shortest term of their chain, so the
+// budget's own value is the one that applies.
+export function latestProjectEnd(budget, now = Date.now()) {
+    const end = budget?.termination_date ? new Date(budget.termination_date) : null;
+    const term = budget?.max_project_term_days;
+    const byTerm = term ? new Date(now + term * 24 * 60 * 60 * 1000) : null;
+    if (byTerm && (!end || byTerm < end)) return { date: byTerm, term };
+    return end ? { date: end, term: null } : null;
+}
+
 export function changeOutcome({ node, budget, quota, terminationDate, resources, myProjects, manages = false }) {
     const current = node?.limit || {};
     const counted = (resources || []).filter(r => !isAvailability(r));
@@ -372,6 +386,9 @@ export function changeOutcome({ node, budget, quota, terminationDate, resources,
             (quota?.[r.id] ?? 0) - (current[r.id] ?? 0) <= (headroom[r.id] ?? 0));
         if (!fits) return beyond;
     }
+    // A budget may leave extensions to its managers: they wait, but are not
+    // refused — the hard limit is about resources, not about asking.
+    if (extendsEnd && budget.auto_approve_extensions === false) return 'approval';
     return 'instant';
 }
 

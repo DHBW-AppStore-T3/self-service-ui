@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Inbox, Search, X } from 'lucide-react';
-import { ActionIcon, Alert, Badge, Button, Checkbox, Drawer, Grid, Group, Loader, Paper, ScrollArea, SegmentedControl, Stack, Text, TextInput, useTree } from '@mantine/core';
+import { ActionIcon, Alert, Badge, Button, Checkbox, Grid, Modal, Group, Loader, Paper, ScrollArea, SegmentedControl, Stack, Text, TextInput, useTree } from '@mantine/core';
 import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
@@ -106,7 +106,7 @@ export function MyBudgetsView() {
     const dlg = useNodeDialog();
     const [budgetForm, setBudgetForm] = useState(null); // { mode, parent?, node? } | null
     // The project a table row was opened for, shown as its full card in a
-    // drawer so the table stays where it was.
+    // dialog so the table stays where it was.
     const [openProject, setOpenProject] = useState(null);
 
     // Which of the managed budgets are drawn at the top.
@@ -274,7 +274,7 @@ export function MyBudgetsView() {
     // changes a root's child_count (a move into one, say) hands back a new array
     // but the same set of roots, and re-running then re-opened what the user had
     // just collapsed.
-    const rootIds = rootBudgets.map(b => b.id).join(' ');
+    const rootIds = rootBudgets.map(b => b.id).join('\u0000');
     useEffect(() => {
         const openable = rootBudgets.filter(b => budgetChildCount(b) > 0);
         if (openable.length === 0) return;
@@ -388,7 +388,7 @@ export function MyBudgetsView() {
     };
 
     // Central action dispatch for both node kinds. An action started from the
-    // drawer closes it: the dialog it opens is the next thing to look at, and
+    // project dialog closes it: the dialog it opens is the next thing to look at, and
     // the card behind it would show the state before the change.
     const handleAction = (action, node) => {
         setOpenProject(null);
@@ -620,13 +620,13 @@ export function MyBudgetsView() {
                 </Grid>
             )}
 
-            <Drawer opened={!!openProject} onClose={() => setOpenProject(null)} position="right" size="lg"
-                title={t('projects.budgetProjects.drawerTitle')}>
+            <Modal opened={!!openProject} onClose={() => setOpenProject(null)} size="lg" centered
+                title={t('projects.budgetProjects.projectTitle')}>
                 {openProject && (
                     <ProjectCard node={openProject} resources={resources} parentName={openProject.parent_name ?? selected?.name}
                         perspective="manager" onAction={handleAction} />
                 )}
-            </Drawer>
+            </Modal>
 
             {/* ── Dialogs (one instance per view) ────────────────────────── */}
             {/* Keyed like every other dialog here, and for a sharper reason: this
@@ -668,6 +668,10 @@ export function MyBudgetsView() {
                 resources={resources}
                 openstackRoles={config.openstackRoles}
                 node={dlg.node}
+                // The budget the project was opened under: its end and its
+                // maximum project term bound the new end date. A sub-budget
+                // managed through an ancestor is not among myBudgets.
+                myBudgets={selected ? [selected, ...myBudgets.items] : myBudgets.items}
             />
             {/* History is a tab in here, not a button of its own outside. */}
             <NodeInspectModal key={`nodeinspectmodal:${dlg.key}`} opened={dlg.is('details')}

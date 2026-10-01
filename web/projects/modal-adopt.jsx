@@ -6,11 +6,12 @@ import { useForm, isEmail, isNotEmpty, hasLength } from '@mantine/form';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { FormModal } from './component-form-modal.jsx';
-import { TerminationDatePicker } from './component-common.jsx';
+import { formatTerm, TerminationDatePicker } from './component-common.jsx';
 import { QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { useApiMutation } from '/helper/query-state.jsx';
 import { formatError } from '/helper/api-error.js';
-import { COLOR, nodeTitle } from './util-project.jsx';
+import { formatDate } from '../format-date.js';
+import { COLOR, latestProjectEnd, nodeTitle } from './util-project.jsx';
 
 const DEFAULT_TERM_DAYS = 180;
 
@@ -71,6 +72,18 @@ export function AdoptModal({ opened, onClose, onDone, resources, node, myBudgets
         return groups;
     }, [myBudgets, ownerBudgetsQuery.data, t]);
 
+    // The chosen budget bounds the end like any project's: its end, or the
+    // longest term it gives its projects.
+    const budgetById = (id) => [...(myBudgets || []), ...(ownerBudgetsQuery.data ?? [])].find(b => b.id === id);
+    const latestEnd = latestProjectEnd(budgetById(form.values.targetId));
+    const selectTarget = (id) => {
+        form.setFieldValue('targetId', id);
+        form.clearFieldError('targetId');
+        const bound = latestProjectEnd(budgetById(id))?.date;
+        const date = form.values.terminationDate;
+        if (bound && (!date || date > bound)) form.setFieldValue('terminationDate', bound);
+    };
+
     const adopt = useApiMutation({
         mutationFn: (values) => api.adopt(node.id, {
             new_parent_id: values.targetId,
@@ -121,6 +134,7 @@ export function AdoptModal({ opened, onClose, onDone, resources, node, myBudgets
                 data={targetData}
                 placeholder={t('projects.adopt.budgetPlaceholder')}
                 {...form.getInputProps('targetId')}
+                onChange={selectTarget}
             />
 
             <Textarea label={t('projects.adopt.purpose')} required rows={2} {...form.getInputProps('reason')} />
@@ -138,7 +152,13 @@ export function AdoptModal({ opened, onClose, onDone, resources, node, myBudgets
                 />
             </div>
 
-            <TerminationDatePicker {...form.getInputProps('terminationDate')} />
+            <TerminationDatePicker
+                {...form.getInputProps('terminationDate')}
+                maxDate={latestEnd?.date ?? null}
+                maxHint={latestEnd?.term
+                    ? t('projects.endDate.atMostTerm', { date: formatDate(latestEnd.date), duration: formatTerm(t, latestEnd.term) })
+                    : undefined}
+            />
 
             {(node.external_group_assignments || []).length > 0 && (
                 <Alert color="gray" variant="light" p="xs">

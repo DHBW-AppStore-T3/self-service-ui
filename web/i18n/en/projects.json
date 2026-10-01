@@ -92,6 +92,9 @@
         "allowBeyond": "Allow requests beyond this",
         "allowBeyondOn": "What auto-approve does not cover waits for a manager. Switch off to make it a hard limit.",
         "allowBeyondOff": "Off: what auto-approve does not cover is refused right away — nothing waits for a manager. The managers of this budget are not limited.",
+        "autoApproveExtensions": "Approve extensions automatically",
+        "autoApproveExtensionsOn": "A later end date applies at once, as long as it stays within the allowed term.",
+        "autoApproveExtensionsOff": "Off: every extension waits for a manager, even though new projects are created at once.",
         "individual": "Apply individual limits",
         "individualOn": "Each person gets at most the amounts below, summed over all their projects here — the setup for a course.",
         "individualOff": "Off: everybody draws from the whole budget until it is used up — the setup for a personal or team pool. Switch on to give each person a fixed share.",
@@ -146,7 +149,25 @@
         "setEndDate": "Set an end date",
         "setEndDateHint": "Off means the budget runs until somebody changes it.",
         "atMost": "At most until {{date}}, when its budget ends.",
-        "ends": "Ends: {{date}} ({{relative}})"
+        "ends": "Ends: {{date}} ({{relative}})",
+        "monthsShortcut_one": "{{count}} month",
+        "monthsShortcut_other": "{{count}} months",
+        "atMostTerm": "At most until {{date}}: projects in this budget run at most {{duration}} at a time.",
+        "setEndDateHintProject": "Off means: the project runs until somebody changes it."
+    },
+    "maxTerm": {
+        "label": "Maximum project term",
+        "enable": "Limit how long projects run",
+        "hint": "A project in this budget ends at most this long after it is created or extended.",
+        "inherited": "The budget above limits projects to {{duration}}; this is the most allowed here.",
+        "days_one": "{{count}} day",
+        "days_other": "{{count}} days",
+        "weeks_one": "{{count}} week",
+        "weeks_other": "{{count}} weeks",
+        "months_one": "{{count}} month",
+        "months_other": "{{count}} months",
+        "fact": "Project term",
+        "factValue": "at most {{duration}} at a time"
     },
     "expiry": {
         "validUntil": "Valid until {{date}}",
@@ -302,6 +323,7 @@
         "endDateRequired": "Please set an end date",
         "endDateInPast": "The end date must be in the future",
         "endDateAfterBudget": "The budget ends on {{date}} — the project cannot run longer",
+        "endDateAfterTerm": "Projects in this budget run at most {{duration}} at a time, so until {{date}}",
         "membersEmpty": "Nobody else has access yet. You (the owner) always do.",
         "belowInUseTitle": "Below what the project already uses",
         "belowInUse": "OpenStack keeps the existing servers running and only refuses new ones, so this does not free anything up — the project stays over its quota until the resources are actually released.",
@@ -509,6 +531,6 @@
         "moreActions": "More actions",
         "noMatches": "No project matches these filters.",
         "none": "No projects are paid from this budget yet.",
-        "drawerTitle": "Project"
+        "projectTitle": "Project"
     }
 }
