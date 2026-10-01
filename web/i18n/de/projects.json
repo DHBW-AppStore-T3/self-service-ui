@@ -119,7 +119,8 @@
         "clearSearch": "Suche leeren",
         "searching": "Suche läuft…",
         "noMatches": "Keine Treffer.",
-        "nothingWaiting": "Nichts wartet auf eine Entscheidung."
+        "nothingWaiting": "Nichts wartet auf eine Entscheidung.",
+        "selectHint": "Ein Budget im Baum auswählen, um Details und Projekte zu sehen."
     },
     "changes": {
         "proposed": "Vorgeschlagene Änderungen",
@@ -428,7 +429,8 @@
         "statusTooltip": "{{status}} — {{description}}",
         "requestOnly": "Aus diesem Budget darf angefragt werden, verwaltet wird es aber von anderen — daher nur lesbar.",
         "autoApprove": "Automatisch: kleine Anfragen werden ohne Nachfrage genehmigt.",
-        "inBudget": "in {{name}}"
+        "inBudget": "in {{name}}",
+        "projectCount": "{{count}} Projekte aus diesem Budget"
     },
     "usage": {
         "pending": "+{{count}} angefragt",
@@ -487,5 +489,26 @@
         "removeRow": "{{entry}} entfernen",
         "blockedHint": "Ungültige, doppelte und schon vorhandene Einträge müssen vor dem Import entfernt werden.",
         "allRemoved": "Alle Einträge wurden entfernt."
+    },
+    "budgetProjects": {
+        "title": "Projekte in diesem Budget ({{count}})",
+        "searchPlaceholder": "Name, Owner, Zweck suchen…",
+        "status": "Status",
+        "allStatuses": "Alle Status",
+        "groupAccess": "Hat Zugriff",
+        "groupOwner": "Owner ist in",
+        "groupPlaceholder": "Nach Gruppe oder Person filtern, z. B. mannheim UND studierende",
+        "clearGroup": "Gruppenfilter entfernen",
+        "loadError": "Die Projekte konnten nicht geladen werden.",
+        "colName": "Name",
+        "colOwner": "Owner",
+        "colStatus": "Status",
+        "colResources": "Ressourcen",
+        "colValidUntil": "Gültig bis",
+        "colActions": "Aktionen",
+        "moreActions": "Weitere Aktionen",
+        "noMatches": "Kein Projekt passt zu diesen Filtern.",
+        "none": "Aus diesem Budget wird noch kein Projekt bezahlt.",
+        "drawerTitle": "Projekt"
     }
 }

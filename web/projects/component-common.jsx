@@ -38,11 +38,16 @@ export function FactRow({ label, hint, children }) {
 // NodeStatusBadge renders the status of a node in the one shared vocabulary,
 // and explains it on hover. The label is a word we invented for a state the
 // reader did not choose; the tooltip is where it says what that means for them.
-export function NodeStatusBadge({ status, size = 'sm', provisioning = false }) {
+//
+// `full` keeps the label whole: in a table column a badge would otherwise be
+// shrunk to an ellipsis, because Mantine clips the label and the column then
+// sizes to the clipped width.
+export function NodeStatusBadge({ status, size = 'sm', provisioning = false, full = false }) {
     const { t } = useTranslation();
     const style = statusStyle(status, provisioning);
     const badge = (
-        <Badge size={size} color={style.color} variant={style.variant}>
+        <Badge size={size} color={style.color} variant={style.variant}
+            styles={full ? { root: { maxWidth: 'none', flexShrink: 0 }, label: { overflow: 'visible' } } : undefined}>
             {statusLabel(t, status, provisioning)}
         </Badge>
     );

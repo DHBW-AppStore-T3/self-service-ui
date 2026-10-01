@@ -78,8 +78,21 @@ export function useNodesApi() {
                 unwrapObject(await getNode({ client, path: { id } })),
             // The one list that has no natural bound: a course budget holds as
             // many projects as it has students. Loaded one page at a time.
-            listChildren: async (id, { limit = PAGE_SIZE, offset = 0 } = {}) =>
-                unwrapPage(await listNodeChildren({ client, path: { id }, query: { limit, offset } })),
+            //
+            // The filters narrow and order on the server (see ChildFilter in
+            // the API): the browser only ever holds the page it shows. Empty
+            // values are left out of the query rather than sent as "".
+            listChildren: async (id, { limit = PAGE_SIZE, offset = 0, kind, q, status, group, groupMode, sort, order } = {}) => {
+                const query = { limit, offset };
+                if (kind) query.kind = kind;
+                if (q) query.q = q;
+                if (status?.length) query.status = status.join(',');
+                if (group) query.group = group;
+                if (group && groupMode) query.group_mode = groupMode;
+                if (sort) query.sort = sort;
+                if (sort && order) query.order = order;
+                return unwrapPage(await listNodeChildren({ client, path: { id }, query }));
+            },
             // Full-text search over everything below the budgets the caller
             // manages. Server-side because the tree is no longer fully loaded.
             searchNodes: async (q, { limit = PAGE_SIZE, offset = 0 } = {}) =>

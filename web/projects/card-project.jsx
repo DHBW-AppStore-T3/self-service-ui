@@ -1,7 +1,7 @@
 import { AlertTriangle, ArrowRightLeft, Check, ExternalLink, Eye, FolderInput, Pencil, Rocket, Users, X } from 'lucide-react';
 import { Alert, Anchor, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, TokenBadgeList } from './component-common.jsx';
-import { COLOR, expiryTone, expiryValue, getAuthUserEmail, isImported, isProvisioning, openstackProjectUrl, overageEntries, overageText, ownerEmail, resourceSummaryText } from './util-project.jsx';
+import { COLOR, expiryTone, expiryValue, getAuthUserEmail, isImported, isProvisioning, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText } from './util-project.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useTranslation } from 'react-i18next';
 import { useProjectConfig } from './projects.jsx';
@@ -27,12 +27,11 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
     // Approved but not in OpenStack yet — the reconciler runs on an interval.
     const provisioning = isProvisioning(node, config?.provisioningEnabled);
     const openstackUrl = openstackProjectUrl(config?.openstackDashboardUrl, node);
-    const isApproved = node.status === 'approved';
-    const isPending = node.status === 'pending';
     const isChangePending = node.status === 'change_pending';
     const isRejected = node.status === 'rejected';
     const hasHistory = (node.history || []).length > 0;
     const isManager = perspective === 'manager';
+    const can = projectActions(node, { manager: isManager });
 
     const createdDate = node.created_at ? formatDate(node.created_at) : '';
     const owner = ownerEmail(node);
@@ -210,7 +209,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         you trim an over-sized request instead of rejecting it.
                         On an approved project the same edit becomes a proposal
                         they then approve, for owners and managers alike. */}
-                    {(isApproved || isPending) && (
+                    {can.change && (
                         <Button variant="light" size="xs" onClick={() => act('change')}>
                             <Pencil size="13" style={{ marginRight: 4 }} />{t('projects.actions.edit')}
                         </Button>
@@ -219,14 +218,14 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         from, and the API has always allowed a manager of the
                         funding chain to release a leaf. Without the button they
                         had to ask the owner to hand back resources. */}
-                    {isApproved && (
+                    {can.release && (
                         <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('release')}>
                             {t('projects.actions.release')}
                         </Button>
                     )}
 
                     {/* Manager actions */}
-                    {isManager && (isPending || isChangePending) && (
+                    {can.approve && (
                         <>
                             <Button color={COLOR.positive} variant="light" size="xs" onClick={() => act('approve')}>
                                 <Check size="13" style={{ marginRight: 4 }} />{t('projects.actions.approve')}
@@ -236,12 +235,12 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                             </Button>
                         </>
                     )}
-                    {isManager && imported && !(node.flags || []).includes('promote_on_reconcile') && (
+                    {can.adopt && (
                         <Button color={COLOR.outside} variant="light" size="xs" onClick={() => act('adopt')}>
                             <Rocket size="13" style={{ marginRight: 4 }} />{t('projects.actions.adopt')}
                         </Button>
                     )}
-                    {isManager && isApproved && (
+                    {can.transfer && (
                         <>
                             <Button variant="light" size="xs" onClick={() => act('transfer')}>
                                 <ArrowRightLeft size="13" style={{ marginRight: 4 }} />{t('projects.actions.ownerAction')}

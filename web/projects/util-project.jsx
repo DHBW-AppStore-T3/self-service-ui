@@ -630,3 +630,26 @@ export function useAsyncRefresh(fetcher, onError) {
 
     return { loading, loaded, refresh };
 }
+
+// projectActions says which actions a project offers, for its owner or for a
+// manager of the budget it is paid from. One answer for the card and the
+// budget's project table, so the two cannot drift apart.
+//
+// Editing is not an owner privilege: on a pending request a manager's edit
+// amends it in place, on an approved project it becomes a proposal. Release is
+// a manager's to do as well — they carry the budget it is paid from.
+export function projectActions(node, { manager = false } = {}) {
+    const approved = node?.status === 'approved';
+    const pending = node?.status === 'pending';
+    const decidable = pending || node?.status === 'change_pending';
+    return {
+        details: true,
+        change: approved || pending,
+        release: approved,
+        approve: manager && decidable,
+        reject: manager && decidable,
+        adopt: manager && isImported(node) && !(node.flags || []).includes('promote_on_reconcile'),
+        transfer: manager && approved,
+        move: manager && approved,
+    };
+}

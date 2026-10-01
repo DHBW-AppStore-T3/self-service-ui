@@ -119,7 +119,8 @@
         "clearSearch": "Clear search",
         "searching": "Searching…",
         "noMatches": "No matches.",
-        "nothingWaiting": "Nothing is waiting for your decision."
+        "nothingWaiting": "Nothing is waiting for your decision.",
+        "selectHint": "Select a budget in the tree to see its details and projects."
     },
     "changes": {
         "proposed": "Proposed changes",
@@ -428,7 +429,8 @@
         "statusTooltip": "{{status}} — {{description}}",
         "requestOnly": "You can request from this budget, but you don't manage it — shown read-only.",
         "autoApprove": "Auto-approve: small requests are approved automatically.",
-        "inBudget": "in {{name}}"
+        "inBudget": "in {{name}}",
+        "projectCount": "{{count}} projects paid from this budget"
     },
     "usage": {
         "pending": "+{{count}} pending",
@@ -487,5 +489,26 @@
         "removeRow": "Remove {{entry}}",
         "blockedHint": "Invalid, duplicate and already listed entries have to be removed before the import.",
         "allRemoved": "All entries have been removed."
+    },
+    "budgetProjects": {
+        "title": "Projects in this budget ({{count}})",
+        "searchPlaceholder": "Search name, owner, purpose…",
+        "status": "Status",
+        "allStatuses": "All statuses",
+        "groupAccess": "Has access",
+        "groupOwner": "Owner is in",
+        "groupPlaceholder": "Filter by group or person, e.g. mannheim UND studierende",
+        "clearGroup": "Remove group filter",
+        "loadError": "The projects could not be loaded.",
+        "colName": "Name",
+        "colOwner": "Owner",
+        "colStatus": "Status",
+        "colResources": "Resources",
+        "colValidUntil": "Valid until",
+        "colActions": "Actions",
+        "moreActions": "More actions",
+        "noMatches": "No project matches these filters.",
+        "none": "No projects are paid from this budget yet.",
+        "drawerTitle": "Project"
     }
 }

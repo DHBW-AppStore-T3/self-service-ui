@@ -31,6 +31,7 @@ import {
     usedAmount,
     visibleResources,
     defaultsWithin,
+    projectActions,
     roomIn,
 } from './util-project.jsx';
 
@@ -625,5 +626,25 @@ describe('defaultsWithin', () => {
     it('keeps the defaults without a bound, and where not even the minimum fits', () => {
         expect(defaultsWithin(catalogue, null)).toEqual({ cores: 4, ram: 16, storage: 50 });
         expect(defaultsWithin(catalogue, { cores: 0, ram: 32 })).toEqual({ cores: 4, ram: 16, storage: 50 });
+    });
+});
+
+describe('projectActions', () => {
+    const on = (a) => Object.keys(a).filter(k => a[k]).sort();
+
+    it('offers an owner editing and releasing, but no decisions', () => {
+        expect(on(projectActions({ status: 'approved' }))).toEqual(['change', 'details', 'release']);
+        expect(on(projectActions({ status: 'pending' }))).toEqual(['change', 'details']);
+    });
+
+    it('lets a manager decide what waits and restructure what runs', () => {
+        expect(on(projectActions({ status: 'change_pending' }, { manager: true }))).toEqual(['approve', 'details', 'reject']);
+        expect(on(projectActions({ status: 'approved' }, { manager: true })))
+            .toEqual(['change', 'details', 'move', 'release', 'transfer']);
+    });
+
+    it('offers adopting an imported project unless it is already on its way', () => {
+        expect(projectActions({ status: 'imported' }, { manager: true }).adopt).toBe(true);
+        expect(projectActions({ status: 'imported', flags: ['promote_on_reconcile'] }, { manager: true }).adopt).toBe(false);
     });
 });

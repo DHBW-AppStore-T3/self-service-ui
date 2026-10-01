@@ -23,6 +23,8 @@ export const projectKeys = {
     // the first place, and with it the bug that a move left the tree showing
     // two different answers until a reload.
     children: (id, limit) => ['projects', 'tree', 'children', id, limit],
+    // The project table under a budget: one entry per filter, sort and page.
+    budgetProjects: (id, params) => ['projects', 'tree', 'budget-projects', id, params],
     search: (q, offset) => ['projects', 'tree', 'search', q, offset],
     config: () => ['projects', 'config'],
     rootStatus: () => ['projects', 'root-status'],

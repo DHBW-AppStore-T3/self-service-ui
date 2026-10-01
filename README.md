@@ -61,7 +61,7 @@ Both areas also include the interactive API documentation of the service behind 
 
 ![Importing a list of members](docs/img/16-import-list.webp)
 
-**My Budgets** — the tree resources are paid from, shown to people who manage a budget. Selecting a node shows its usage, who manages it, and who may request from it; budgets they may only request from appear read-only, marked with an eye.
+**My Budgets** — the tree resources are paid from, shown to people who manage a budget. The tree holds budgets only, each with the number of projects it pays for; selecting one shows its usage, who manages it and who may request from it, and below that a table of its projects. The table filters by text, status and group — a group either has access to the project or contains its owner, so "the projects of everyone in `group:standort-ma#studierende`" is one filter — sorts by any column and pages on the server, so a budget with hundreds of student projects stays usable. Each row carries the project's actions, the frequent ones as icons and the rest in a menu; clicking a row opens the full project card beside the table. Budgets someone may only request from appear read-only, marked with an eye.
 
 ![My Budgets](docs/img/03-budget-tree.webp)
 
@@ -69,7 +69,7 @@ Both areas also include the interactive API documentation of the service behind 
 
 ![Delegating by creating a sub-budget](docs/img/04-delegate.webp)
 
-**Approving a request** — the manager sees what it would do to the funding budget before deciding, and can grant a smaller amount instead of rejecting.
+**Approving a request** — straight from the project table or the *Waiting* list, the manager sees what it would do to the funding budget before deciding, and can grant a smaller amount instead of rejecting.
 
 ![Approving a request](docs/img/05-approve-impact.webp)
 
