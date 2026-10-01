@@ -271,8 +271,7 @@
         "importedManager": "This project exists in OpenStack but is not managed here yet. Use “Adopt” to place it under a budget.",
         "imported": "This project exists in OpenStack but is not managed here. It cannot be edited.",
         "inUseHint": "Charged to the budget instead of the granted amount.",
-        "shared": "Shared",
-        "sharedHint": "{{owner}}’s project — administered together",
+        "sharedBy": "Shared by {{owner}}",
         "membersMore": "+{{count}} more"
     },
     "projectForm": {

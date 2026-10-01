@@ -71,12 +71,13 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                 <Group justify="space-between" mb="xs">
                     <Group gap="xs">
                         <NodeStatusBadge status={node.status} provisioning={provisioning} />
+                        {/* Who shared it says it all, so it stands on the badge rather
+                            than behind a hover nobody finds. Not uppercased: an
+                            address in capitals is hard to read. */}
                         {shared && (
-                            <Tooltip label={t('projects.projectCard.sharedHint', { owner })}>
-                                <Badge color={COLOR.identity} variant="outline" leftSection={<Users size="11" />} style={{ cursor: 'default' }}>
-                                    {t('projects.projectCard.shared')}
-                                </Badge>
-                            </Tooltip>
+                            <Badge color={COLOR.identity} variant="outline" tt="none" leftSection={<Users size="11" />}>
+                                {t('projects.projectCard.sharedBy', { owner })}
+                            </Badge>
                         )}
                         {node.os_overcommitted && (
                             <Tooltip label={overage.length > 0

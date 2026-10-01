@@ -271,8 +271,7 @@
         "importedManager": "Dieses Projekt existiert in OpenStack, wird hier aber noch nicht verwaltet. Mit „Übernehmen“ wird es einem Budget zugeordnet.",
         "imported": "Dieses Projekt existiert in OpenStack, wird hier aber nicht verwaltet. Es lässt sich nicht bearbeiten.",
         "inUseHint": "Wird dem Budget statt der gewährten Menge berechnet.",
-        "shared": "Geteilt",
-        "sharedHint": "Projekt von {{owner}} – gemeinsam verwaltet",
+        "sharedBy": "Geteilt von {{owner}}",
         "membersMore": "+{{count}} weitere"
     },
     "projectForm": {
