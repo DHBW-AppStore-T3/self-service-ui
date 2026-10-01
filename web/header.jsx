@@ -35,7 +35,7 @@ function LanguageMenu() {
             <Menu.Target>
                 <Button variant="subtle" size="sm" color="gray" aria-label={t('language.change')}
                     leftSection={<Languages size="16" />}>
-                    <Text size="sm">{current.label}</Text>
+                    <Text size="sm" visibleFrom="sm">{current.label}</Text>
                 </Button>
             </Menu.Target>
             <Menu.Dropdown>
@@ -160,7 +160,7 @@ export function Header() {
                     px="xl" gap="lg" wrap="nowrap" align="stretch">
                     <Group gap="sm" wrap="nowrap" h={HEADER_HEIGHT}>
                         <Burger opened={opened} onClick={() => setOpened(!opened)}
-                            hiddenFrom={NAV_BREAKPOINT} size="sm" />
+                            hiddenFrom={NAV_BREAKPOINT} size="sm" aria-label={t('nav.menu')} />
                         <Link href="/" onClick={close}>
                             <Image src={dhbwLogoUrl} alt="DHBW Logo" h={28} w="auto" fit="contain" />
                         </Link>
@@ -217,12 +217,12 @@ export function Header() {
                         {user ? (
                             <Menu trigger="hover" openDelay={100} closeDelay={200}>
                                 <Menu.Target>
-                                    <Button variant="subtle" size="sm" color="gray"
+                                    <Button variant="subtle" size="sm" color="gray" aria-label={user.profile.name}
                                         leftSection={<User size="16" />}>
                                         {/* Truncation is a safety net for unusually long
                                             names, not the normal case — an address like
                                             firstname.lastname@dhbw.de fits. */}
-                                        <Text size="sm" truncate maw={260}>{user.profile.name}</Text>
+                                        <Text size="sm" truncate maw={220} visibleFrom="sm">{user.profile.name}</Text>
                                     </Button>
                                 </Menu.Target>
                                 <Menu.Dropdown>

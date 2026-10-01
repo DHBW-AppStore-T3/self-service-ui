@@ -6,7 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { lazy, Suspense, useState } from 'react';
 import { Router, Route, Switch, useLocation } from 'wouter';
 
-import { apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
+import { appStoreEnabled, apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
 // Imported for its side effect: initialising i18next before the first render,
 // so nothing flashes in one language and settles in another.
 import '/i18n/index.js';
@@ -121,6 +121,8 @@ function App() {
     );
 }
 
+const AppStore = lazy(() => import('./app-store/app-store.jsx').then(m => ({ default: m.AppStore })));
+
 function AppRoutes() {
     const [location] = useLocation();
 
@@ -146,6 +148,7 @@ function AppRoutes() {
                     {dnsZonesEnabled && <Route path="/dyndns" component={DynamicDnsManagement} nest />}
                     {cloudProjectsEnabled && <Route path="/projects" component={CloudProjectManagement} nest />}
                     {apiTokensEnabled && <Route path="/tokens" component={ApiTokens} nest />}
+                    {appStoreEnabled && <Route path="/app-store" component={AppStore} nest />}
                     <Route component={NotFound} />
                 </Switch>
             </ErrorBoundary>

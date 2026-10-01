@@ -1,0 +1,17 @@
+{
+  "title": "App Store", "catalog": "App catalog", "deployments": "Deployments",
+  "intro": "Discover applications for learning and teaching and deploy them in the DHBW cloud.",
+  "search": "Search apps", "searchPlaceholder": "Enter a name or description", "visibility": "Visibility",
+  "all": "All apps", "public": "Public", "private": "Private", "sort": "Sort by", "name": "Name A–Z", "newest": "Newest first",
+  "results_one": "{{count}} app", "results_other": "{{count}} apps", "details": "View details", "version": "Version",
+  "noDescription": "This app does not have a description yet.", "empty": "No apps available yet",
+  "emptyHint": "Apps accessible to your account will appear here.", "noResults": "No matching apps", "noResultsHint": "Try another search term or change the filters.", "reset": "Reset filters",
+  "loading": "Loading App Store", "error": "Could not load App Store", "retry": "Try again",
+  "errorMessage": "The App Store connection is currently unavailable. Please try again.",
+  "unauthorized": "A valid sign-in is required to access the App Store.", "forbidden": "Your account does not have access to this section.", "notFound": "This app was not found or is no longer available.",
+  "back": "Back to catalog", "repository": "Open source repository", "openApp": "Deploy in App Store", "handoff": "Configuration and deployment take place in the existing DHBW App Store.",
+  "manage": "Open App Store", "missingLink": "The existing App Store address has not been configured yet.",
+  "deploymentIntro": "The status of your accessible deployments. This view updates automatically.", "noDeployments": "No deployments yet", "noDeploymentsHint": "Discover an app in the catalog to start a deployment.",
+  "openDeployment": "Manage deployment", "created": "Created", "status": "Status", "deploymentName": "Deployment", "refresh": "Refresh",
+  "statuses": { "pending": "Pending", "running": "Deploying", "success": "Ready", "failed": "Failed", "destroying": "Deleting", "destroyed": "Deleted", "cancelled": "Cancelled", "pausing": "Pausing", "paused": "Paused", "resuming": "Resuming", "pause_failed": "Pause failed", "resume_failed": "Resume failed" }
+}

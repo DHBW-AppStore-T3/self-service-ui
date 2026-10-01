@@ -5,3 +5,6 @@ tmp/
 dist/
 Dockerfile
 Makefile
+test-results/
+playwright-report/
+.git/
