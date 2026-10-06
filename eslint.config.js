@@ -12,7 +12,7 @@ import globals from 'globals';
 // this codebase (automatic JSX runtime, no prop-types).
 export default [
     {
-        ignores: ['dist/**', 'docs/**', 'node_modules/**', 'web/config.js'],
+        ignores: ['dist/**', 'docs/**', 'node_modules/**', 'web/config.js', 'test-results/**', 'playwright-report/**'],
     },
 
     // Browser code.
@@ -25,8 +25,9 @@ export default [
             parserOptions: { ecmaFeatures: { jsx: true } },
             globals: {
                 ...globals.browser,
-                // Injected by Vite's `define` (see vite.config.js).
+                // Injected by Webpack DefinePlugin.
                 __APP_VERSION__: 'readonly',
+                __DEV__: 'readonly',
             },
         },
         plugins: { 'react-hooks': reactHooks },

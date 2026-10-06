@@ -14,7 +14,9 @@
         "apiDocumentation": "API-Dokumentation",
         "zoneManagement": "Zonen",
         "administration": "Verwaltung",
-        "pendingDot": "Anfragen warten auf eine Entscheidung"
+        "pendingDot": "Anfragen warten auf eine Entscheidung",
+        "appStore": "App-Store",
+        "menu": "Navigation öffnen"
     },
     "account": {
         "signIn": "Anmelden",

@@ -13,7 +13,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import dayjs from 'dayjs';
-import 'dayjs/locale/de';
+import 'dayjs/locale/de.js';
 
 // One file per area and language (see README.md in this folder); the file name
 // is the key's first segment, so `projects.json` holds everything addressed as
@@ -29,8 +29,11 @@ import deDyndns from './de/dyndns.json';
 import deTokens from './de/tokens.json';
 import deHome from './de/home.json';
 
-const en = { ...enCommon, projects: enProjects, dyndns: enDyndns, tokens: enTokens, home: enHome };
-const de = { ...deCommon, projects: deProjects, dyndns: deDyndns, tokens: deTokens, home: deHome };
+import enAppStore from './en/appStore.json';
+import deAppStore from './de/appStore.json';
+
+const en = { ...enCommon, appStore: enAppStore, projects: enProjects, dyndns: enDyndns, tokens: enTokens, home: enHome };
+const de = { ...deCommon, appStore: deAppStore, projects: deProjects, dyndns: deDyndns, tokens: deTokens, home: deHome };
 import { setDateLocale } from '../format-date.js';
 
 // Where the preference is kept. Namespaced, because an artifact origin is

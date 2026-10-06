@@ -3,7 +3,7 @@
 set -e
 
 # Check if all required environment variables are set, otherwise exit with an error.
-required_vars="DYN_ZONES_BASE_URL OIDC_CLIENT_ID OIDC_ISSUER_URL"
+required_vars="OIDC_CLIENT_ID OIDC_ISSUER_URL"
 
 for var in $required_vars; do
   if [ -z "$(eval echo \$$var)" ]; then
@@ -17,6 +17,9 @@ done
 # Dynamically generate the config file
 cat > /srv/www/config.js << EOF
 window.appconfig = {
+  appStoreBaseUrl: "${APP_STORE_BASE_URL:-/api/app-store}",
+  appStoreFrontendUrl: "${APP_STORE_FRONTEND_URL}",
+  appStoreEnabled: ${APP_STORE_ENABLED:-true},
   dynamicZonesBaseUrl: "${DYN_ZONES_BASE_URL}",
   cloudResourcesBaseUrl: "${CLOUD_RESOURCES_BASE_URL}",
   cloudResourcesMcpUrl: "${CLOUD_RESOURCES_MCP_URL}",

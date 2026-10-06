@@ -47,7 +47,7 @@ describe('translations', () => {
 // until somebody reads it. Only literal calls are checked — the handful of
 // computed keys (`projects.status.${status}.label`) are covered by the screens
 // that use them.
-const AREAS = 'projects|dyndns|tokens|home|nav|account|footer|helper|providers|swagger|app|language|dates';
+const AREAS = 'appStore|projects|dyndns|tokens|home|nav|account|footer|helper|providers|swagger|app|language|dates';
 const KEY_CALL = new RegExp(`(?<![\\w.$])(?:t|i18nKey=)\\(?\\s*["'\`]((?:${AREAS})(?:\\.[A-Za-z0-9_]+)+)["'\`]`, 'g');
 
 function sourceFiles(dir) {

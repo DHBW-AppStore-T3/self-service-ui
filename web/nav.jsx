@@ -1,6 +1,6 @@
 import { useLocation } from 'wouter';
 import { useTranslation } from 'react-i18next';
-import { apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
+import { appStoreEnabled, apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
 import { TOKEN_SCOPES, tokenScopeLabel, tokenScopePath } from '/tokens/scopes.js';
 import { useCloudStatus } from '/projects/cloud-status.jsx';
 import { useDnsPolicyStatus } from '/dyndns/use-policy.jsx';
@@ -19,11 +19,10 @@ export const HEADER_HEIGHT = 60;
 // hence the modest number.
 export const SUBNAV_HEIGHT = 40;
 
-// Below this the navigation goes into the burger. Deliberately not Mantine's
-// `sm` (768px): the widest case — three categories plus a signed-in user with a
-// long address — needs about 900px before the row starts wrapping, and a
+// Below this the navigation goes into the burger. Five categories plus the
+// language switch and account need the lg breakpoint before the row fits, and a
 // wrapped header looks broken long before it becomes unusable.
-export const NAV_BREAKPOINT = 'md';
+export const NAV_BREAKPOINT = 'lg';
 
 // useNav returns the sections the current user may see, plus which section and
 // item the current URL is in. Availability is decided here so no caller has to
@@ -86,6 +85,13 @@ export function useNav() {
             // databases — and a tab bar says that more plainly than two boxes
             // stacked on one page did.
             items: TOKEN_SCOPES.map(s => ({ label: tokenScopeLabel(s, t), href: tokenScopePath(s) })),
+        },
+        appStoreEnabled && {
+            id: 'app-store', label: t('nav.appStore'), base: '/app-store',
+            items: [
+                { label: t('appStore.catalog'), href: '/app-store/apps' },
+                { label: t('appStore.deployments'), href: '/app-store/deployments' },
+            ],
         },
     ].filter(Boolean).map(s => ({ ...s, href: s.href ?? s.items[0]?.href ?? '/' }));
 

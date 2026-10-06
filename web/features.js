@@ -35,3 +35,5 @@ export const apiTokensEnabled = dnsZonesEnabled || cloudProjectsEnabled;
 // not, and offering an address that answers 404 is worse than offering none.
 export const cloudProjectsMcpUrl = window?.appconfig?.cloudResourcesMcpUrl || '';
 export const dnsZonesMcpUrl = window?.appconfig?.dynamicZonesMcpUrl || '';
+
+export const appStoreEnabled = window?.appconfig?.appStoreEnabled !== false;

@@ -1,0 +1,17 @@
+{
+  "title": "App-Store", "catalog": "App-Katalog", "deployments": "Deployments",
+  "intro": "Anwendungen für Studium und Lehre entdecken und in der DHBW-Cloud bereitstellen.",
+  "search": "Apps suchen", "searchPlaceholder": "Name oder Beschreibung eingeben", "visibility": "Sichtbarkeit",
+  "all": "Alle Apps", "public": "Öffentlich", "private": "Privat", "sort": "Sortieren", "name": "Name A–Z", "newest": "Neueste zuerst",
+  "results_one": "{{count}} App", "results_other": "{{count}} Apps", "details": "Details ansehen", "version": "Version",
+  "noDescription": "Für diese App ist noch keine Beschreibung hinterlegt.", "empty": "Noch keine Apps verfügbar",
+  "emptyHint": "Hier erscheinen die Apps, auf die dein Konto zugreifen darf.", "noResults": "Keine passenden Apps", "noResultsHint": "Ändere den Suchbegriff oder die Filter.", "reset": "Filter zurücksetzen",
+  "loading": "App-Store wird geladen", "error": "App-Store konnte nicht geladen werden", "retry": "Erneut versuchen",
+  "errorMessage": "Die Verbindung zum App-Store ist derzeit nicht verfügbar. Bitte versuche es erneut.",
+  "unauthorized": "Für den App-Store ist eine gültige Anmeldung erforderlich.", "forbidden": "Dein Konto hat keinen Zugriff auf diesen Bereich.", "notFound": "Diese App wurde nicht gefunden oder ist nicht mehr verfügbar.",
+  "back": "Zurück zum Katalog", "repository": "Quellcode öffnen", "openApp": "Im App-Store bereitstellen", "handoff": "Die Konfiguration und Bereitstellung erfolgt im bestehenden DHBW-App-Store.",
+  "manage": "App-Store öffnen", "missingLink": "Die Adresse des bestehenden App-Stores ist noch nicht konfiguriert.",
+  "deploymentIntro": "Status deiner verfügbaren Bereitstellungen. Die Ansicht aktualisiert sich automatisch.", "noDeployments": "Noch keine Deployments", "noDeploymentsHint": "Entdecke eine App im Katalog, um eine Bereitstellung zu starten.",
+  "openDeployment": "Deployment verwalten", "created": "Erstellt am", "status": "Status", "deploymentName": "Deployment", "refresh": "Aktualisieren",
+  "statuses": { "pending": "Wartet", "running": "Wird bereitgestellt", "success": "Bereit", "failed": "Fehlgeschlagen", "destroying": "Wird gelöscht", "destroyed": "Gelöscht", "cancelled": "Abgebrochen", "pausing": "Wird pausiert", "paused": "Pausiert", "resuming": "Wird fortgesetzt", "pause_failed": "Pausieren fehlgeschlagen", "resume_failed": "Fortsetzen fehlgeschlagen" }
+}
