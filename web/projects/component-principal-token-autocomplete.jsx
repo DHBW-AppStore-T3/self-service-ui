@@ -104,6 +104,11 @@ export function PrincipalTokenAutocomplete({ value, onChange, onSelect, placehol
             )}
             rightSection={loading ? <Loader size="xs" /> : null}
         />
+        {/* The syntax only matters once someone is searching, so it appears
+            then rather than adding a line to every form. */}
+        {value && !failed && (
+            <Text size="xs" c="dimmed">{t('projects.principalSearch.syntax')}</Text>
+        )}
         {failed && (
             <Text size="xs" c="orange.8">
                 {t('projects.principalSearch.unreachable')}

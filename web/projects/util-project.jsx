@@ -181,6 +181,27 @@ export function freeAmount(node, resourceId) {
     return cap - usedAmount(node, resourceId);
 }
 
+// roomIn is what a budget still has free, per quantity — the most a request
+// there could ever be granted.
+export function roomIn(budget, resources) {
+    return Object.fromEntries((resources || [])
+        .filter(r => !isAvailability(r))
+        .map(r => [r.id, freeAmount(budget, r.id)]));
+}
+
+// defaultsWithin fills a request with the catalogue's defaults, each capped to
+// what `room` leaves: a default larger than the budget holds would open the
+// form asking for more than it can grant — 16 GB of RAM from a budget of 8.
+// Where even the minimum does not fit, the default stays and validation says
+// why; a silent zero would read as a choice.
+export function defaultsWithin(resources, room) {
+    return Object.fromEntries((resources || []).map(r => {
+        const value = r.default ?? 0;
+        const cap = isAvailability(r) ? Infinity : (room?.[r.id] ?? Infinity);
+        return [r.id, cap >= (r.min ?? 0) ? Math.min(value, cap) : value];
+    }));
+}
+
 // True when the requested quota fits into the budget's remaining capacity.
 //
 // Availabilities are skipped: they consume nothing, so "does it fit" is not a
@@ -221,17 +242,7 @@ export function autoApproveHeadroom(budget, resources, myProjects) {
     if (!hasAutoApprove(budget)) return null;
     const pool = isPoolAutoApprove(budget);
     const perRequester = budget.auto_approve.per_requester_limit || {};
-
-    const mine = {};
-    for (const project of myProjects || []) {
-        if (project?.parent_id !== budget.id) continue;
-        // Same definition of "active" the server uses for this sum.
-        if (project.status !== 'approved' && project.status !== 'change_pending') continue;
-        for (const r of resources || []) {
-            if (isAvailability(r)) continue;
-            mine[r.id] = (mine[r.id] || 0) + (project.limit?.[r.id] || 0);
-        }
-    }
+    const mine = activeUsageUnder(budget, resources, myProjects);
 
     const out = {};
     for (const r of resources || []) {
@@ -243,6 +254,38 @@ export function autoApproveHeadroom(budget, resources, myProjects) {
         out[r.id] = Math.max(0, Math.min(personal, free));
     }
     return out;
+}
+
+// activeUsageUnder sums what the caller's active projects under this budget
+// hold — the same definition of "active" the server uses for the per-person sum.
+function activeUsageUnder(budget, resources, myProjects) {
+    const mine = {};
+    for (const project of myProjects || []) {
+        if (project?.parent_id !== budget.id) continue;
+        if (project.status !== 'approved' && project.status !== 'change_pending') continue;
+        for (const r of resources || []) {
+            if (isAvailability(r)) continue;
+            mine[r.id] = (mine[r.id] || 0) + (project.limit?.[r.id] || 0);
+        }
+    }
+    return mine;
+}
+
+// headroomExhaustedBy says why autoApproveHeadroom came out empty: 'share' when
+// the caller's own projects hold their whole per-person share, 'budget' when the
+// budget itself has nothing left, null when there was never anything to take
+// (a share of zero) — the one case where "nothing" is the honest answer.
+export function headroomExhaustedBy(budget, resources, myProjects) {
+    if (!hasAutoApprove(budget)) return null;
+    const counted = (resources || []).filter(r => !isAvailability(r));
+    if (!isPoolAutoApprove(budget)) {
+        const perRequester = budget.auto_approve.per_requester_limit || {};
+        const granted = counted.filter(r => (perRequester[r.id] ?? 0) > 0);
+        if (granted.length === 0) return null;
+        const mine = activeUsageUnder(budget, counted, myProjects);
+        if (granted.every(r => (mine[r.id] || 0) >= perRequester[r.id])) return 'share';
+    }
+    return counted.some(r => freeAmount(budget, r.id) <= 0) ? 'budget' : null;
 }
 
 // beyondAutoApproveRefused reports whether the budget refuses requests its
@@ -302,6 +345,20 @@ export function requestOutcome({ budget, manages, quota, resources, myProjects }
 //
 // `manages`: the viewer manages the budget — the hard limit of a budget that
 // takes no requests beyond its auto-approve does not bind them.
+// latestProjectEnd is the latest a project under budget may end at `now`:
+// the budget's end, or now plus the longest term the budget gives its projects
+// (max_project_term_days), whichever comes first. `term` is set when the term is
+// what binds, so a form can say so. Null where neither exists — a project there
+// may run open-ended. Budgets carry the shortest term of their chain, so the
+// budget's own value is the one that applies.
+export function latestProjectEnd(budget, now = Date.now()) {
+    const end = budget?.termination_date ? new Date(budget.termination_date) : null;
+    const term = budget?.max_project_term_days;
+    const byTerm = term ? new Date(now + term * 24 * 60 * 60 * 1000) : null;
+    if (byTerm && (!end || byTerm < end)) return { date: byTerm, term };
+    return end ? { date: end, term: null } : null;
+}
+
 export function changeOutcome({ node, budget, quota, terminationDate, resources, myProjects, manages = false }) {
     const current = node?.limit || {};
     const counted = (resources || []).filter(r => !isAvailability(r));
@@ -329,6 +386,9 @@ export function changeOutcome({ node, budget, quota, terminationDate, resources,
             (quota?.[r.id] ?? 0) - (current[r.id] ?? 0) <= (headroom[r.id] ?? 0));
         if (!fits) return beyond;
     }
+    // A budget may leave extensions to its managers: they wait, but are not
+    // refused — the hard limit is about resources, not about asking.
+    if (extendsEnd && budget.auto_approve_extensions === false) return 'approval';
     return 'instant';
 }
 
@@ -586,4 +646,27 @@ export function useAsyncRefresh(fetcher, onError) {
     };
 
     return { loading, loaded, refresh };
+}
+
+// projectActions says which actions a project offers, for its owner or for a
+// manager of the budget it is paid from. One answer for the card and the
+// budget's project table, so the two cannot drift apart.
+//
+// Editing is not an owner privilege: on a pending request a manager's edit
+// amends it in place, on an approved project it becomes a proposal. Release is
+// a manager's to do as well — they carry the budget it is paid from.
+export function projectActions(node, { manager = false } = {}) {
+    const approved = node?.status === 'approved';
+    const pending = node?.status === 'pending';
+    const decidable = pending || node?.status === 'change_pending';
+    return {
+        details: true,
+        change: approved || pending,
+        release: approved,
+        approve: manager && decidable,
+        reject: manager && decidable,
+        adopt: manager && isImported(node) && !(node.flags || []).includes('promote_on_reconcile'),
+        transfer: manager && approved,
+        move: manager && approved,
+    };
 }

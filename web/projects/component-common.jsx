@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Calendar } from 'lucide-react';
 import { DatePickerInput } from '@mantine/dates';
-import { Badge, Box, Checkbox, Group, NumberInput, Progress, Select, Stack, Table, Text, Tooltip } from '@mantine/core';
+import { Badge, Box, Button, Checkbox, Group, NumberInput, Progress, Select, Stack, Table, Text, Tooltip } from '@mantine/core';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -38,11 +38,16 @@ export function FactRow({ label, hint, children }) {
 // NodeStatusBadge renders the status of a node in the one shared vocabulary,
 // and explains it on hover. The label is a word we invented for a state the
 // reader did not choose; the tooltip is where it says what that means for them.
-export function NodeStatusBadge({ status, size = 'sm', provisioning = false }) {
+//
+// `full` keeps the label whole: in a table column a badge would otherwise be
+// shrunk to an ellipsis, because Mantine clips the label and the column then
+// sizes to the clipped width.
+export function NodeStatusBadge({ status, size = 'sm', provisioning = false, full = false }) {
     const { t } = useTranslation();
     const style = statusStyle(status, provisioning);
     const badge = (
-        <Badge size={size} color={style.color} variant={style.variant}>
+        <Badge size={size} color={style.color} variant={style.variant}
+            styles={full ? { root: { maxWidth: 'none', flexShrink: 0 }, label: { overflow: 'visible' } } : undefined}>
             {statusLabel(t, status, provisioning)}
         </Badge>
     );
@@ -327,21 +332,79 @@ export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateT
     );
 }
 
-// ── End date picker ─────────────────────────────────────────────────────────
+// ── Durations and end dates ─────────────────────────────────────────────────
 
-// TerminationDatePicker: date input plus a duration shortcut ("90 days") that
-// keeps both in sync — beginners think in durations, admins in dates.
+// A month is 30 days here, as everywhere a duration turns into a date: "6
+// months" from today is 180 days, not "the same day in April".
+const DAYS_PER_UNIT = { days: 1, weeks: 7, months: 30 };
+const DAY_MS = 24 * 60 * 60 * 1000;
+// The terms people actually hand out: a quarter, a semester, a year.
+const SHORTCUT_MONTHS = [3, 6, 12];
+
+// durationUnitFor picks the unit a span reads best in: the one it divides into
+// exactly ("6 months", not "26 weeks"), else the one with the fewest digits.
+export function durationUnitFor(days) {
+    if (days >= 30 && days % 30 === 0) return 'months';
+    if (days >= 14 && days % 7 === 0) return 'weeks';
+    return days < 60 ? 'days' : days < 365 ? 'weeks' : 'months';
+}
+
+// DurationInput: a span of days as a number and a unit, plus shortcuts for
+// three, six and twelve months. Stored in days whatever the unit shows.
 //
-// `optional` adds the switch that decides whether there is an end date at all.
-// Without it the duration read "90 Days" next to an empty date field, which is
-// two contradicting answers to the same question. Budgets use it (a department
-// budget usually runs until somebody changes it); a project request does not,
-// because there an end date is required.
+// The unit the user PICKED sticks; null means "whichever reads best". Deriving
+// it from the value on every render fights the user, because "Weeks" + 4 is 28
+// days and a derived unit would snap that straight back to "Days" — the
+// number jumped and the unit reset on every keystroke.
 //
-// `maxDate` is the end of the budget above: nothing may outlive the budget it
-// draws from, so the calendar, the duration and the "set an end date" default
-// all stop there, and the switch cannot be turned off.
-const DEFAULT_DURATION_DAYS = 90;
+// `leading` renders in the same row before the number (the date field of
+// TerminationDatePicker), so both stay bottom-aligned with the shortcuts below.
+// `maxDays` caps what can be entered and hides the shortcuts beyond it.
+export function DurationInput({ days, onChange, maxDays = null, disabled = false, leading = null, error }) {
+    const { t } = useTranslation();
+    const [pickedUnit, setPickedUnit] = useState(null);
+    const unit = pickedUnit ?? (days ? durationUnitFor(days) : 'days');
+    // No span means no number: a number standing next to an empty date field
+    // claims something that is not stored anywhere.
+    const value = days ? Math.round(days / DAYS_PER_UNIT[unit]) : null;
+
+    const emit = (v, u) => {
+        if (!v || v <= 0) return;
+        const span = v * DAYS_PER_UNIT[u];
+        onChange?.(maxDays && span > maxDays ? maxDays : span);
+    };
+    const shortcuts = SHORTCUT_MONTHS.filter(m => !maxDays || m * DAYS_PER_UNIT.months <= maxDays);
+
+    return (
+        <Stack gap={6}>
+            <Group gap="xs" align="flex-start">
+                {leading}
+                <NumberInput size="xs" w={110} label={t('projects.endDate.duration')} min={1}
+                    max={maxDays ? Math.max(1, Math.floor(maxDays / DAYS_PER_UNIT[unit])) : undefined}
+                    value={value ?? ''}
+                    placeholder="—"
+                    disabled={disabled}
+                    error={error}
+                    onChange={(v) => emit(v, unit)} />
+                <Select size="xs" label={t('projects.endDate.unit')} w={110} value={unit} allowDeselect={false}
+                    data={['days', 'weeks', 'months'].map(u => ({ value: u, label: t(`projects.endDate.${u}`) }))}
+                    disabled={disabled}
+                    onChange={(u) => { setPickedUnit(u); emit(value, u); }} />
+            </Group>
+            {shortcuts.length > 0 && (
+                <Group gap="xs">
+                    {shortcuts.map(m => (
+                        <Button key={m} size="compact-xs" variant={days === m * DAYS_PER_UNIT.months ? 'light' : 'subtle'}
+                            disabled={disabled}
+                            onClick={() => { setPickedUnit('months'); onChange?.(m * DAYS_PER_UNIT.months); }}>
+                            {t('projects.endDate.monthsShortcut', { count: m })}
+                        </Button>
+                    ))}
+                </Group>
+            )}
+        </Stack>
+    );
+}
 
 // pickedDate turns what the calendar reports into the Date every form expects.
 // Mantine's date pickers report a "YYYY-MM-DD" string since v8, while the
@@ -354,56 +417,33 @@ export function pickedDate(value) {
     return value instanceof Date ? value : dayjs(value).toDate();
 }
 
-export function TerminationDatePicker({ value, onChange, error, readOnly = false, label, optional = false, maxDate = null }) {
+// TerminationDatePicker: a date and a duration (DurationInput) kept in sync —
+// beginners think in durations, admins in dates.
+//
+// `optional` adds the switch that decides whether there is an end date at all.
+// Without it the duration read "90 Days" next to an empty date field, which is
+// two contradicting answers to the same question. `optionalHint` says what
+// "no end" means for the thing at hand.
+//
+// `maxDate` is the latest allowed end — a budget's end, or the longest term a
+// budget gives its projects: the calendar, the duration and the "set an end
+// date" default all stop there, and the switch cannot be turned off.
+// `maxHint` says why; without it the reason is a budget's end.
+const DEFAULT_DURATION_DAYS = 90;
+
+export function TerminationDatePicker({ value, onChange, error, readOnly = false, label, optional = false, optionalHint, maxDate = null, maxHint }) {
     const { t } = useTranslation();
     const heading = label ?? t('projects.endDate.label');
     const currentDate = value;
-    // No date means no duration to show: a number standing next to an empty date
-    // field claims something that is not stored anywhere.
-    // The unit the user PICKED, or null for "whichever states the span in the
-    // fewest digits". Picking one has to stick: deriving it from the date on
-    // every render fights the user, because "Weeks" + 4 is 28 days and the
-    // thresholds below would snap that straight back to "Days" — the number
-    // jumped and the unit reset on every keystroke.
-    //
-    // That protection used to exist as a `unitPicked` flag which nothing ever
-    // set to true, so it never worked; the duration was written into state from
-    // an effect that also re-chose the unit. Both are derived here instead.
-    const [pickedUnit, setPickedUnit] = useState(null);
-
-    const selectData = [
-        { value: 'days', label: t('projects.endDate.days') },
-        { value: 'weeks', label: t('projects.endDate.weeks') },
-        { value: 'months', label: t('projects.endDate.months') },
-    ];
 
     const daysUntil = currentDate
-        ? Math.ceil((new Date(currentDate) - new Date()) / (1000 * 60 * 60 * 24))
+        ? Math.max(1, Math.ceil((new Date(currentDate) - new Date()) / DAY_MS))
         : null;
-
-    const autoUnit = daysUntil === null ? 'days'
-        : daysUntil < 60 ? 'days'
-            : daysUntil < 365 ? 'weeks'
-                : 'months';
-    const durationUnit = pickedUnit ?? autoUnit;
-
-    // No date means no duration to show: a number standing next to an empty
-    // date field claims something that is not stored anywhere.
-    const durationValue = daysUntil === null ? null
-        : durationUnit === 'weeks' ? Math.round(daysUntil / 7)
-            : durationUnit === 'months' ? Math.round(daysUntil / 30)
-                : daysUntil;
-
     const latest = maxDate ? new Date(maxDate) : null;
-    const dateFromDuration = (val, unit) => {
-        const days = unit === 'weeks' ? val * 7 : unit === 'months' ? val * 30 : val;
-        const date = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+    const maxDays = latest ? Math.max(1, Math.floor((latest - new Date()) / DAY_MS)) : null;
+    const dateFromDuration = (days) => {
+        const date = new Date(Date.now() + days * DAY_MS);
         return latest && date > latest ? latest : date;
-    };
-
-    const updateDateFromDuration = (val, unit) => {
-        if (!val || val <= 0) return;
-        onChange?.(dateFromDuration(val, unit));
     };
 
     if (readOnly) {
@@ -421,28 +461,26 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
     const hasEndDate = !optional || !!latest || !!currentDate;
 
     const fields = (
-        <Group gap="xs" align="flex-end">
-            <DatePickerInput style={{ flex: 1 }} size="xs" placeholder={t('projects.endDate.pick')} leftSection={<Calendar size="14" />}
-                valueFormat={t('dates.pickerFormat')}
-                label={currentDate
-                    ? t('projects.endDate.dateWithRelative', { relative: dayjs(currentDate).fromNow() })
-                    : t('projects.endDate.date')}
-                value={currentDate}
-                onChange={(v) => onChange?.(pickedDate(v))}
-                minDate={new Date()}
-                maxDate={latest ?? undefined}
-                disabled={!hasEndDate}
-                error={error}
-            />
-            <NumberInput size="xs" w={110} label={t('projects.endDate.duration')} min={1} max={365}
-                value={durationValue ?? ''}
-                placeholder="—"
-                disabled={!hasEndDate}
-                onChange={(v) => updateDateFromDuration(v, durationUnit)} />
-            <Select size="xs" label={t('projects.endDate.unit')} w={110} value={durationUnit} data={selectData}
-                disabled={!hasEndDate}
-                onChange={(u) => { setPickedUnit(u); updateDateFromDuration(durationValue, u); }} />
-        </Group>
+        <DurationInput
+            days={daysUntil}
+            maxDays={maxDays}
+            disabled={!hasEndDate}
+            onChange={(days) => onChange?.(dateFromDuration(days))}
+            leading={
+                <DatePickerInput style={{ flex: 1 }} size="xs" placeholder={t('projects.endDate.pick')} leftSection={<Calendar size="14" />}
+                    valueFormat={t('dates.pickerFormat')}
+                    label={currentDate
+                        ? t('projects.endDate.dateWithRelative', { relative: dayjs(currentDate).fromNow() })
+                        : t('projects.endDate.date')}
+                    value={currentDate}
+                    onChange={(v) => onChange?.(pickedDate(v))}
+                    minDate={new Date()}
+                    maxDate={latest ?? undefined}
+                    disabled={!hasEndDate}
+                    error={error}
+                />
+            }
+        />
     );
 
     return (
@@ -455,10 +493,10 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
                         below never describe something that is not stored. */}
                     <Checkbox
                         label={t('projects.endDate.setEndDate')}
-                        description={t('projects.endDate.setEndDateHint')}
+                        description={optionalHint ?? t('projects.endDate.setEndDateHint')}
                         checked={hasEndDate}
                         onChange={e => onChange?.(e.currentTarget.checked
-                            ? dateFromDuration(DEFAULT_DURATION_DAYS, 'days')
+                            ? dateFromDuration(DEFAULT_DURATION_DAYS)
                             : null)}
                     />
                     <Box
@@ -475,9 +513,40 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
             ) : fields}
             {latest && (
                 <Text size="xs" c="dimmed">
-                    {t('projects.endDate.atMost', { date: formatDate(latest) })}
+                    {maxHint ?? t('projects.endDate.atMost', { date: formatDate(latest) })}
                 </Text>
             )}
         </Stack>
     );
+}
+
+// MaxTermInput: the longest a project below a budget may run at a time, or no
+// such limit. `bound` is the limit of the budget above: this one may be
+// shorter, never longer or absent, so the switch is locked on beneath one.
+export function MaxTermInput({ value, onChange, bound = null }) {
+    const { t } = useTranslation();
+    const limited = value !== null && value !== undefined;
+    return (
+        <Stack gap="xs">
+            <Text fw={600} size="sm">{t('projects.maxTerm.label')}</Text>
+            <Checkbox
+                label={t('projects.maxTerm.enable')}
+                description={bound
+                    ? t('projects.maxTerm.inherited', { duration: formatTerm(t, bound) })
+                    : t('projects.maxTerm.hint')}
+                checked={limited}
+                disabled={!!bound}
+                onChange={e => onChange?.(e.currentTarget.checked ? (bound ?? 180) : null)}
+            />
+            <Box pl="xl" ml="xs" style={{ opacity: limited ? 1 : 0.45, transition: 'opacity 150ms ease' }}>
+                <DurationInput days={value ?? null} maxDays={bound} disabled={!limited} onChange={onChange} />
+            </Box>
+        </Stack>
+    );
+}
+
+// formatTerm states a term of days in the unit it reads best in.
+export function formatTerm(t, days) {
+    const unit = durationUnitFor(days);
+    return t(`projects.maxTerm.${unit}`, { count: Math.round(days / DAYS_PER_UNIT[unit]) });
 }

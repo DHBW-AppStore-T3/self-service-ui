@@ -1,9 +1,9 @@
 import { Clock, Inbox, Plus, Zap } from 'lucide-react';
-import { Badge, Button, Card, Group, SimpleGrid, Stack, Text } from '@mantine/core';
+import { Badge, Button, Card, Group, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { FactRow, TokenBadgeList } from './component-common.jsx';
+import { FactRow, formatTerm, TokenBadgeList } from './component-common.jsx';
 import {
-    autoApproveHeadroom, beyondAutoApproveRefused, COLOR, expiryTone, expiryValue, freeAmount, hasAutoApprove,
+    autoApproveHeadroom, beyondAutoApproveRefused, COLOR, expiryTone, expiryValue, freeAmount, hasAutoApprove, headroomExhaustedBy,
     isAvailability, resourceSummaryText, UNLIMITED_QUOTA, visibleResources,
 } from './util-project.jsx';
 
@@ -28,11 +28,21 @@ function BudgetOfferCard({ budget, resources, myProjects, onNewProject, onReques
         ? autoApproveHeadroom(budget, scope, myProjects)
         : Object.fromEntries(scope.map(r => [r.id, freeAmount(budget, r.id)]));
     const summary = resourceSummaryText(scope, printable(available));
+    // Zero for a reason: "nothing" read as if there never had been anything.
+    const exhausted = instant && !summary ? headroomExhaustedBy(budget, scope, myProjects) : null;
+    const nothingText = exhausted === 'share'
+        ? t('projects.offers.shareInUse', { share: resourceSummaryText(scope, budget.auto_approve.per_requester_limit) })
+        : exhausted === 'budget'
+            ? t('projects.offers.budgetUsedUp')
+            : t('projects.offers.nothing');
     const hardLimit = beyondAutoApproveRefused(budget);
     const takesBudgetRequests = budget.allow_sub_budget_requests !== false;
 
     return (
-        <Card withBorder radius="md" padding="sm" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        // Tinted, unlike a project card: this is somewhere to get resources
+        // from, not something the viewer has.
+        <Card withBorder radius="md" padding="sm" bg="var(--mantine-color-gray-light)"
+            style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <Group justify="space-between" wrap="nowrap" mb={4}>
                 <Text fw={700} size="sm" truncate>{budget.name || budget.id}</Text>
                 {instant ? (
@@ -52,7 +62,7 @@ function BudgetOfferCard({ budget, resources, myProjects, onNewProject, onReques
                 {instant ? (
                     <>
                         <FactRow label={t('projects.offers.yoursRightAway')}>
-                            {summary || t('projects.offers.nothing')}
+                            {summary || nothingText}
                         </FactRow>
                         <FactRow label={t('projects.fact.beyondThat')}>
                             {hardLimit ? t('projects.autoApprove.beyondRefused') : t('projects.autoApprove.beyondManager')}
@@ -81,6 +91,11 @@ function BudgetOfferCard({ budget, resources, myProjects, onNewProject, onReques
                         </Text>
                     </FactRow>
                 )}
+                {budget.max_project_term_days && (
+                    <FactRow label={t('projects.maxTerm.fact')}>
+                        <Text size="xs">{t('projects.maxTerm.factValue', { duration: formatTerm(t, budget.max_project_term_days) })}</Text>
+                    </FactRow>
+                )}
             </Stack>
 
             <Group gap="xs" grow>
@@ -105,7 +120,10 @@ export function BudgetOffers({ budgets, resources, myProjects, onNewProject, onR
     if (!budgets?.length) return null;
     return (
         <Stack gap="xs">
-            <Text size="xs" fw={600} c="dimmed" tt="uppercase">{t('projects.offers.heading')}</Text>
+            <div>
+                <Title order={4}>{t('projects.offers.heading')}</Title>
+                <Text size="sm" c="dimmed">{t('projects.offers.headingHint')}</Text>
+            </div>
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
                 {budgets.map(b => (
                     <BudgetOfferCard key={b.id} budget={b} resources={resources} myProjects={myProjects}

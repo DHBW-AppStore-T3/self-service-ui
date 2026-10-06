@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Inbox, Search, X } from 'lucide-react';
-import { ActionIcon, Alert, Badge, Button, Checkbox, Grid, Group, Loader, Paper, ScrollArea, SegmentedControl, Stack, Text, TextInput, useTree } from '@mantine/core';
+import { ActionIcon, Alert, Badge, Button, Checkbox, Grid, Modal, Group, Loader, Paper, ScrollArea, SegmentedControl, Stack, Text, TextInput, useTree } from '@mantine/core';
 import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
@@ -11,7 +11,8 @@ import { PAGE_SIZE, useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { BudgetCard } from './card-budget.jsx';
 import { ProjectCard } from './card-project.jsx';
-import { BudgetTree, MORE_SUFFIX, NodeResultList, budgetsToTreeData } from './component-budget-tree.jsx';
+import { BudgetTree, MORE_SUFFIX, NodeResultList, budgetsToTreeData, budgetChildCount } from './component-budget-tree.jsx';
+import { BudgetProjectsTable } from './component-budget-projects.jsx';
 import { AdoptModal } from './modal-adopt.jsx';
 import { ApproveModal } from './modal-approve.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
@@ -36,9 +37,12 @@ const SEARCH_DEBOUNCE_MS = 300;
 const CHILDREN_STALE_MS = 30_000;
 
 // MyBudgetsView is a master-detail tree navigator: the left side shows the
-// budgets the user manages as an expandable tree (sub-budgets and projects
-// load lazily on expand, one page at a time), the right side shows the selected
-// node with its usage, access rules and actions. Delegating resources =
+// budgets the user manages as an expandable tree (sub-budgets load lazily on
+// expand, one page at a time), the right side shows the selected budget with
+// its usage, access rules and actions, and below it a table of the projects
+// paid from it. Projects are not in the tree: a budget for all students of a
+// location holds hundreds, which buried the budget structure and could only be
+// scrolled, not filtered. The table filters, sorts and pages on the server. Delegating resources =
 // creating a sub-budget with someone else in "Managed by" — there is
 // deliberately no separate "delegation" concept.
 //
@@ -101,6 +105,9 @@ export function MyBudgetsView() {
     // see the whole organization).
     const dlg = useNodeDialog();
     const [budgetForm, setBudgetForm] = useState(null); // { mode, parent?, node? } | null
+    // The project a table row was opened for, shown as its full card in a
+    // dialog so the table stays where it was.
+    const [openProject, setOpenProject] = useState(null);
 
     // Which of the managed budgets are drawn at the top.
     //
@@ -151,7 +158,7 @@ export function MyBudgetsView() {
     const childLimit = (nodeId) => limits[nodeId] ?? PAGE_SIZE;
     const childQuery = (nodeId) => ({
         queryKey: projectKeys.children(nodeId, childLimit(nodeId)),
-        queryFn: () => api.listChildren(nodeId, { limit: childLimit(nodeId) }),
+        queryFn: () => api.listChildren(nodeId, { limit: childLimit(nodeId), kind: 'budget' }),
         // Not a caching nicety, a correctness one for the pair below: with the
         // default of 0 the row that onLoadChildren just fetched is stale the
         // moment it arrives, so the query mounting behind it fetches the same
@@ -219,7 +226,7 @@ export function MyBudgetsView() {
         try {
             await queryClient.fetchQuery({
                 queryKey: projectKeys.children(nodeId, next),
-                queryFn: () => api.listChildren(nodeId, { limit: next }),
+                queryFn: () => api.listChildren(nodeId, { limit: next, kind: 'budget' }),
             });
             setLimits(prev => ({ ...prev, [nodeId]: next }));
         } catch (e) {
@@ -267,9 +274,9 @@ export function MyBudgetsView() {
     // changes a root's child_count (a move into one, say) hands back a new array
     // but the same set of roots, and re-running then re-opened what the user had
     // just collapsed.
-    const rootIds = rootBudgets.map(b => b.id).join(' ');
+    const rootIds = rootBudgets.map(b => b.id).join('\u0000');
     useEffect(() => {
-        const openable = rootBudgets.filter(b => b.child_count > 0);
+        const openable = rootBudgets.filter(b => budgetChildCount(b) > 0);
         if (openable.length === 0) return;
         tree.setExpandedState({
             ...tree.expandedState,
@@ -380,8 +387,11 @@ export function MyBudgetsView() {
         }
     };
 
-    // Central action dispatch for both node kinds.
+    // Central action dispatch for both node kinds. An action started from the
+    // project dialog closes it: the dialog it opens is the next thing to look at, and
+    // the card behind it would show the state before the change.
     const handleAction = (action, node) => {
+        setOpenProject(null);
         if (action === 'sub-budget') return setBudgetForm({ mode: 'create', parent: node });
         // From a read-only budget: request under it — `parent` preselects it.
         if (action === 'request-here') return setBudgetForm({ mode: 'request', parent: node });
@@ -585,13 +595,23 @@ export function MyBudgetsView() {
                     <Grid.Col span={{ base: 12, md: 7, lg: 8 }}>
                         {!selected && (
                             <Alert color={COLOR.info} variant="light">
-                                Select a budget or project in the tree to see its details.
+                                {t('projects.budgets.selectHint')}
                             </Alert>
                         )}
                         {selected && (isBudget(selected) ? (
-                            <BudgetCard node={selected} resources={resources}
-                                onAction={handleAction}
-                                manageable={!requestableOnly.some(b => b.id === selected.id)} />
+                            <Stack>
+                                <BudgetCard node={selected} resources={resources}
+                                    onAction={handleAction}
+                                    manageable={!selected.request_only} />
+                                {/* Listing a budget's projects is a manager's view;
+                                    a budget one may only request under has none
+                                    to show. Keyed by budget so its filters reset
+                                    when another budget is picked. */}
+                                {!selected.request_only && (
+                                    <BudgetProjectsTable key={selected.id} budget={selected} resources={resources}
+                                        onAction={handleAction} onOpen={setOpenProject} />
+                                )}
+                            </Stack>
                         ) : (
                             <ProjectCard node={selected} resources={resources} parentName={selected.parent_name}
                                 perspective="manager" onAction={handleAction} />
@@ -599,6 +619,14 @@ export function MyBudgetsView() {
                     </Grid.Col>
                 </Grid>
             )}
+
+            <Modal opened={!!openProject} onClose={() => setOpenProject(null)} size="lg" centered
+                title={t('projects.budgetProjects.projectTitle')}>
+                {openProject && (
+                    <ProjectCard node={openProject} resources={resources} parentName={openProject.parent_name ?? selected?.name}
+                        perspective="manager" onAction={handleAction} />
+                )}
+            </Modal>
 
             {/* ── Dialogs (one instance per view) ────────────────────────── */}
             {/* Keyed like every other dialog here, and for a sharper reason: this
@@ -640,6 +668,10 @@ export function MyBudgetsView() {
                 resources={resources}
                 openstackRoles={config.openstackRoles}
                 node={dlg.node}
+                // The budget the project was opened under: its end and its
+                // maximum project term bound the new end date. A sub-budget
+                // managed through an ancestor is not among myBudgets.
+                myBudgets={selected ? [selected, ...myBudgets.items] : myBudgets.items}
             />
             {/* History is a tab in here, not a button of its own outside. */}
             <NodeInspectModal key={`nodeinspectmodal:${dlg.key}`} opened={dlg.is('details')}

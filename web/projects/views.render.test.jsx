@@ -85,6 +85,22 @@ describe('the cloud project views render', () => {
         expectNoRenderFailure();
     });
 
+    // Projects are listed in a table under the selected budget, not in the
+    // tree: a budget of student projects buried the budget structure.
+    it('My Budgets lists a budget\'s projects in a table, not in the tree', async () => {
+        renderView(<MyBudgetsView />);
+        const tree = () => within(screen.getByRole('tree'));
+
+        await screen.findAllByText('Mannheim');
+        fireEvent.click(tree().getByText('Mannheim'));
+
+        const table = await screen.findByRole('table');
+        expect(await within(table).findByText('Mein Projekt')).toBeTruthy();
+        expect(within(table).getByText('Projekt mit Änderung')).toBeTruthy();
+        expect(tree().queryAllByText('Mein Projekt')).toHaveLength(0);
+        expectNoRenderFailure();
+    });
+
     // The loop did not fail the first paint — it failed the renders after the
     // queries resolved. A test that stops at "something appeared" would have
     // gone green on the broken build.

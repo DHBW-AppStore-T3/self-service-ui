@@ -92,6 +92,9 @@
         "allowBeyond": "Allow requests beyond this",
         "allowBeyondOn": "What auto-approve does not cover waits for a manager. Switch off to make it a hard limit.",
         "allowBeyondOff": "Off: what auto-approve does not cover is refused right away — nothing waits for a manager. The managers of this budget are not limited.",
+        "autoApproveExtensions": "Approve extensions automatically",
+        "autoApproveExtensionsOn": "A later end date applies at once, as long as it stays within the allowed term.",
+        "autoApproveExtensionsOff": "Off: every extension waits for a manager, even though new projects are created at once.",
         "individual": "Apply individual limits",
         "individualOn": "Each person gets at most the amounts below, summed over all their projects here — the setup for a course.",
         "individualOff": "Off: everybody draws from the whole budget until it is used up — the setup for a personal or team pool. Switch on to give each person a fixed share.",
@@ -119,7 +122,8 @@
         "clearSearch": "Clear search",
         "searching": "Searching…",
         "noMatches": "No matches.",
-        "nothingWaiting": "Nothing is waiting for your decision."
+        "nothingWaiting": "Nothing is waiting for your decision.",
+        "selectHint": "Select a budget in the tree to see its details and projects."
     },
     "changes": {
         "proposed": "Proposed changes",
@@ -145,7 +149,25 @@
         "setEndDate": "Set an end date",
         "setEndDateHint": "Off means the budget runs until somebody changes it.",
         "atMost": "At most until {{date}}, when its budget ends.",
-        "ends": "Ends: {{date}} ({{relative}})"
+        "ends": "Ends: {{date}} ({{relative}})",
+        "monthsShortcut_one": "{{count}} month",
+        "monthsShortcut_other": "{{count}} months",
+        "atMostTerm": "At most until {{date}}: projects in this budget run at most {{duration}} at a time.",
+        "setEndDateHintProject": "Off means: the project runs until somebody changes it."
+    },
+    "maxTerm": {
+        "label": "Maximum project term",
+        "enable": "Limit how long projects run",
+        "hint": "A project in this budget ends at most this long after it is created or extended.",
+        "inherited": "The budget above limits projects to {{duration}}; this is the most allowed here.",
+        "days_one": "{{count}} day",
+        "days_other": "{{count}} days",
+        "weeks_one": "{{count}} week",
+        "weeks_other": "{{count}} weeks",
+        "months_one": "{{count}} month",
+        "months_other": "{{count}} months",
+        "fact": "Project term",
+        "factValue": "at most {{duration}} at a time"
     },
     "expiry": {
         "validUntil": "Valid until {{date}}",
@@ -169,7 +191,8 @@
         "resources": "Resources",
         "members": "Members",
         "owner": "Owner",
-        "inUse": "In use"
+        "inUse": "In use",
+        "admins": "Admins"
     },
     "forms": {
         "add": "Add",
@@ -241,19 +264,24 @@
         "intro": "A project is your own space in the DHBW cloud with the resources you request.",
         "shown": "Projects shown: {{shown}}/{{total}}",
         "noneCanRequest": "You don't have any projects yet. Click “New project” to get started — budgets marked “Instant” create it right away.",
-        "none": "You don't have any projects yet, and no budget currently accepts requests from you. Ask your lecturer or administrator to add you to a budget."
+        "none": "You don't have any projects yet, and no budget currently accepts requests from you. Ask your lecturer or administrator to add you to a budget.",
+        "heading": "My projects ({{count}})"
     },
     "offers": {
-        "heading": "Budgets you can use",
+        "heading": "Budgets for new projects",
         "instant": "Instant",
         "onRequest": "On request",
         "yoursRightAway": "Yours right away",
         "stillFree": "Still free here",
         "everyProject": "Every project",
-        "nothing": "Nothing"
+        "nothing": "Nothing",
+        "headingHint": "New projects are paid from one of these budgets. Each card says how much is available right away.",
+        "shareInUse": "None left — your share ({{share}}) is in use by your projects",
+        "budgetUsedUp": "None left — the budget is fully used"
     },
     "principalSearch": {
-        "placeholder": "e.g. group:cs-students",
+        "placeholder": "e.g. mannheim UND beschäftigte",
+        "syntax": "Several words: any of them · \"…\": exact phrase · UND or +word: required · * wildcard. Roles such as #beschaeftigte are offered with their group.",
         "unreachable": "The group directory is not reachable — no suggestions. You can still type a token by hand."
     },
     "projectCard": {
@@ -265,7 +293,8 @@
         "importedManager": "This project exists in OpenStack but is not managed here yet. Use “Adopt” to place it under a budget.",
         "imported": "This project exists in OpenStack but is not managed here. It cannot be edited.",
         "inUseHint": "Charged to the budget instead of the granted amount.",
-        "ownerPlus": "Owner + {{count}}"
+        "sharedBy": "Shared by {{owner}}",
+        "membersMore": "+{{count}} more"
     },
     "projectForm": {
         "titleNew": "New project",
@@ -294,6 +323,7 @@
         "endDateRequired": "Please set an end date",
         "endDateInPast": "The end date must be in the future",
         "endDateAfterBudget": "The budget ends on {{date}} — the project cannot run longer",
+        "endDateAfterTerm": "Projects in this budget run at most {{duration}} at a time, so until {{date}}",
         "membersEmpty": "Nobody else has access yet. You (the owner) always do.",
         "belowInUseTitle": "Below what the project already uses",
         "belowInUse": "OpenStack keeps the existing servers running and only refuses new ones, so this does not free anything up — the project stays over its quota until the resources are actually released.",
@@ -307,7 +337,12 @@
         "outcomeWaitingPolicyChange": "More than this budget approves automatically. A manager decides, and until then the project keeps its current resources.",
         "outcomeWaitingPolicy": "More than this budget approves automatically. A manager of this budget decides.",
         "outcomeWaitingChange": "A manager decides. Until then the project keeps its current resources.",
-        "outcomeWaiting": "A manager of this budget decides on this request."
+        "outcomeWaiting": "A manager of this budget decides on this request.",
+        "admins": "Project admins",
+        "adminsHint": "Administer the project here together with the owner: rename it, request changes, edit this list and release it. This gives no access in OpenStack.",
+        "access": "Access in OpenStack",
+        "accessHint": "Who gets into the project in OpenStack, and with which role.",
+        "adminsEmpty": "Nobody besides the owner."
     },
     "quotaInputs": {
         "filter": "Filter resources",
@@ -416,7 +451,8 @@
         "statusTooltip": "{{status}} — {{description}}",
         "requestOnly": "You can request from this budget, but you don't manage it — shown read-only.",
         "autoApprove": "Auto-approve: small requests are approved automatically.",
-        "inBudget": "in {{name}}"
+        "inBudget": "in {{name}}",
+        "projectCount": "{{count}} projects paid from this budget"
     },
     "usage": {
         "pending": "+{{count}} pending",
@@ -429,5 +465,72 @@
         "studierende": "Students",
         "studiengangsleiter": "Programme director",
         "sekretariat": "Office"
+    },
+    "principalImport": {
+        "title": "Import a list",
+        "open": "Import list…",
+        "dropTitle": "Drop a CSV or text file here, or click to choose one",
+        "dropHint": "CSV, TSV or TXT, up to {{size}} MB. The file is read in the browser and nothing is uploaded.",
+        "pasteLabel": "Or paste a list",
+        "pasteHint": "One entry per line, or separated by commas or semicolons. Accepted: email addresses, “Name <email>”, user:… and group:… tokens.",
+        "empty": "The input contains no entries.",
+        "fileTooLarge": "The file is larger than {{size}} MB.",
+        "fileType": "Only CSV, TSV and text files can be imported.",
+        "toPreview": "Preview",
+        "back": "Back",
+        "submit_one": "Add {{count}} entry",
+        "submit_other": "Add {{count}} entries",
+        "tokenColumn": "Column with email or group",
+        "roleColumn": "Column with role",
+        "noRoleColumn": "None",
+        "columnN": "Column {{n}} ({{sample}})",
+        "hasHeader": "First row is a header",
+        "countNew": "New: {{count}}",
+        "countExisting": "Already on the list: {{count}}",
+        "countDuplicate": "Duplicates: {{count}}",
+        "countInvalid": "Invalid: {{count}}",
+        "truncated": "Only the first {{max}} rows are imported.",
+        "bulkRole": "Set role",
+        "applyAll": "For all",
+        "applyMissing": "Only rows without a role",
+        "selectAll": "Select all",
+        "line": "No.",
+        "entry": "Entry",
+        "status": "Status",
+        "status_new": "New",
+        "status_existing": "Already on the list",
+        "status_duplicate": "Duplicate",
+        "status_invalid": "Invalid",
+        "chooseRole": "Choose a role",
+        "roleUnknown": "“{{value}}” is not a known role",
+        "missingRole": "Every entry needs a role.",
+        "removeBlocked_one": "Remove {{count}} entry that cannot be added",
+        "removeBlocked_other": "Remove {{count}} entries that cannot be added",
+        "removeSelected_one": "Remove {{count}} selected entry",
+        "removeSelected_other": "Remove {{count}} selected entries",
+        "removeRow": "Remove {{entry}}",
+        "blockedHint": "Invalid, duplicate and already listed entries have to be removed before the import.",
+        "allRemoved": "All entries have been removed."
+    },
+    "budgetProjects": {
+        "title": "Projects in this budget ({{count}})",
+        "searchPlaceholder": "Search name, owner, purpose…",
+        "status": "Status",
+        "allStatuses": "All statuses",
+        "groupAccess": "Has access",
+        "groupOwner": "Owner is in",
+        "groupPlaceholder": "Filter by group or person, e.g. mannheim UND studierende",
+        "clearGroup": "Remove group filter",
+        "loadError": "The projects could not be loaded.",
+        "colName": "Name",
+        "colOwner": "Owner",
+        "colStatus": "Status",
+        "colResources": "Resources",
+        "colValidUntil": "Valid until",
+        "colActions": "Actions",
+        "moreActions": "More actions",
+        "noMatches": "No project matches these filters.",
+        "none": "No projects are paid from this budget yet.",
+        "projectTitle": "Project"
     }
 }

@@ -1,7 +1,8 @@
-import { AlertTriangle, ArrowRightLeft, Check, ExternalLink, Eye, FolderInput, Pencil, Rocket, X } from 'lucide-react';
+import { AlertTriangle, ArrowRightLeft, Check, ExternalLink, Eye, FolderInput, Pencil, Rocket, Users, X } from 'lucide-react';
 import { Alert, Anchor, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
-import { FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge } from './component-common.jsx';
-import { COLOR, expiryTone, expiryValue, isImported, isProvisioning, openstackProjectUrl, overageEntries, overageText, ownerEmail, resourceSummaryText } from './util-project.jsx';
+import { FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, TokenBadgeList } from './component-common.jsx';
+import { COLOR, expiryTone, expiryValue, getAuthUserEmail, isImported, isProvisioning, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText } from './util-project.jsx';
+import { useAuth } from '/providers/auth.jsx';
 import { useTranslation } from 'react-i18next';
 import { useProjectConfig } from './projects.jsx';
 import { formatDate } from '../format-date.js';
@@ -14,6 +15,9 @@ import { formatDate } from '../format-date.js';
 // perspective:
 //   'owner'    the viewer owns this project (My Projects)
 //   'manager'  the viewer decides on it (Approvals)
+// How many members a card names before it counts the rest.
+const MEMBERS_SHOWN = 5;
+
 export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction }) {
     const { t } = useTranslation();
     const act = (action) => onAction?.(action, node);
@@ -23,16 +27,25 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
     // Approved but not in OpenStack yet — the reconciler runs on an interval.
     const provisioning = isProvisioning(node, config?.provisioningEnabled);
     const openstackUrl = openstackProjectUrl(config?.openstackDashboardUrl, node);
-    const isApproved = node.status === 'approved';
-    const isPending = node.status === 'pending';
     const isChangePending = node.status === 'change_pending';
     const isRejected = node.status === 'rejected';
     const hasHistory = (node.history || []).length > 0;
     const isManager = perspective === 'manager';
+    const can = projectActions(node, { manager: isManager });
 
     const createdDate = node.created_at ? formatDate(node.created_at) : '';
-    const authorizedCount = (node.authorized_users || []).length;
     const owner = ownerEmail(node);
+    // In My Projects a card is either the viewer's own project or one they
+    // administer with its owner — then who that owner is belongs on it too.
+    const { user } = useAuth();
+    const me = getAuthUserEmail(user).toLowerCase();
+    const shared = !isManager && !!owner && owner.toLowerCase() !== me;
+    const showOwner = owner && (isManager || shared);
+    const admins = node.admin_scope || [];
+    // A few members by name say more than a count: "Owner + 1" read as if the
+    // owner were one of two people, whoever the one was.
+    const memberTokens = (node.authorized_users || []).map(u => u.token);
+    const shownMembers = memberTokens.slice(0, MEMBERS_SHOWN);
 
     // Resources shown in the summary line: the proposed limit while a change
     // awaits approval, the current limit otherwise.
@@ -57,6 +70,14 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                 <Group justify="space-between" mb="xs">
                     <Group gap="xs">
                         <NodeStatusBadge status={node.status} provisioning={provisioning} />
+                        {/* Who shared it says it all, so it stands on the badge rather
+                            than behind a hover nobody finds. Not uppercased: an
+                            address in capitals is hard to read. */}
+                        {shared && (
+                            <Badge color={COLOR.identity} variant="outline" tt="none" leftSection={<Users size="11" />}>
+                                {t('projects.projectCard.sharedBy', { owner })}
+                            </Badge>
+                        )}
                         {node.os_overcommitted && (
                             <Tooltip label={overage.length > 0
                                 ? t('projects.projectCard.overcommittedWithAmount', { amount: overageText(overage) })
@@ -96,9 +117,15 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
 
                 {/* ── Key facts ──────────────────────────────────────────── */}
                 <Stack gap="6" mb="xs">
-                    {isManager && owner && (
+                    {showOwner && (
                         <FactRow label={t('projects.fact.owner')}>
                             <PersonBadge email={owner} size="xs" />
+                        </FactRow>
+                    )}
+
+                    {admins.length > 0 && (
+                        <FactRow label={t('projects.fact.admins')}>
+                            <TokenBadgeList tokens={admins} size="xs" />
                         </FactRow>
                     )}
 
@@ -132,10 +159,16 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         </FactRow>
                     )}
 
-                    {authorizedCount > 0 && (
+                    {memberTokens.length > 0 && (
                         <FactRow label={t('projects.fact.members')}>
-                            {/* A count beside a label needs no plural of its own. */}
-                            {t('projects.projectCard.ownerPlus', { count: authorizedCount })}
+                            <Group gap="xs" wrap="wrap">
+                                <TokenBadgeList tokens={shownMembers} size="xs" />
+                                {memberTokens.length > shownMembers.length && (
+                                    <Text size="xs" c="dimmed">
+                                        {t('projects.projectCard.membersMore', { count: memberTokens.length - shownMembers.length })}
+                                    </Text>
+                                )}
+                            </Group>
                         </FactRow>
                     )}
                 </Stack>
@@ -176,7 +209,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         you trim an over-sized request instead of rejecting it.
                         On an approved project the same edit becomes a proposal
                         they then approve, for owners and managers alike. */}
-                    {(isApproved || isPending) && (
+                    {can.change && (
                         <Button variant="light" size="xs" onClick={() => act('change')}>
                             <Pencil size="13" style={{ marginRight: 4 }} />{t('projects.actions.edit')}
                         </Button>
@@ -185,14 +218,14 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         from, and the API has always allowed a manager of the
                         funding chain to release a leaf. Without the button they
                         had to ask the owner to hand back resources. */}
-                    {isApproved && (
+                    {can.release && (
                         <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('release')}>
                             {t('projects.actions.release')}
                         </Button>
                     )}
 
                     {/* Manager actions */}
-                    {isManager && (isPending || isChangePending) && (
+                    {can.approve && (
                         <>
                             <Button color={COLOR.positive} variant="light" size="xs" onClick={() => act('approve')}>
                                 <Check size="13" style={{ marginRight: 4 }} />{t('projects.actions.approve')}
@@ -202,12 +235,12 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                             </Button>
                         </>
                     )}
-                    {isManager && imported && !(node.flags || []).includes('promote_on_reconcile') && (
+                    {can.adopt && (
                         <Button color={COLOR.outside} variant="light" size="xs" onClick={() => act('adopt')}>
                             <Rocket size="13" style={{ marginRight: 4 }} />{t('projects.actions.adopt')}
                         </Button>
                     )}
-                    {isManager && isApproved && (
+                    {can.transfer && (
                         <>
                             <Button variant="light" size="xs" onClick={() => act('transfer')}>
                                 <ArrowRightLeft size="13" style={{ marginRight: 4 }} />{t('projects.actions.ownerAction')}

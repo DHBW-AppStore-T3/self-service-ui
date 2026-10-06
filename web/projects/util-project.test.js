@@ -11,6 +11,7 @@ import {
     expiryTone,
     freeAmount,
     groupResources,
+    headroomExhaustedBy,
     isAvailability,
     isExpired,
     isProvisioning,
@@ -29,6 +30,9 @@ import {
     statusLabel,
     usedAmount,
     visibleResources,
+    defaultsWithin,
+    projectActions,
+    roomIn,
 } from './util-project.jsx';
 
 const RESOURCES = [
@@ -111,6 +115,32 @@ describe('quotaFits', () => {
 
     it('treats a resource the request omits as zero', () => {
         expect(quotaFits(budget, { cpu: 6 }, RESOURCES)).toBe(true);
+    });
+});
+
+describe('headroomExhaustedBy', () => {
+    const budget = {
+        id: 'b1',
+        limit: { cpu: 10, ram: 64 },
+        usage: { approved: { limit: { cpu: 4 } } },
+        auto_approve: { per_requester_limit: { cpu: 4, ram: 8 } },
+    };
+
+    it('names the own projects when they hold the whole share', () => {
+        const mine = [{ parent_id: 'b1', status: 'approved', limit: { cpu: 4, ram: 8 } }];
+        expect(headroomExhaustedBy(budget, RESOURCES, mine)).toBe('share');
+    });
+
+    it('names the budget when it has nothing left for anyone', () => {
+        const full = { ...budget, usage: { approved: { limit: { cpu: 10 } } } };
+        expect(headroomExhaustedBy(full, RESOURCES, [])).toBe('budget');
+        const pool = { ...full, auto_approve: {} };
+        expect(headroomExhaustedBy(pool, RESOURCES, [])).toBe('budget');
+    });
+
+    it('has no reason when the share was zero to begin with', () => {
+        const none = { ...budget, auto_approve: { per_requester_limit: { cpu: 0 } } };
+        expect(headroomExhaustedBy(none, RESOURCES, [])).toBeNull();
     });
 });
 
@@ -577,5 +607,44 @@ describe('openstackProjectUrl', () => {
         for (const status of ['pending', 'released', 'rejected', 'imported']) {
             expect(openstackProjectUrl('https://x', { ...node, status })).toBeNull();
         }
+    });
+});
+
+describe('defaultsWithin', () => {
+    const catalogue = [
+        { id: 'cores', default: 4, min: 1 },
+        { id: 'ram', default: 16, min: 1 },
+        { id: 'storage', default: 50, min: 1 },
+    ];
+
+    it('caps each default to what the budget has room for', () => {
+        // The Prof-Schwenkreis case: a pool of 4 cores, 8 GB, 50 GB.
+        const budget = { limit: { cores: 4, ram: 8, storage: 50 } };
+        expect(defaultsWithin(catalogue, roomIn(budget, catalogue))).toEqual({ cores: 4, ram: 8, storage: 50 });
+    });
+
+    it('keeps the defaults without a bound, and where not even the minimum fits', () => {
+        expect(defaultsWithin(catalogue, null)).toEqual({ cores: 4, ram: 16, storage: 50 });
+        expect(defaultsWithin(catalogue, { cores: 0, ram: 32 })).toEqual({ cores: 4, ram: 16, storage: 50 });
+    });
+});
+
+describe('projectActions', () => {
+    const on = (a) => Object.keys(a).filter(k => a[k]).sort();
+
+    it('offers an owner editing and releasing, but no decisions', () => {
+        expect(on(projectActions({ status: 'approved' }))).toEqual(['change', 'details', 'release']);
+        expect(on(projectActions({ status: 'pending' }))).toEqual(['change', 'details']);
+    });
+
+    it('lets a manager decide what waits and restructure what runs', () => {
+        expect(on(projectActions({ status: 'change_pending' }, { manager: true }))).toEqual(['approve', 'details', 'reject']);
+        expect(on(projectActions({ status: 'approved' }, { manager: true })))
+            .toEqual(['change', 'details', 'move', 'release', 'transfer']);
+    });
+
+    it('offers adopting an imported project unless it is already on its way', () => {
+        expect(projectActions({ status: 'imported' }, { manager: true }).adopt).toBe(true);
+        expect(projectActions({ status: 'imported', flags: ['promote_on_reconcile'] }, { manager: true }).adopt).toBe(false);
     });
 });

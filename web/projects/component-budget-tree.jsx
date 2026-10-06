@@ -28,6 +28,13 @@ import { COLOR, isBudget, isImported, nodeTitle, statusDescription, statusLabel,
 // fetch for them.
 export const MORE_SUFFIX = '::more';
 
+// budgetChildCount is how many budgets sit under this one — what the tree can
+// expand into, now that projects are listed in a table instead. child_count
+// stands in while the API does not split the count yet.
+export function budgetChildCount(node) {
+    return node?.child_budget_count ?? node?.child_count ?? 0;
+}
+
 // budgetsToTreeData converts the loaded pages into Mantine's node shape.
 //
 // hasChildren comes from the server's child_count, NOT from the children loaded
@@ -53,7 +60,7 @@ export function budgetsToTreeData(t, roots, childrenById) {
         return {
             value: node.id,
             label: nodeTitle(node),
-            hasChildren: isBudget(node) && node.child_count > 0,
+            hasChildren: isBudget(node) && budgetChildCount(node) > 0,
             // An EMPTY loaded list must stay undefined: Mantine derives
             // "has children" from `Array.isArray(node.children)`, so handing it
             // `[]` produces an expand control that opens nothing.
@@ -168,6 +175,7 @@ function MoreRow({ more, elementProps, onLoadMore }) {
 // One row: chevron (only where there is something to expand), type icon, title,
 // auto-approve marker and status dot.
 function TreeRow({ payload, selectedId, onSelect, onLoadMore }) {
+    const { t } = useTranslation();
     const { node: treeNode, expanded, hasChildren, isLoading, loadError, elementProps } = payload;
 
     if (treeNode.nodeProps?.more) {
@@ -209,6 +217,13 @@ function TreeRow({ payload, selectedId, onSelect, onLoadMore }) {
             <Text size="sm" truncate style={{ flex: 1 }} fw={isSelected ? 600 : 400}>
                 {nodeTitle(node)}
             </Text>
+            {/* How many projects the budget pays for — listed in the table beside
+                the tree, so the row only counts them. */}
+            {isBudget(node) && node.child_project_count > 0 && (
+                <Tooltip label={t('projects.tree.projectCount', { count: node.child_project_count })}>
+                    <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>{node.child_project_count}</Text>
+                </Tooltip>
+            )}
 
             {/* A failed child fetch stays on the row it belongs to instead of
                 popping an error modal that loses the context. */}

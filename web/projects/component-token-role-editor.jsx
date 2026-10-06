@@ -1,10 +1,15 @@
+import { useState } from 'react';
 import { Badge, Button, Group, Select, Text, Stack } from '@mantine/core';
+import { ListPlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { PrincipalImportModal } from './modal-principal-import.jsx';
+import { tokenDisplay, useTokenLabels } from './token-labels.jsx';
 import { COLOR, formatRoleLabel } from './util-project.jsx';
 import { SearchableItemSelector } from './component-searchable-item-selector.jsx';
 
 export function TokenRoleEditor({
     label,
+    description,
     authorizedUsers,
     onAddToken,
     onRemoveToken,
@@ -21,6 +26,8 @@ export function TokenRoleEditor({
     readOnly = false,
 }) {
     const { t } = useTranslation();
+    const [importing, setImporting] = useState(false);
+    const labels = useTokenLabels((authorizedUsers || []).map(a => a.token));
     const noUsers = emptyMessage ?? t('projects.memberEditor.empty');
     const renderSearchResult = (item, onAdd, buttonLabel) => (
         <Group justify="space-between" key={item}>
@@ -38,8 +45,8 @@ export function TokenRoleEditor({
     const renderItem = (auth, onRemove) => {
         if (!auth) return null;
         return (
-            <Group justify="space-between" key={auth.token} align="center">
-                <Text size="sm">{auth.token}</Text>
+            <Group justify="space-between" key={auth.token} align="center" wrap="nowrap">
+                <Text size="sm">{tokenDisplay(auth.token, labels[auth.token])}</Text>
                 <Group gap="xs">
                     <Text size="xs" c="dimmed">{t('projects.memberEditor.openstackRole')}</Text>
                     <Select
@@ -83,6 +90,7 @@ export function TokenRoleEditor({
     }
 
     return (
+        <>
         <SearchableItemSelector
             label={label}
             selectedItems={authorizedUsers}
@@ -92,7 +100,7 @@ export function TokenRoleEditor({
             isSearching={isSearching}
             onSearch={onSearch}
             placeholder={t('projects.memberEditor.placeholder')}
-            searchDescription={t('projects.memberEditor.searchHint')}
+            searchDescription={description ?? t('projects.memberEditor.searchHint')}
             emptyMessage={noUsers}
             buttonLabel={t('projects.forms.add')}
             renderItem={renderItem}
@@ -100,6 +108,21 @@ export function TokenRoleEditor({
             error={error}
             isActive={isActive}
             onFocus={onFocus}
+            searchAction={
+                <Button variant="default" leftSection={<ListPlus size={16} />} onClick={() => setImporting(true)}>
+                    {t('projects.principalImport.open')}
+                </Button>
+            }
         />
+        {importing && (
+            <PrincipalImportModal
+                existing={(authorizedUsers || []).map(a => a.token)}
+                roles={roles}
+                defaultRole={defaultOpenstackRole}
+                onImport={(entries) => entries.forEach(e => onAddToken(e.token, e.role))}
+                onClose={() => setImporting(false)}
+            />
+        )}
+        </>
     );
 }

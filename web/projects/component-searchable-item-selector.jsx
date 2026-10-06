@@ -1,5 +1,6 @@
 import { Badge, Button, Group, Loader, Paper, Stack, Text, TextInput } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
+import { EditorHeading } from './component-token-list-editor.jsx';
 
 export function SearchableItemSelector({
     label,
@@ -18,20 +19,23 @@ export function SearchableItemSelector({
     error,
     isActive = true,
     onFocus,
+    searchAction = null,
 }) {
     const { t } = useTranslation();
     const addLabel = buttonLabel ?? t('projects.forms.add');
     return (
-        <div>
-            <Text fw={600} mb="xs">{label}</Text>
-            <Stack gap="sm">
-                <TextInput
-                    placeholder={placeholder ?? t('projects.itemSelector.placeholder')}
-                    onChange={(e) => onSearch(e.target.value)}
-                    onFocus={onFocus}
-                    description={searchDescription ?? t('projects.itemSelector.searchHint')}
-                    rightSection={isSearching && <Loader size="xs" />}
-                />
+        <Stack gap="xs">
+            <EditorHeading label={label} description={searchDescription ?? t('projects.itemSelector.searchHint')} />
+                <Group gap="xs" align="flex-end" wrap="nowrap">
+                    <TextInput
+                        style={{ flex: 1 }}
+                        placeholder={placeholder ?? t('projects.itemSelector.placeholder')}
+                        onChange={(e) => onSearch(e.target.value)}
+                        onFocus={onFocus}
+                        rightSection={isSearching && <Loader size="xs" />}
+                    />
+                    {searchAction}
+                </Group>
 
                 {searchResults.length > 0 && isActive && (
                     <Paper p="sm" withBorder style={{ maxHeight: '200px', overflowY: 'auto' }}>
@@ -56,7 +60,7 @@ export function SearchableItemSelector({
                 )}
 
                 {selectedItems.length === 0 ? (
-                    <Text size="xs" c="dimmed" fw={500}>{emptyMessage ?? t('projects.itemSelector.empty')}</Text>
+                    <Text size="xs" c="dimmed">{emptyMessage ?? t('projects.itemSelector.empty')}</Text>
                 ) : renderItem ? (
                     <Stack gap="xs">
                         {selectedItems.map(item => renderItem(item, onRemove))}
@@ -81,7 +85,6 @@ export function SearchableItemSelector({
                     </Group>
                 )}
                 {error && <Text c="red" size="xs">{error}</Text>}
-            </Stack>
-        </div>
+        </Stack>
     );
 }
