@@ -30,6 +30,8 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-i18next": "^17.0.15",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "swagger-ui-dist": "^5.32.8",
     "validator": "^13.15.35",
     "wouter": "^3.10.0"
