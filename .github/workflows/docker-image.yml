@@ -171,15 +171,28 @@ jobs:
           gh release create "v$VERSION" --title "v$VERSION" --notes-file "$NOTES"
 
       # --- ghcr retention (runs after the push, so counts include the new tag) ---
+      # Only where something was pushed: on a pull request there is nothing to
+      # tidy, and before the first push to main the package does not exist, so
+      # every step failed with "Package not found".
       # Keep only the newest pre-release "-test.N" tag
       - uses: dataaxiom/ghcr-cleanup-action@v1
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           use-regex: true
           exclude-tags: '^latest$'
           delete-tags: '^\d+\.\d+\.\d+-test\.\d+$'
           keep-n-tagged: 1
+      # Keep the newest 3 of this fork's "-six7.N" releases
+      - uses: dataaxiom/ghcr-cleanup-action@v1
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          use-regex: true
+          exclude-tags: '^latest$'
+          delete-tags: '^\d+\.\d+\.\d+-six7\.\d+$'
+          keep-n-tagged: 3
       # Keep the newest 3 stable semver tags (X.Y.Z)
       - uses: dataaxiom/ghcr-cleanup-action@v1
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           use-regex: true
           exclude-tags: '^latest$'
@@ -187,11 +200,13 @@ jobs:
           keep-n-tagged: 3
       # Delete all old pre-release "-alpha" tags
       - uses: dataaxiom/ghcr-cleanup-action@v1
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           use-regex: true
           delete-tags: '^.*-alpha$'
       # Clean up untagged / ghost / orphaned leftovers
       - uses: dataaxiom/ghcr-cleanup-action@v1
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           delete-untagged: true
           delete-ghost-images: true
