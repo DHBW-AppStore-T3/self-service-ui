@@ -12,7 +12,8 @@ selfServiceUI:
   hostname: "self-service-ui.example.com"
   replicas: 1
   imagePullPolicy: "Always"
-  image: "ghcr.io/pfisterer/self-service-ui"
+  # The fork's images (private: pulling needs registry credentials).
+  image: "ghcr.io/six7-app-store/self-service-ui"
   # Empty -> the chart\'s appVersion is used (see the deployment template).
   version: ""
   dynamicZonesBaseUrl: https://dyndnsapi.example.com
