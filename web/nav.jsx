@@ -107,11 +107,20 @@ export function useNav() {
                 { label: t(appStoreStaff ? 'appStore.deployments' : 'appStore.myEnvironments'), href: '/app-store/deployments' },
             ],
         },
+        // External: opens the App-Store in its own tab/popup via the SSO
+        // handoff (see header.jsx's openWithSso), not a route in this SPA.
+        appstoreEnabled && {
+            id: 'app-store',
+            label: 'DHBW App-Store',
+            href: appstoreBaseUrl,
+            external: true,
+            items: [],
+        },
     ].filter(Boolean).map(s => ({ ...s, href: s.href ?? s.items[0]?.href ?? '/' }));
 
-    const inSection = (s) => (s.base
+    const inSection = (s) => (!s.external && (s.base
         ? currentPath === s.base || currentPath.startsWith(s.base + '/')
-        : currentPath === '/');
+        : currentPath === '/'));
     const activeSection = sections.find(inSection) ?? null;
 
     // Longest match wins, so /dyndns/zones/example.org still marks "Zone
