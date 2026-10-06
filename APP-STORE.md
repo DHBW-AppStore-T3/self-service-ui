@@ -14,17 +14,16 @@ Der bestehende Vue-App-Store im benachbarten `frontend/` bleibt erhalten.
   und `/deployments/:id` des vorhandenen Frontends. Es wird kein Vue-Code eingebettet.
 - Deutsch/Englisch über die vorhandene Sprachauswahl; Lade-, Leer- und Fehlerzustände.
 
-React rendert die Oberfläche, Mantine liefert die Komponenten. Webpack baut die
-Anwendung und stellt den Entwicklungsserver bereit. `vite.config.js` wurde entfernt.
-Nur die übernommenen Unit-Tests verwenden weiterhin Vitest mit dessen interner
-Vite-Abhängigkeit; diese ist nicht der Build oder Entwicklungsserver der Anwendung.
+React rendert die Oberfläche, Mantine liefert die Komponenten. Gebaut wird wie im
+Upstream mit Vite; der App-Store fügt keine eigene Build-Kette hinzu, damit
+Updates aus `pfisterer/self-service-ui` ohne Konflikte im Build übernommen werden.
 
 ## Lokaler Start unter PowerShell
 
-Node.js 24.15+ (oder eine von den Abhängigkeiten unterstützte neuere Version) und npm:
+Node.js 22.22+ oder 24.15+ und npm:
 
 ```powershell
-cd C:\Users\flock\Desktop\DHBW_APP\self-service-ui
+cd self-service-ui
 npm ci
 $env:DUMMY_AUTH = 'true'
 $env:APP_STORE_UPSTREAM = 'http://localhost:8000'
@@ -34,8 +33,8 @@ npm run dev
 
 Adresse: http://localhost:8084/app-store/apps
 
-Die Variablen werden aus der Prozessumgebung gelesen. Webpack erzeugt `config.js`
-im Speicher; es verändert keine lokale `.env`-Datei. Ohne laufendes Backend zeigt
+Die Variablen kommen aus der Prozessumgebung oder aus `.env`/`.env.local`; Vite
+schreibt daraus beim Start `web/config.js`. Ohne laufendes Backend zeigt
 die Oberfläche eine Fehlermeldung. Es gibt keine automatisch eingesetzten Beispieldaten.
 
 **Der Dummy-Login ist nur eine lokale Vorschau des Portals.** Er authentifiziert
