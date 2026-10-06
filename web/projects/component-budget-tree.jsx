@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ChevronDown, ChevronRight, CloudDownload, Eye, FileText, Folder, Zap } from 'lucide-react';
 import { Box, Group, Loader, Text, Tooltip, Tree, UnstyledButton } from '@mantine/core';
 import { COLOR, isBudget, isImported, nodeTitle, statusDescription, statusLabel, statusStyle } from './util-project.jsx';
@@ -27,6 +28,13 @@ import { COLOR, isBudget, isImported, nodeTitle, statusDescription, statusLabel,
 // fetch for them.
 export const MORE_SUFFIX = '::more';
 
+// budgetChildCount is how many budgets sit under this one — what the tree can
+// expand into, now that projects are listed in a table instead. child_count
+// stands in while the API does not split the count yet.
+export function budgetChildCount(node) {
+    return node?.child_budget_count ?? node?.child_count ?? 0;
+}
+
 // budgetsToTreeData converts the loaded pages into Mantine's node shape.
 //
 // hasChildren comes from the server's child_count, NOT from the children loaded
@@ -35,7 +43,7 @@ export const MORE_SUFFIX = '::more';
 //
 // `childrenById` is a plain object keyed by node id, and that is load-bearing
 // rather than a matter of taste — see childrenById() in the owning view.
-export function budgetsToTreeData(roots, childrenById) {
+export function budgetsToTreeData(t, roots, childrenById) {
     const toData = (node) => {
         const page = childrenById[node.id];
         const loaded = page?.items || [];
@@ -45,14 +53,14 @@ export function budgetsToTreeData(roots, childrenById) {
         if (page && loaded.length < page.total) {
             rows.push({
                 value: node.id + MORE_SUFFIX,
-                label: 'Show more',
+                label: t('projects.actions.showMore'),
                 nodeProps: { more: { parentId: node.id, loaded: loaded.length, total: page.total } },
             });
         }
         return {
             value: node.id,
             label: nodeTitle(node),
-            hasChildren: isBudget(node) && node.child_count > 0,
+            hasChildren: isBudget(node) && budgetChildCount(node) > 0,
             // An EMPTY loaded list must stay undefined: Mantine derives
             // "has children" from `Array.isArray(node.children)`, so handing it
             // `[]` produces an expand control that opens nothing.
@@ -67,11 +75,14 @@ export function budgetsToTreeData(roots, childrenById) {
 // A dot carries no words at all, so the tooltip does double duty here: it names
 // the status and explains it, in that order.
 function StatusDot({ status }) {
+    const { t } = useTranslation();
     if (status === 'approved') return null;
-    const description = statusDescription(status);
+    const description = statusDescription(t, status);
     return (
         <Tooltip
-            label={description ? `${statusLabel(status)} — ${description}` : statusLabel(status)}
+            label={description
+                ? t('projects.tree.statusTooltip', { status: statusLabel(t, status), description })
+                : statusLabel(t, status)}
             multiline={Boolean(description)}
             w={description ? 300 : undefined}
         >
@@ -86,17 +97,18 @@ function StatusDot({ status }) {
 // The markers to the right of a row's title, shared by the tree and the flat
 // result lists: what auto-approves, and what is not plainly active.
 function NodeMarkers({ node }) {
+    const { t } = useTranslation();
     return (
         <>
             {/* Set by the owning view on budgets the user may request from but
                 does not manage — the row is a window, not a workplace. */}
             {node.request_only && (
-                <Tooltip label="You can request from this budget, but you don't manage it — shown read-only.">
+                <Tooltip label={t('projects.tree.requestOnly')}>
                     <Eye size="12" color="var(--mantine-color-gray-6)" style={{ flexShrink: 0 }} />
                 </Tooltip>
             )}
-            {node.auto_approve?.per_requester_limit && (
-                <Tooltip label="Auto-approve: small requests are approved automatically.">
+            {node.auto_approve && (
+                <Tooltip label={t('projects.tree.autoApprove')}>
                     <Zap size="12" color="var(--mantine-color-green-6)" style={{ flexShrink: 0 }} />
                 </Tooltip>
             )}
@@ -129,6 +141,7 @@ function rowStyle(selected) {
 // hidden — a page boundary that says nothing is indistinguishable from the end
 // of the list.
 function MoreRow({ more, elementProps, onLoadMore }) {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
 
     const load = async (event) => {
@@ -151,8 +164,8 @@ function MoreRow({ more, elementProps, onLoadMore }) {
             {loading ? <Loader size="12" /> : <ChevronDown size="14" color="var(--mantine-color-gray-6)" style={{ flexShrink: 0 }} />}
             <UnstyledButton onClick={load} disabled={loading}>
                 <Text size="xs" c={COLOR.info} fw={500}>
-                    {loading ? 'Loading…' : 'Show more'}
-                    <Text span size="xs" c="dimmed" fw={400}> — {more.loaded} of {more.total} loaded</Text>
+                    {loading ? t('projects.actions.loading') : t('projects.actions.showMore')}
+                    <Text span size="xs" c="dimmed" fw={400}>{` (${more.loaded}/${more.total})`}</Text>
                 </Text>
             </UnstyledButton>
         </Group>
@@ -162,6 +175,7 @@ function MoreRow({ more, elementProps, onLoadMore }) {
 // One row: chevron (only where there is something to expand), type icon, title,
 // auto-approve marker and status dot.
 function TreeRow({ payload, selectedId, onSelect, onLoadMore }) {
+    const { t } = useTranslation();
     const { node: treeNode, expanded, hasChildren, isLoading, loadError, elementProps } = payload;
 
     if (treeNode.nodeProps?.more) {
@@ -203,6 +217,13 @@ function TreeRow({ payload, selectedId, onSelect, onLoadMore }) {
             <Text size="sm" truncate style={{ flex: 1 }} fw={isSelected ? 600 : 400}>
                 {nodeTitle(node)}
             </Text>
+            {/* How many projects the budget pays for — listed in the table beside
+                the tree, so the row only counts them. */}
+            {isBudget(node) && node.child_project_count > 0 && (
+                <Tooltip label={t('projects.tree.projectCount', { count: node.child_project_count })}>
+                    <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>{node.child_project_count}</Text>
+                </Tooltip>
+            )}
 
             {/* A failed child fetch stays on the row it belongs to instead of
                 popping an error modal that loses the context. */}
@@ -217,8 +238,9 @@ function TreeRow({ payload, selectedId, onSelect, onLoadMore }) {
 }
 
 export function BudgetTree({ data, tree, selectedId, onSelect, onLoadMore }) {
+    const { t } = useTranslation();
     if (!data || data.length === 0) {
-        return <Text size="sm" c="dimmed" p="xs">No matches.</Text>;
+        return <Text size="sm" c="dimmed" p="xs">{t('projects.budgets.noMatches')}</Text>;
     }
     return (
         <Tree
@@ -239,6 +261,7 @@ export function BudgetTree({ data, tree, selectedId, onSelect, onLoadMore }) {
 // and unfolding a paginated tree down to a handful of matches would be both
 // slow and harder to read. The funding budget is named on each row instead.
 export function NodeResultList({ nodes, selectedId, onSelect, total, onMore, emptyText }) {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
 
     if (!nodes || nodes.length === 0) {
@@ -266,7 +289,7 @@ export function NodeResultList({ nodes, selectedId, onSelect, total, onMore, emp
                         <Box style={{ flex: 1, minWidth: 0 }}>
                             <Text size="sm" truncate fw={isSelected ? 600 : 400}>{nodeTitle(node)}</Text>
                             {node.parent_name && (
-                                <Text size="xs" c="dimmed" truncate>in {node.parent_name}</Text>
+                                <Text size="xs" c="dimmed" truncate>{t('projects.tree.inBudget', { name: node.parent_name })}</Text>
                             )}
                         </Box>
                         <NodeMarkers node={node} />
@@ -278,12 +301,12 @@ export function NodeResultList({ nodes, selectedId, onSelect, total, onMore, emp
                     {onMore ? (
                         <UnstyledButton onClick={loadMore} disabled={loading}>
                             <Text size="xs" c={COLOR.info} fw={500}>
-                                {loading ? 'Loading…' : `Show more`}
-                                <Text span size="xs" c="dimmed" fw={400}> — {nodes.length} of {total}</Text>
+                                {loading ? t('projects.actions.loading') : t('projects.actions.showMore')}
+                                <Text span size="xs" c="dimmed" fw={400}>{` (${nodes.length}/${total})`}</Text>
                             </Text>
                         </UnstyledButton>
                     ) : (
-                        <Text size="xs" c="dimmed">Showing {nodes.length} of {total}</Text>
+                        <Text size="xs" c="dimmed">{`${nodes.length}/${total}`}</Text>
                     )}
                 </Group>
             )}

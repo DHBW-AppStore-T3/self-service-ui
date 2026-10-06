@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Checkbox, Grid, Group, NumberInput, Stack, Switch, Text, TextInput } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import { UNLIMITED_QUOTA, groupResources, isAvailability } from './util-project.jsx';
 
 // Above this many fields the list stops being scannable and gets a filter. The
@@ -26,6 +27,7 @@ const SEARCH_THRESHOLD = 12;
 // node is visibleResources' job, not this component's — the same form is used
 // where there is no node at all.
 export function QuotaInputs({ resources, value, onChange, errors = {}, disabled = false, allowUnlimited = false, headroom = null }) {
+    const { t } = useTranslation();
     const [query, setQuery] = useState('');
 
     const matching = useMemo(() => {
@@ -47,15 +49,15 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
             {searchable && (
                 <TextInput
                     size="xs"
-                    placeholder={`Filter ${resources.length} resources`}
+                    placeholder={t('projects.quotaInputs.filter')}
                     value={query}
                     onChange={e => setQuery(e.currentTarget.value)}
-                    aria-label="Filter resources"
+                    aria-label={t('projects.quotaInputs.filter')}
                 />
             )}
 
             {searchable && matching.length === 0 && (
-                <Text size="xs" c="dimmed">Nothing matches “{query}”.</Text>
+                <Text size="xs" c="dimmed">{t('projects.quotaInputs.noMatches', { query })}</Text>
             )}
 
             {groups.map(([groupName, groupResourcesList]) => (
@@ -67,7 +69,7 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
                         {groupResourcesList.map(r => (
                             <Grid.Col key={r.id} span={{ base: 12, sm: isAvailability(r) ? 6 : 4 }}>
                                 {isAvailability(r)
-                                    ? <AvailabilityField resource={r} value={value?.[r.id]} onChange={onChange} disabled={disabled} />
+                                    ? <AvailabilityField resource={r} value={value?.[r.id]} onChange={onChange} disabled={disabled} error={errors[r.id]} />
                                     : <QuantityField
                                         resource={r}
                                         value={value?.[r.id]}
@@ -89,7 +91,10 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
 // An availability is granted or it is not. A NumberInput would invite a 2, which
 // the API rejects — the control has to make the invalid value unreachable rather
 // than report it afterwards.
-function AvailabilityField({ resource, value, onChange, disabled }) {
+//
+// It shows its error like every other field: a tab marked as faulty with no
+// field saying why leaves nothing to fix.
+function AvailabilityField({ resource, value, onChange, disabled, error }) {
     return (
         <Group gap="xs" align="flex-start" wrap="nowrap">
             <Switch
@@ -98,12 +103,14 @@ function AvailabilityField({ resource, value, onChange, disabled }) {
                 onChange={e => onChange(resource.id, e.currentTarget.checked ? 1 : 0)}
                 label={resource.name}
                 description={resource.message}
+                error={error}
             />
         </Group>
     );
 }
 
 function QuantityField({ resource: r, value: current, onChange, error, disabled, allowUnlimited, free }) {
+    const { t } = useTranslation();
     const isUnlimited = current === UNLIMITED_QUOTA;
     return (
         <Stack gap="4">
@@ -113,16 +120,16 @@ function QuantityField({ resource: r, value: current, onChange, error, disabled,
                 max={r.max}
                 disabled={disabled || isUnlimited}
                 value={isUnlimited ? '' : current}
-                placeholder={isUnlimited ? 'No cap' : undefined}
+                placeholder={isUnlimited ? t('projects.quotaInputs.noCap') : undefined}
                 onChange={v => onChange(r.id, v)}
                 error={error}
-                description={isUnlimited ? 'Children may use any amount' : r.message}
+                description={isUnlimited ? t('projects.quotaInputs.noCapHint') : r.message}
             />
             <HeadroomShare free={free} value={isUnlimited ? UNLIMITED_QUOTA : current} />
             {allowUnlimited && (
                 <Checkbox
                     size="xs"
-                    label="No cap"
+                    label={t('projects.quotaInputs.noCap')}
                     disabled={disabled}
                     checked={isUnlimited}
                     onChange={e => onChange(r.id, e.currentTarget.checked ? UNLIMITED_QUOTA : (r.default ?? 0))}
@@ -138,17 +145,18 @@ function QuantityField({ resource: r, value: current, onChange, error, disabled,
 // says nothing). "No cap" wanting more than a finite free amount is the one
 // combination that must speak up even at value 0.
 function HeadroomShare({ free, value }) {
+    const { t } = useTranslation();
     if (free === undefined || free === null || !Number.isFinite(free)) return null;
     const v = value === UNLIMITED_QUOTA ? Infinity : (typeof value === 'number' ? value : 0);
     if (v > free) {
         return (
             <Text size="xs" c="red.8">
-                Exceeds the {free} still free in that budget — a manager would have to raise it first.
+                {t('projects.quotaInputs.exceedsFree', { free })}
             </Text>
         );
     }
     const share = free > 0 ? Math.round((v / free) * 100) : 0;
-    return <Text size="xs" c="dimmed">{free} free in that budget · this takes {share}%</Text>;
+    return <Text size="xs" c="dimmed">{t('projects.quotaInputs.freeShare', { free, share })}</Text>;
 }
 
 // Returns the default quota map for a set of resource definitions.
@@ -163,19 +171,26 @@ export function defaultQuota(resources) {
 // Availabilities are checked against 0/1 instead of min/max: their definitions
 // carry no bounds, so the generic range check would read min=0, max=0 and call
 // every granted availability invalid.
-export function validateQuota(resources, quota, { allowUnlimited = false } = {}) {
+// Takes `t` as its first argument: a validator runs outside a component (inside
+// useForm), so it cannot reach for the hook and is handed the translator like
+// every other plain function here.
+export function validateQuota(t, resources, quota, { allowUnlimited = false } = {}) {
     const errors = {};
     (resources || []).forEach(r => {
         const v = quota?.[r.id];
         if (isAvailability(r)) {
-            if (v !== 0 && v !== 1) {
-                errors[r.id] = 'Must be granted or not granted';
+            // Absent is "not granted": a stored limit only carries the
+            // availabilities that were set, and one added to the catalogue
+            // later is missing from every older budget. Treating that as
+            // invalid blocked saving an untouched field.
+            if (v !== undefined && v !== null && v !== 0 && v !== 1) {
+                errors[r.id] = t('projects.quotaInputs.grantedOrNot');
             }
             return;
         }
         if (allowUnlimited && v === UNLIMITED_QUOTA) return;
         if (v === null || v === undefined || v === '' || v < (allowUnlimited ? 0 : r.min) || v > r.max) {
-            errors[r.id] = r.message || `Enter a value between ${r.min} and ${r.max}`;
+            errors[r.id] = r.message || t('projects.quotaInputs.range', { min: r.min, max: r.max });
         }
     });
     return errors;

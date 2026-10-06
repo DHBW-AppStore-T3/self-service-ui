@@ -1,8 +1,10 @@
 import { useLocation } from 'wouter';
-import { apiTokensEnabled, appstoreBaseUrl, appstoreEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
-import { TOKEN_SCOPES, tokenScopePath } from '/tokens/scopes.js';
+import { useTranslation } from 'react-i18next';
+import { appStoreEnabled, apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
+import { TOKEN_SCOPES, tokenScopeLabel, tokenScopePath } from '/tokens/scopes.js';
 import { useCloudStatus } from '/projects/cloud-status.jsx';
 import { useDnsPolicyStatus } from '/dyndns/use-policy.jsx';
+import { useRole } from '/app-store/queries.jsx';
 
 // The whole navigation as data, in one place: the header renders it two ways
 // (two bars on a wide screen, one vertical list in the burger) and the shell
@@ -19,10 +21,17 @@ export const HEADER_HEIGHT = 60;
 export const SUBNAV_HEIGHT = 40;
 
 // Below this the navigation goes into the burger. Deliberately not Mantine's
-// `sm` (768px): the widest case — three categories plus a signed-in user with a
-// long address — needs about 900px before the row starts wrapping, and a
-// wrapped header looks broken long before it becomes unusable.
-export const NAV_BREAKPOINT = 'md';
+// `sm` (768px): three categories plus a signed-in user with a long address need
+// about 900px before the row starts wrapping, and a wrapped header looks broken
+// long before it becomes unusable.
+//
+// Only when all four optional sections are on is the row too wide for `md`.
+// The sections are fixed by config.js, so this is decided once at load — and
+// the usual deployments, which run one or two of them, keep the full header
+// down to `md` instead of losing it to the burger for everyone.
+const OPTIONAL_SECTIONS = [cloudProjectsEnabled, dnsZonesEnabled, apiTokensEnabled, appStoreEnabled]
+    .filter(Boolean).length;
+export const NAV_BREAKPOINT = OPTIONAL_SECTIONS > 3 ? 'lg' : 'md';
 
 // useNav returns the sections the current user may see, plus which section and
 // item the current URL is in. Availability is decided here so no caller has to
@@ -32,42 +41,44 @@ export const NAV_BREAKPOINT = 'md';
 // menu offers, not what exists.
 export function useNav() {
     const [currentPath] = useLocation();
+    const { t } = useTranslation();
     const { isRoot, pending, hasBudgets } = useCloudStatus();
     const { hasPolicy } = useDnsPolicyStatus();
+    const { staff: appStoreStaff } = useRole();
 
 
 
     const sections = [
-        { id: 'home', label: 'Home', href: '/', items: [] },
+        { id: 'home', label: t('nav.home'), href: '/', items: [] },
         cloudProjectsEnabled && {
             id: 'projects',
-            label: 'Cloud Projects',
+            label: t('nav.cloudProjects'),
             base: '/projects',
             // A dot, not a count: the budget view can widen its scope, so a
             // number up here would disagree with the number down there.
             dot: pending > 0,
             items: [
-                { label: 'My Projects', href: '/projects/projects' },
+                { label: t('nav.myProjects'), href: '/projects/projects' },
                 // Only for someone who manages a budget or may request one —
                 // for everybody else the page is a single "nothing here" box.
-                hasBudgets && { label: 'My Budgets', href: '/projects/budgets', dot: pending > 0 },
-                isRoot && { label: 'Root Admin', href: '/projects/admin-sync' },
-                { label: 'API Documentation', href: '/projects/api-doc' },
+                hasBudgets && { label: t('nav.myBudgets'), href: '/projects/budgets', dot: pending > 0 },
+                isRoot && { label: t('nav.rootAdmin'), href: '/projects/admin-sync' },
+                { label: t('nav.apiDocumentation'), href: '/projects/api-doc' },
             ].filter(Boolean),
         },
         dnsZonesEnabled && {
             id: 'dyndns',
-            label: 'DNS Zones',
+            label: t('nav.dnsZones'),
             base: '/dyndns',
             items: [
-                { label: 'Zone Management', href: '/dyndns/zones' },
+                { label: t('nav.zoneManagement'), href: '/dyndns/zones' },
                 // Read-only for most users, and worth reading only if a rule
                 // actually applies to them; empty for a student. Named for
                 // what the page became: policy rules are one tab among the
                 // administrative ones (delegations, orphaned zones, zone
                 // events). Old /policy links redirect (see dyndns-routes).
-                hasPolicy && { label: 'Administration', href: '/dyndns/administration' },
-                { label: 'API Documentation', href: '/dyndns/api-doc' },
+                hasPolicy && { label: t('nav.administration'), href: '/dyndns/administration' },
+                { label: t('nav.apiDocumentation'), href: '/dyndns/api-doc' },
             ].filter(Boolean),
         },
         // Last, and a category of its own with nothing under it: tokens belong
@@ -77,13 +88,24 @@ export function useNav() {
         // that was the only API that had them.
         apiTokensEnabled && {
             id: 'tokens',
-            label: 'API Tokens',
+            label: t('nav.apiTokens'),
             base: '/tokens',
             // A tab per issuing API, from the same list the page routes on. The
             // two are not one credential — different prefixes, different
             // databases — and a tab bar says that more plainly than two boxes
             // stacked on one page did.
-            items: TOKEN_SCOPES.map(s => ({ label: s.label, href: tokenScopePath(s) })),
+            items: TOKEN_SCOPES.map(s => ({ label: tokenScopeLabel(s, t), href: tokenScopePath(s) })),
+        },
+        appStoreEnabled && {
+            id: 'app-store',
+            label: t('nav.appStore'),
+            base: '/app-store',
+            items: [
+                { label: t('appStore.catalog'), href: '/app-store/apps' },
+                // The same list either way; a student only ever sees the
+                // environments a teacher gave them access to.
+                { label: t(appStoreStaff ? 'appStore.deployments' : 'appStore.myEnvironments'), href: '/app-store/deployments' },
+            ],
         },
         // External: opens the App-Store in its own tab/popup via the SSO
         // handoff (see header.jsx's openWithSso), not a route in this SPA.

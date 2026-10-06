@@ -12,7 +12,7 @@ import globals from 'globals';
 // this codebase (automatic JSX runtime, no prop-types).
 export default [
     {
-        ignores: ['dist/**', 'docs/**', 'node_modules/**', 'web/config.js'],
+        ignores: ['dist/**', 'docs/**', 'node_modules/**', 'web/config.js', 'test-results/**', 'playwright-report/**'],
     },
 
     // Browser code.

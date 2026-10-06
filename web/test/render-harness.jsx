@@ -1,6 +1,9 @@
 import { render } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import './jsdom-stubs.js';
+// Initialises i18next once for every test: a component calling t() without it
+// renders bare keys, which would pass a smoke test and fail in the browser.
+import '/i18n/index.js';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '/providers/auth.jsx';
 import { ConfirmProvider } from '/providers/confirm.jsx';
@@ -42,12 +45,13 @@ const CONFIG = {
     dummyDevUsers: [],
 };
 
-export function renderView(ui, { config = CONFIG, user = USER } = {}) {
+// `auth` adds fields to the auth context, e.g. { useDummyAuth: true }.
+export function renderView(ui, { config = CONFIG, user = USER, auth = {} } = {}) {
     const client = testQueryClient();
     const result = render(
         <MantineProvider>
             <QueryClientProvider client={client}>
-                <AuthContext.Provider value={{ user, loading: false }}>
+                <AuthContext.Provider value={{ user, loading: false, ...auth }}>
                     <ErrorModalProvider>
                         <ConfirmProvider>
                             <ProjectConfigContext.Provider value={config}>
@@ -66,9 +70,12 @@ export function renderView(ui, { config = CONFIG, user = USER } = {}) {
 // children, a branch below it, and a leaf carrying the dates and the measured
 // usage that the cards format.
 export function fixtureTree() {
-    const budget = (id, parentId, name, childCount) => ({
+    // The API counts budgets and projects separately: the tree expands into
+    // the first, the project table lists the second.
+    const budget = (id, parentId, name, budgets, projects = 0) => ({
         id, parent_id: parentId, kind: 'budget', status: 'approved', name,
-        child_count: childCount, limit: { cores: 32, ram: 128 },
+        child_count: budgets + projects, child_budget_count: budgets, child_project_count: projects,
+        limit: { cores: 32, ram: 128 },
         admin_scope: ['user:dennis.pfisterer@dhbw.de'],
         usage: { approved: { limit: { cores: 8, ram: 16 }, node_ids: [] } },
         created_at: '2026-08-01T10:00:00Z',
@@ -103,7 +110,7 @@ export function fixtureTree() {
     return {
         roots: [budget('b_root', null, 'Organization Root', 1)],
         children: {
-            b_root: { items: [budget('b_ma', 'b_root', 'Mannheim', 2)], total: 2 },
+            b_root: { items: [budget('b_ma', 'b_root', 'Mannheim', 0, 2)], total: 1 },
             b_ma: { items: [project('p_1', 'b_ma', 'Mein Projekt'), changing], total: 2 },
         },
     };
@@ -151,7 +158,12 @@ export function fakeNodesApi(tree = fixtureTree()) {
     return {
         getConfig: async () => CONFIG,
         getNode: async (id) => byId[id] ?? null,
-        listChildren: async (id) => tree.children[id] ?? { items: [], total: 0 },
+        // Honours the kind filter the way the API does: the tree asks for
+        // budgets, the project table for projects.
+        listChildren: async (id, { kind } = {}) => {
+            const items = (tree.children[id]?.items ?? []).filter(n => !kind || n.kind === kind);
+            return { items, total: items.length };
+        },
         searchNodes: async () => page([]),
         listMine: async () => page(all.filter(n => n.kind === 'project')),
         listMyBudgets: async () => page(tree.roots),

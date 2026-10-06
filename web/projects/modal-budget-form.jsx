@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { Info } from 'lucide-react';
-import { Alert, Box, Checkbox, Fieldset, Select, Stack, Text, Textarea, TextInput } from '@mantine/core';
+import { Alert, Box, Checkbox, Fieldset, Select, Stack, Switch, Text, Textarea, TextInput } from '@mantine/core';
+import { Trans, useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { useApiMutation } from '/helper/query-state.jsx';
 import { useForm } from '@mantine/form';
-import { TerminationDatePicker } from './component-common.jsx';
+import { MaxTermInput, TerminationDatePicker } from './component-common.jsx';
+import { formatDate } from '../format-date.js';
 import { FormModal, FormTabs } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenListEditor } from './component-token-list-editor.jsx';
-import { COLOR, formatError, freeAmount, isAvailability, UNLIMITED_QUOTA, visibleResources } from './util-project.jsx';
+import { COLOR, formatError, freeAmount, isAvailability, isPoolAutoApprove, UNLIMITED_QUOTA, visibleResources } from './util-project.jsx';
 
 // Same three-step split as the project dialog: what it is → how much → who.
 const TAB_DETAILS = 'details';
@@ -29,18 +31,37 @@ const TAB_AUTO_APPROVE = 'auto-approve';
 //                   raising the budget's own cap needs a parent-chain manager
 //                   while policy fields only need a manager of the budget.
 export function BudgetFormModal({ opened, onClose, onDone, resources, mode, parent = null, node = null, eligibleBudgets = [], currentUserEmail = '' }) {
+    const { t } = useTranslation();
     const api = useNodesApi();
     const isEdit = mode === 'edit';
     const isRequest = mode === 'request';
 
     // A budget can only hold what the budget above it holds, so the parent is
-    // what decides which resources this form may offer at all.
+    // what decides which resources this form may offer at all. When requesting,
+    // that is the budget picked under "Request from" — the dialog opened from
+    // the page header has no parent in hand, and falling back to the whole
+    // catalogue offered availabilities the chosen budget does not carry.
     //
     // Editing without a parent in hand falls back to the node's own scope. That
     // is narrower than the truth — it shows what the budget HAS rather than what
     // it could be given — but the alternative is offering the whole catalogue
     // and letting the server refuse, which teaches the user nothing.
-    const offered = visibleResources(resources, parent || node);
+    const scopeFor = (parentId) => isRequest
+        ? (eligibleBudgets.find(b => b.id === parentId) || null)
+        : (parent || node);
+
+    // The budget this one draws from, when it is in hand: its end is the latest
+    // this one may run. Editing opened without the parent leaves the check to
+    // the server.
+    const boundFor = (parentId) => isRequest
+        ? (eligibleBudgets.find(b => b.id === parentId) || null)
+        : parent;
+    const endOf = (parentId) => {
+        const end = boundFor(parentId)?.termination_date;
+        return end ? new Date(end) : null;
+    };
+    // Its maximum project term likewise: this one may only be shorter.
+    const termOf = (parentId) => boundFor(parentId)?.max_project_term_days ?? null;
 
     const [activeTab, setActiveTab] = useState(TAB_DETAILS);
 
@@ -57,9 +78,13 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 adminScope: node.admin_scope || [],
                 eligibleRequesters: node.eligible_requesters || [],
                 allowSubBudgetRequests: node.allow_sub_budget_requests !== false,
+                allowRequestsBeyond: node.allow_requests_beyond_auto_approve !== false,
+                autoApproveExtensions: node.auto_approve_extensions !== false,
                 autoApproveEnabled: !!node.auto_approve,
+                autoApproveIndividual: !!node.auto_approve && !isPoolAutoApprove(node),
                 autoApproveQuota: { ...(node.auto_approve?.per_requester_limit || defaultQuota(resources)) },
                 terminationDate: node.termination_date ? new Date(node.termination_date) : null,
+                maxTermDays: node.max_project_term_days ?? null,
             }
             : {
                 parentId: parent?.id ?? eligibleBudgets[0]?.id ?? null,
@@ -78,40 +103,56 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 // requesters. Existing budgets are untouched — the API still treats an
                 // unset flag as "allowed".
                 allowSubBudgetRequests: false,
+                // As before the switch existed: beyond auto-approve, a manager decides.
+                allowRequestsBeyond: true,
+                autoApproveExtensions: true,
                 autoApproveEnabled: false,
+                // A pool unless said otherwise: the budget's own cap already
+                // bounds it, and a per-person limit only matters once several
+                // people share it.
+                autoApproveIndividual: false,
                 autoApproveQuota: defaultQuota(resources),
-                terminationDate: null,
+                // A budget under one that ends ends with it, unless told sooner.
+                terminationDate: endOf(parent?.id ?? eligibleBudgets[0]?.id ?? null),
+                // Under a budget that limits its projects, so does this one.
+                maxTermDays: termOf(parent?.id ?? eligibleBudgets[0]?.id ?? null),
             },
         validate: (values) => ({
             name: (values.name || '').trim().length < 3
-                ? 'Please give the budget a name (at least 3 characters)' : null,
+                ? t('projects.budgetForm.nameRequired') : null,
             reason: (!isEdit && (values.reason || '').trim().length < 5)
-                ? 'Please describe what this budget is for (at least 5 characters)' : null,
+                ? t('projects.budgetForm.purposeRequired') : null,
             parentId: (isRequest && !values.parentId)
-                ? 'Please choose the budget to request from' : null,
+                ? t('projects.budgetForm.requestFromRequired') : null,
+            terminationDate: (() => {
+                const bound = endOf(values.parentId);
+                if (!bound) return null;
+                if (!values.terminationDate) return t('projects.budgetForm.endDateNeeded', { date: formatDate(bound) });
+                return values.terminationDate > bound
+                    ? t('projects.budgetForm.endDateAfterParent', { date: formatDate(bound) }) : null;
+            })(),
             adminScope: !values.adminScope.length
-                ? 'Name at least one person or group — a budget nobody manages appears in nobody\'s "My Budgets", and requests under it land with the budget above instead'
+                ? t('projects.budgetForm.adminScopeRequired')
                 : null,
             ...Object.fromEntries(
-                Object.entries(validateQuota(visibleResources(resources, parent || node), values.quota, { allowUnlimited: true }))
+                Object.entries(validateQuota(t, visibleResources(resources, scopeFor(values.parentId)), values.quota, { allowUnlimited: true }))
                     .map(([id, msg]) => [`quota.${id}`, msg])),
-            ...(values.autoApproveEnabled
+            ...(values.autoApproveEnabled && values.autoApproveIndividual
                 ? Object.fromEntries(
-                    Object.entries(validateQuota(visibleResources(resources, parent || node), values.autoApproveQuota))
+                    Object.entries(validateQuota(t, visibleResources(resources, scopeFor(values.parentId)), values.autoApproveQuota))
                         .map(([id, msg]) => [`autoApproveQuota.${id}`, msg]))
                 : {}),
         }),
     });
 
-    const { quota, adminScope, eligibleRequesters, autoApproveEnabled, autoApproveQuota } = form.values;
+    const { quota, adminScope, eligibleRequesters, autoApproveEnabled, autoApproveIndividual, autoApproveQuota, allowRequestsBeyond, autoApproveExtensions } = form.values;
+    const offered = visibleResources(resources, scopeFor(form.values.parentId));
 
     // The budget the new one would draw from: the picked one when requesting,
     // the parent when a manager carves out a sub-budget directly. Editing shows
     // no shares — the node's own cap already counts against the parent there,
     // so "free" would undercount what a manager may set.
-    const sourceBudget = isRequest
-        ? (eligibleBudgets.find(b => b.id === form.values.parentId) || null)
-        : (isEdit ? null : parent);
+    const sourceBudget = isEdit ? null : scopeFor(form.values.parentId);
     const headroom = sourceBudget
         ? Object.fromEntries(offered.filter(r => !isAvailability(r))
             .map(r => [r.id, freeAmount(sourceBudget, r.id)]))
@@ -131,9 +172,16 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
             .join(' · ')
         : '';
 
+    // The auto-approve policy as the API takes it: none, a pool (no per-person
+    // limit — the budget's own room is the bound), or individual limits.
+    const autoApprovePolicy = (values) => {
+        if (!values.autoApproveEnabled) return null;
+        return values.autoApproveIndividual ? { per_requester_limit: values.autoApproveQuota } : {};
+    };
+
     // Which tab to flag: a field the user cannot see must not fail silently.
     const errorsInTab = (tab, errs) => {
-        if (tab === TAB_DETAILS) return ['name', 'reason', 'parentId'].some(k => errs[k]);
+        if (tab === TAB_DETAILS) return ['name', 'reason', 'parentId', 'terminationDate'].some(k => errs[k]);
         if (tab === TAB_RESOURCES) return (resources || []).some(r => errs[`quota.${r.id}`]);
         if (tab === TAB_ACCESS) return !!errs.adminScope;
         if (tab === TAB_AUTO_APPROVE) return Object.keys(errs).some(k => k.startsWith('autoApproveQuota.'));
@@ -141,10 +189,15 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     };
     const tabHasError = (tab) => errorsInTab(tab, form.errors);
 
+    // Ending earlier — or at all, where the budget had no end — carries down to
+    // whatever below it runs longer, so say so before it happens.
+    const shortensSubtree = isEdit && node?.child_count > 0 && !!form.values.terminationDate
+        && (!node.termination_date || form.values.terminationDate < new Date(node.termination_date));
+
     const buildEditBody = (values) => {
         const {
             name, quota, adminScope, eligibleRequesters,
-            allowSubBudgetRequests, autoApproveEnabled, autoApproveQuota, terminationDate,
+            allowSubBudgetRequests, terminationDate,
         } = values;
         // Diff against the current node: only send what changed (see note above).
         const body = {};
@@ -156,10 +209,21 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         if (allowSubBudgetRequests !== (node.allow_sub_budget_requests !== false)) {
             body.allow_sub_budget_requests = allowSubBudgetRequests;
         }
-        if (autoApproveEnabled) {
+        if (values.allowRequestsBeyond !== (node.allow_requests_beyond_auto_approve !== false)) {
+            body.allow_requests_beyond_auto_approve = values.allowRequestsBeyond;
+        }
+        if (values.autoApproveExtensions !== (node.auto_approve_extensions !== false)) {
+            body.auto_approve_extensions = values.autoApproveExtensions;
+        }
+        if (values.maxTermDays !== (node.max_project_term_days ?? null)) {
+            if (values.maxTermDays) body.max_project_term_days = values.maxTermDays;
+            else body.clear_max_project_term_days = true;
+        }
+        const policy = autoApprovePolicy(values);
+        if (policy) {
             const prev = JSON.stringify(node.auto_approve?.per_requester_limit || {});
-            if (!node.auto_approve || prev !== JSON.stringify(autoApproveQuota)) {
-                body.auto_approve = { per_requester_limit: autoApproveQuota };
+            if (!node.auto_approve || prev !== JSON.stringify(policy.per_requester_limit || {})) {
+                body.auto_approve = policy;
             }
         } else if (node.auto_approve) {
             body.clear_auto_approve = true;
@@ -190,7 +254,10 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 admin_scope: values.adminScope,
                 eligible_requesters: values.eligibleRequesters,
                 allow_sub_budget_requests: values.allowSubBudgetRequests,
-                auto_approve: values.autoApproveEnabled ? { per_requester_limit: values.autoApproveQuota } : null,
+                allow_requests_beyond_auto_approve: values.allowRequestsBeyond,
+                auto_approve_extensions: values.autoApproveExtensions,
+                auto_approve: autoApprovePolicy(values),
+                max_project_term_days: values.maxTermDays,
                 termination_date: values.terminationDate ? values.terminationDate.toISOString() : null,
             });
         },
@@ -210,39 +277,51 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         if (bad) setActiveTab(bad);
     };
 
-    const title = isEdit ? `Edit budget: ${node?.name || node?.id}`
-        : isRequest ? 'Request a budget'
-            : `New sub-budget under “${parent?.name || parent?.id}”`;
+    const title = isEdit ? t('projects.budgetForm.titleEdit', { name: node?.name || node?.id })
+        : isRequest ? t('projects.budgetForm.titleRequest')
+            : t('projects.budgetForm.titleNew', { name: parent?.name || parent?.id });
 
     const detailsTab = (
         <Stack>
             {isRequest && (
                 <Select
-                    label="Request from"
-                    description="The budget that will provide the resources — its managers approve your request."
+                    label={t('projects.budgetForm.requestFrom')}
+                    description={t('projects.budgetForm.requestFromHint')}
                     required
                     searchable
                     data={eligibleBudgets.map(b => ({ value: b.id, label: b.name || b.id }))}
                     {...form.getInputProps('parentId')}
+                    onChange={(id) => {
+                        form.setFieldValue('parentId', id);
+                        form.clearFieldError('parentId');
+                        // Another budget may end sooner: pull the date in with it.
+                        const bound = endOf(id);
+                        const date = form.values.terminationDate;
+                        if (bound && (!date || date > bound)) form.setFieldValue('terminationDate', bound);
+                        // And it may limit its projects more tightly.
+                        const term = termOf(id);
+                        const days = form.values.maxTermDays;
+                        if (term && (!days || days > term)) form.setFieldValue('maxTermDays', term);
+                    }}
                 />
             )}
             {isRequest && freeSummary && (
                 <Text size="xs" c="dimmed" mt={-8}>
-                    Still free there: {freeSummary}
+                    {t('projects.budgetForm.stillFree', { summary: freeSummary })}
                 </Text>
             )}
 
             <TextInput
-                label="Name"
-                description="A short, recognizable name, e.g. “CS Department” or “AI Lab WS26”."
+                label={t('projects.budgetForm.name')}
+                description={t('projects.budgetForm.nameHint')}
                 required
                 {...form.getInputProps('name')}
             />
 
             {!isEdit && (
                 <Textarea
-                    label="Purpose"
-                    description="What is this budget for?"
+                    label={t('projects.budgetForm.purpose')}
+                    description={t('projects.budgetForm.purposeHint')}
                     required
                     rows={2}
                     {...form.getInputProps('reason')}
@@ -250,18 +329,32 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
             )}
 
             <TerminationDatePicker
-                label="Valid until"
+                label={t('projects.fact.validUntil')}
                 optional
+                maxDate={endOf(form.values.parentId)}
                 {...form.getInputProps('terminationDate')}
+            />
+            {shortensSubtree && (
+                <Alert variant="light" color={COLOR.attention} icon={<Info size="16" />} p="xs">
+                    <Text size="xs">
+                        {t('projects.budgetForm.shortensSubtree', { date: formatDate(form.values.terminationDate) })}
+                    </Text>
+                </Alert>
+            )}
+
+            <MaxTermInput
+                value={form.values.maxTermDays}
+                bound={termOf(form.values.parentId)}
+                onChange={(d) => form.setFieldValue('maxTermDays', d)}
             />
         </Stack>
     );
 
     const resourcesTab = (
         <div>
-            <Text fw={600} size="sm">Resource cap</Text>
+            <Text fw={600} size="sm">{t('projects.budgetForm.resourceCap')}</Text>
             <Text size="xs" c="dimmed" mb="xs">
-                The maximum everything under this budget may use in total.
+                {t('projects.budgetForm.resourceCapHint')}
             </Text>
             <QuotaInputs
                 resources={offered}
@@ -286,31 +379,31 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         <Stack>
             {/* The group legend IS the field label — printing "Managed by" again
                 inside a box called "Management" says the same thing twice. */}
-            <Fieldset legend="Managed by">
+            <Fieldset legend={t('projects.fact.managedBy')}>
                 <TokenListEditor
-                    description="These people or groups approve requests under this budget and can delegate further. This is how you hand resources to someone."
+                    description={t('projects.budgetForm.managedByHint')}
                     tokens={adminScope}
                     onChange={(t) => { form.setFieldValue('adminScope', t); form.clearFieldError('adminScope'); }}
                     error={form.errors.adminScope}
                 />
             </Fieldset>
 
-            <Fieldset legend="Who can request here">
+            <Fieldset legend={t('projects.forms.whoCanRequest')}>
                 <Stack>
                     {/* The description deliberately says "project requests" only:
                         whether budgets may be requested too is the checkbox at the
                         end of this group, which would otherwise contradict it. */}
                     <TokenListEditor
-                        description="These people or groups may submit project requests under this budget. Leave empty to disable requests."
+                        description={t('projects.budgetForm.requestersHint')}
                         tokens={eligibleRequesters}
                         onChange={(t) => form.setFieldValue('eligibleRequesters', t)}
                     />
 
                     <Checkbox
-                        label="Also allow budget requests in addition to projects"
+                        label={t('projects.budgetForm.allowBudgetRequests')}
                         description={hasRequesters
-                            ? 'A requester can then ask for a budget of their own here and delegate further. Turn this off for a course budget that should only ever hold projects — managers can always create sub-budgets directly.'
-                            : 'Only relevant once somebody may request here.'}
+                            ? t('projects.budgetForm.allowBudgetRequestsHint')
+                            : t('projects.budgetForm.allowBudgetRequestsInactive')}
                         disabled={!hasRequesters}
                         {...form.getInputProps('allowSubBudgetRequests', { type: 'checkbox' })}
                         style={fadedWithoutRequesters}
@@ -329,23 +422,21 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         <Stack>
             {!hasRequesters && (
                 <Alert color={COLOR.info} variant="light" icon={<Info size="18" />}>
-                    Nobody may request from this budget yet, so there is nothing to approve
-                    automatically. Add people or groups under <b>Access → “Who can request here”</b>
-                    {' '}first; this tab becomes editable as soon as somebody is listed.
+                    <Trans i18nKey="projects.budgetForm.autoApproveNoRequesters" components={{ 1: <b /> }} />
                 </Alert>
             )}
 
-            <Stack gap="xs">
-                <Checkbox
-                    label="Approve small requests automatically"
-                    description="Requests are granted instantly without a manager, as long as the person stays under the per-person limit and the budget has capacity."
+            <Stack gap="md">
+                <Switch
+                    label={t('projects.budgetForm.autoApprove')}
+                    description={t('projects.budgetForm.autoApproveHint')}
                     disabled={!hasRequesters}
                     {...form.getInputProps('autoApproveEnabled', { type: 'checkbox' })}
                     style={fadedWithoutRequesters}
                 />
-                {/* Indented under the checkbox, and shown disabled rather than
-                    hidden while auto-approve is off: the per-person limit is what
-                    the checkbox actually does, so it must read as belonging to it. */}
+                {/* Indented under the main switch, and shown disabled rather than
+                    hidden while auto-approve is off: it refines what that switch
+                    does, so it must read as belonging to it. */}
                 <Box
                     pl="xl"
                     ml="xs"
@@ -358,20 +449,50 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                         transition: 'opacity 150ms ease',
                     }}
                 >
-                    <Text size="xs" c="dimmed" mb="xs">
-                        Per-person limit — how much one requester may take without approval.
-                    </Text>
-                    <QuotaInputs
-                        resources={offered}
-                        value={autoApproveQuota}
-                        disabled={!autoApproveEnabled || !hasRequesters}
-                        errors={Object.fromEntries(offered.map(r => [r.id, form.errors[`autoApproveQuota.${r.id}`]]))}
-                        onChange={(id, v) => {
-                            form.setFieldValue(`autoApproveQuota.${id}`, v);
-                            form.clearFieldError(`autoApproveQuota.${id}`);
-                        }}
-                    />
+                    <Stack gap="sm">
+                        {/* What happens to everything the policy does not
+                            cover: a manager decides, or it is refused. */}
+                        <Switch
+                            label={t('projects.budgetForm.allowBeyond')}
+                            description={allowRequestsBeyond
+                                ? t('projects.budgetForm.allowBeyondOn')
+                                : t('projects.budgetForm.allowBeyondOff')}
+                            disabled={!autoApproveEnabled || !hasRequesters}
+                            {...form.getInputProps('allowRequestsBeyond', { type: 'checkbox' })}
+                        />
+                        <Switch
+                            label={t('projects.budgetForm.autoApproveExtensions')}
+                            description={autoApproveExtensions
+                                ? t('projects.budgetForm.autoApproveExtensionsOn')
+                                : t('projects.budgetForm.autoApproveExtensionsOff')}
+                            disabled={!autoApproveEnabled || !hasRequesters}
+                            {...form.getInputProps('autoApproveExtensions', { type: 'checkbox' })}
+                        />
+                        <Switch
+                            label={t('projects.budgetForm.individual')}
+                            description={autoApproveIndividual
+                                ? t('projects.budgetForm.individualOn')
+                                : t('projects.budgetForm.individualOff')}
+                            disabled={!autoApproveEnabled || !hasRequesters}
+                            {...form.getInputProps('autoApproveIndividual', { type: 'checkbox' })}
+                        />
+                        {autoApproveIndividual && (
+                            <QuotaInputs
+                                resources={offered}
+                                value={autoApproveQuota}
+                                disabled={!autoApproveEnabled || !hasRequesters}
+                                errors={Object.fromEntries(offered.map(r => [r.id, form.errors[`autoApproveQuota.${r.id}`]]))}
+                                onChange={(id, v) => {
+                                    form.setFieldValue(`autoApproveQuota.${id}`, v);
+                                    form.clearFieldError(`autoApproveQuota.${id}`);
+                                }}
+                            />
+                        )}
+                    </Stack>
                 </Box>
+                <Text size="xs" c="dimmed">
+                    {t('projects.budgetForm.neverNeedApproval')}
+                </Text>
             </Stack>
         </Stack>
     );
@@ -384,16 +505,18 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
             onSubmit={form.onSubmit(values => save.mutate(values), handleInvalid)}
             submitting={save.isPending}
             submitError={save.error && formatError(save.error)}
-            submitLabel={isEdit ? 'Save changes' : isRequest ? 'Submit request' : 'Create budget'}
+            submitLabel={isEdit ? t('projects.forms.saveChanges')
+                : isRequest ? t('projects.forms.submitRequest')
+                    : t('projects.budgetForm.submitCreate')}
         >
             <FormTabs
                 value={activeTab}
                 onChange={setActiveTab}
                 tabs={[
-                    { value: TAB_DETAILS, label: 'Details', hasError: tabHasError(TAB_DETAILS), content: detailsTab },
-                    { value: TAB_RESOURCES, label: 'Resources', hasError: tabHasError(TAB_RESOURCES), content: resourcesTab },
-                    { value: TAB_ACCESS, label: 'Access', hasError: tabHasError(TAB_ACCESS), content: accessTab },
-                    { value: TAB_AUTO_APPROVE, label: 'Auto-approve', hasError: tabHasError(TAB_AUTO_APPROVE), content: autoApproveTab },
+                    { value: TAB_DETAILS, label: t('projects.actions.details'), hasError: tabHasError(TAB_DETAILS), content: detailsTab },
+                    { value: TAB_RESOURCES, label: t('projects.fact.resources'), hasError: tabHasError(TAB_RESOURCES), content: resourcesTab },
+                    { value: TAB_ACCESS, label: t('projects.budgetForm.tabAccess'), hasError: tabHasError(TAB_ACCESS), content: accessTab },
+                    { value: TAB_AUTO_APPROVE, label: t('projects.budgetForm.tabAutoApprove'), hasError: tabHasError(TAB_AUTO_APPROVE), content: autoApproveTab },
                 ]}
             />
         </FormModal>

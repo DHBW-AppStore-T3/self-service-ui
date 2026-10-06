@@ -44,6 +44,13 @@
         reverse_proxy {$APPSTORE_UPSTREAM:app-store-backend:8000}
     }
 
+    handle_path /api/app-store/* {
+        header Cache-Control "no-store"
+        # No default, unlike the two above: docker-entrypoint.sh requires the
+        # variable while the App Store is enabled.
+        reverse_proxy {$APP_STORE_UPSTREAM}
+    }
+
     # Everything else: the SPA (with client-side routing fallback to index.html).
     # Hashed build assets (/assets/*) are immutable -> cache them long. index.html
     # and everything else stay no-cache so a new deploy is picked up immediately.

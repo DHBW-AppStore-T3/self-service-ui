@@ -76,17 +76,20 @@ spec:
             - name: CLOUD_RESOURCES_UPSTREAM
               value: "{{ .Values.selfServiceUI.cloudResourcesUpstream }}"
             {{- end }}
-            # Empty -> App-Store nav entry hidden.
-            - name: APPSTORE_BASE_URL
-              value: "{{ .Values.selfServiceUI.appstoreBaseUrl }}"
-            {{- if .Values.selfServiceUI.appstoreUpstream }}
-            - name: APPSTORE_UPSTREAM
-              value: "{{ .Values.selfServiceUI.appstoreUpstream }}"
-            {{- end }}
+            - name: APP_STORE_ENABLED
+              value: "{{ .Values.selfServiceUI.appStore.enabled }}"
+            - name: APP_STORE_UPSTREAM
+              value: "{{ .Values.selfServiceUI.appStore.upstream }}"
+            - name: APP_STORE_BASE_URL
+              value: "{{ .Values.selfServiceUI.appStore.baseUrl }}"
+            - name: APP_STORE_FRONTEND_URL
+              value: "{{ .Values.selfServiceUI.appStore.frontendUrl }}"
             - name: OIDC_ISSUER_URL
               value: "{{ .Values.auth.oidc.issuerUrl  }}"
             - name: OIDC_CLIENT_ID
               value: "{{ .Values.auth.oidc.clientId }}"
+            - name: OIDC_END_SESSION_URL
+              value: "{{ .Values.auth.oidc.endSessionUrl }}"
 
 ---
 apiVersion: v1

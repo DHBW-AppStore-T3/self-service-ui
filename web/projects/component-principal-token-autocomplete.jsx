@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Autocomplete, Loader, Stack, Text } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
 
 /**
@@ -24,9 +25,14 @@ import { useNodesApi } from './api-nodes.jsx';
  *   disabled?: boolean
  *   limit?: number
  */
-export function PrincipalTokenAutocomplete({ value, onChange, onSelect, placeholder = 'e.g. group:cs-students', limit = 10 }) {
+export function PrincipalTokenAutocomplete({ value, onChange, onSelect, placeholder, limit = 10 }) {
+    const { t } = useTranslation();
     const api = useNodesApi();
     const [search, setSearch] = useState(value || '');
+    // The token just handed over from the dropdown. Mantine calls onChange with
+    // the picked option right AFTER onOptionSubmit, which wrote the token back
+    // into the field that submit() had just emptied — see onChange below.
+    const justSubmitted = useRef(null);
 
     // The search term is part of the cache key, so typing back to something
     // already looked up answers from the cache instead of the network, and a
@@ -59,6 +65,7 @@ export function PrincipalTokenAutocomplete({ value, onChange, onSelect, placehol
         const token = (raw ?? '').trim();
         if (!token) return;
         onSelect?.(token);
+        justSubmitted.current = token;
         setSearch('');
         onChange('');
     };
@@ -66,12 +73,18 @@ export function PrincipalTokenAutocomplete({ value, onChange, onSelect, placehol
     return (
         <Stack gap="4">
         <Autocomplete
-            placeholder={placeholder}
+            placeholder={placeholder ?? t('projects.principalSearch.placeholder')}
             value={value}
             data={groups.map(g => g.token)}
             filter={({ options }) => options}
             clearable={true}
-            onChange={(val) => { setSearch(val); onChange(val); }}
+            onChange={(val) => {
+                const echo = justSubmitted.current !== null && val === justSubmitted.current;
+                justSubmitted.current = null;
+                if (echo) return;
+                setSearch(val);
+                onChange(val);
+            }}
             onOptionSubmit={submit}
             onKeyDown={(e) => {
                 if (e.key !== 'Enter') return;
@@ -91,9 +104,14 @@ export function PrincipalTokenAutocomplete({ value, onChange, onSelect, placehol
             )}
             rightSection={loading ? <Loader size="xs" /> : null}
         />
+        {/* The syntax only matters once someone is searching, so it appears
+            then rather than adding a line to every form. */}
+        {value && !failed && (
+            <Text size="xs" c="dimmed">{t('projects.principalSearch.syntax')}</Text>
+        )}
         {failed && (
             <Text size="xs" c="orange.8">
-                The group directory is not reachable — no suggestions. You can still type a token by hand.
+                {t('projects.principalSearch.unreachable')}
             </Text>
         )}
         </Stack>

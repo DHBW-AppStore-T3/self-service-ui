@@ -1,4 +1,6 @@
 import { Badge, Button, Group, Loader, Paper, Stack, Text, TextInput } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
+import { EditorHeading } from './component-token-list-editor.jsx';
 
 export function SearchableItemSelector({
     label,
@@ -8,33 +10,38 @@ export function SearchableItemSelector({
     searchResults,
     isSearching,
     onSearch,
-    placeholder = 'Search and add...',
-    searchDescription = 'Type to search',
-    emptyMessage = 'No items selected',
-    buttonLabel = 'Add',
+    placeholder,
+    searchDescription,
+    emptyMessage,
+    buttonLabel,
     renderItem,
     renderSearchResult,
     error,
     isActive = true,
     onFocus,
+    searchAction = null,
 }) {
+    const { t } = useTranslation();
+    const addLabel = buttonLabel ?? t('projects.forms.add');
     return (
-        <div>
-            <Text fw={600} mb="xs">{label}</Text>
-            <Stack gap="sm">
-                <TextInput
-                    placeholder={placeholder}
-                    onChange={(e) => onSearch(e.target.value)}
-                    onFocus={onFocus}
-                    description={searchDescription}
-                    rightSection={isSearching && <Loader size="xs" />}
-                />
+        <Stack gap="xs">
+            <EditorHeading label={label} description={searchDescription ?? t('projects.itemSelector.searchHint')} />
+                <Group gap="xs" align="flex-end" wrap="nowrap">
+                    <TextInput
+                        style={{ flex: 1 }}
+                        placeholder={placeholder ?? t('projects.itemSelector.placeholder')}
+                        onChange={(e) => onSearch(e.target.value)}
+                        onFocus={onFocus}
+                        rightSection={isSearching && <Loader size="xs" />}
+                    />
+                    {searchAction}
+                </Group>
 
                 {searchResults.length > 0 && isActive && (
                     <Paper p="sm" withBorder style={{ maxHeight: '200px', overflowY: 'auto' }}>
                         <Stack gap="xs">
                             {searchResults.map((item) => renderSearchResult
-                                ? renderSearchResult(item, onAdd, buttonLabel)
+                                ? renderSearchResult(item, onAdd, addLabel)
                                 : (
                                     <Group justify="space-between" key={item.id || item}>
                                         <Text size="sm">{item.name || item}</Text>
@@ -43,7 +50,7 @@ export function SearchableItemSelector({
                                             variant="light"
                                             onClick={() => onAdd(item)}
                                         >
-                                            {buttonLabel}
+                                            {addLabel}
                                         </Button>
                                     </Group>
                                 )
@@ -53,7 +60,7 @@ export function SearchableItemSelector({
                 )}
 
                 {selectedItems.length === 0 ? (
-                    <Text size="xs" c="dimmed" fw={500}>{emptyMessage}</Text>
+                    <Text size="xs" c="dimmed">{emptyMessage ?? t('projects.itemSelector.empty')}</Text>
                 ) : renderItem ? (
                     <Stack gap="xs">
                         {selectedItems.map(item => renderItem(item, onRemove))}
@@ -65,6 +72,7 @@ export function SearchableItemSelector({
                                 key={item}
                                 rightSection={<button
                                     type="button"
+                                    aria-label={t('projects.forms.remove')}
                                     onClick={() => onRemove(item)}
                                     style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: '0', margin: '0', display: 'flex', alignItems: 'center' }}
                                 >
@@ -77,7 +85,6 @@ export function SearchableItemSelector({
                     </Group>
                 )}
                 {error && <Text c="red" size="xs">{error}</Text>}
-            </Stack>
-        </div>
+        </Stack>
     );
 }

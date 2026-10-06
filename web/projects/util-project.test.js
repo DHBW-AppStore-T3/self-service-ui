@@ -1,4 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import i18n from '/i18n/index.js';
+
+// The real English resources, so a renamed key fails here rather than showing
+// the key itself on the screen.
+const t = i18n.getFixedT('en');
 import {
     UNLIMITED_QUOTA,
     autoApproveHeadroom,
@@ -6,6 +11,7 @@ import {
     expiryTone,
     freeAmount,
     groupResources,
+    headroomExhaustedBy,
     isAvailability,
     isExpired,
     isProvisioning,
@@ -13,6 +19,7 @@ import {
     nodeChanges,
     nodeTitle,
     normalizeObjectResponse,
+    openstackProjectUrl,
     overageEntries,
     overageText,
     ownerEmail,
@@ -23,6 +30,9 @@ import {
     statusLabel,
     usedAmount,
     visibleResources,
+    defaultsWithin,
+    projectActions,
+    roomIn,
 } from './util-project.jsx';
 
 const RESOURCES = [
@@ -108,6 +118,32 @@ describe('quotaFits', () => {
     });
 });
 
+describe('headroomExhaustedBy', () => {
+    const budget = {
+        id: 'b1',
+        limit: { cpu: 10, ram: 64 },
+        usage: { approved: { limit: { cpu: 4 } } },
+        auto_approve: { per_requester_limit: { cpu: 4, ram: 8 } },
+    };
+
+    it('names the own projects when they hold the whole share', () => {
+        const mine = [{ parent_id: 'b1', status: 'approved', limit: { cpu: 4, ram: 8 } }];
+        expect(headroomExhaustedBy(budget, RESOURCES, mine)).toBe('share');
+    });
+
+    it('names the budget when it has nothing left for anyone', () => {
+        const full = { ...budget, usage: { approved: { limit: { cpu: 10 } } } };
+        expect(headroomExhaustedBy(full, RESOURCES, [])).toBe('budget');
+        const pool = { ...full, auto_approve: {} };
+        expect(headroomExhaustedBy(pool, RESOURCES, [])).toBe('budget');
+    });
+
+    it('has no reason when the share was zero to begin with', () => {
+        const none = { ...budget, auto_approve: { per_requester_limit: { cpu: 0 } } };
+        expect(headroomExhaustedBy(none, RESOURCES, [])).toBeNull();
+    });
+});
+
 describe('autoApproveHeadroom', () => {
     const budget = {
         id: 'b1',
@@ -167,9 +203,9 @@ describe('resourceSummaryText', () => {
 
 describe('statusLabel / isProvisioning', () => {
     it('translates the known statuses and passes an unknown one through', () => {
-        expect(statusLabel('pending')).toBe('Awaiting approval');
-        expect(statusLabel('approved')).toBe('Active');
-        expect(statusLabel('whatever')).toBe('whatever');
+        expect(statusLabel(t, 'pending')).toBe('Awaiting approval');
+        expect(statusLabel(t, 'approved')).toBe('Active');
+        expect(statusLabel(t, 'whatever')).toBe('whatever');
     });
 
     // "Active" for a project OpenStack has not created yet sends people looking
@@ -177,7 +213,7 @@ describe('statusLabel / isProvisioning', () => {
     it('says "Setting up" for an approved leaf without an OpenStack project', () => {
         const node = { kind: 'project', status: 'approved' };
         expect(isProvisioning(node, true)).toBe(true);
-        expect(statusLabel('approved', true)).toBe('Setting up');
+        expect(statusLabel(t, 'approved', true)).toBe('Setting up');
     });
 
     it('is not provisioning once the project exists, or when nothing provisions', () => {
@@ -271,6 +307,11 @@ describe('nodeChanges', () => {
         expect(nodeChanges({ dateFrom: '2027-01-01T00:00:00Z', dateTo: '2027-01-01T00:00:00.000Z' })
             .hasDateChange).toBe(false);
         expect(nodeChanges({ dateFrom: '2027-01-01', dateTo: '2027-06-01' }).hasDateChange).toBe(true);
+    });
+
+    it('sees an end given where there was none', () => {
+        expect(nodeChanges({ dateFrom: null, dateTo: '2027-06-01' }).hasDateChange).toBe(true);
+        expect(nodeChanges({ dateFrom: '2027-06-01' }).hasDateChange).toBe(false);
     });
 
     it('splits members into added, removed and role-changed', () => {
@@ -545,5 +586,65 @@ describe('resourceSummaryText with availabilities', () => {
         const text = resourceSummaryText(resources, { cores: 4, 'dhbw-ipv4': 0 });
 
         expect(text).toBe('4 Cores');
+    });
+});
+
+describe('openstackProjectUrl', () => {
+    const node = { status: 'approved', os_project_id: 'abc123' };
+
+    it('switches Horizon to the project, keeping the target through the login', () => {
+        expect(openstackProjectUrl('https://newstack.dhbw.cloud/', node))
+            .toBe('https://newstack.dhbw.cloud/auth/switch/abc123/?next=/project/');
+    });
+
+    it('links nothing without a dashboard or an OpenStack project', () => {
+        expect(openstackProjectUrl('', node)).toBeNull();
+        expect(openstackProjectUrl('https://x', { status: 'approved' })).toBeNull();
+    });
+
+    it('links only projects that are active', () => {
+        expect(openstackProjectUrl('https://x', { ...node, status: 'change_pending' })).not.toBeNull();
+        for (const status of ['pending', 'released', 'rejected', 'imported']) {
+            expect(openstackProjectUrl('https://x', { ...node, status })).toBeNull();
+        }
+    });
+});
+
+describe('defaultsWithin', () => {
+    const catalogue = [
+        { id: 'cores', default: 4, min: 1 },
+        { id: 'ram', default: 16, min: 1 },
+        { id: 'storage', default: 50, min: 1 },
+    ];
+
+    it('caps each default to what the budget has room for', () => {
+        // The Prof-Schwenkreis case: a pool of 4 cores, 8 GB, 50 GB.
+        const budget = { limit: { cores: 4, ram: 8, storage: 50 } };
+        expect(defaultsWithin(catalogue, roomIn(budget, catalogue))).toEqual({ cores: 4, ram: 8, storage: 50 });
+    });
+
+    it('keeps the defaults without a bound, and where not even the minimum fits', () => {
+        expect(defaultsWithin(catalogue, null)).toEqual({ cores: 4, ram: 16, storage: 50 });
+        expect(defaultsWithin(catalogue, { cores: 0, ram: 32 })).toEqual({ cores: 4, ram: 16, storage: 50 });
+    });
+});
+
+describe('projectActions', () => {
+    const on = (a) => Object.keys(a).filter(k => a[k]).sort();
+
+    it('offers an owner editing and releasing, but no decisions', () => {
+        expect(on(projectActions({ status: 'approved' }))).toEqual(['change', 'details', 'release']);
+        expect(on(projectActions({ status: 'pending' }))).toEqual(['change', 'details']);
+    });
+
+    it('lets a manager decide what waits and restructure what runs', () => {
+        expect(on(projectActions({ status: 'change_pending' }, { manager: true }))).toEqual(['approve', 'details', 'reject']);
+        expect(on(projectActions({ status: 'approved' }, { manager: true })))
+            .toEqual(['change', 'details', 'move', 'release', 'transfer']);
+    });
+
+    it('offers adopting an imported project unless it is already on its way', () => {
+        expect(projectActions({ status: 'imported' }, { manager: true }).adopt).toBe(true);
+        expect(projectActions({ status: 'imported', flags: ['promote_on_reconcile'] }, { manager: true }).adopt).toBe(false);
     });
 });

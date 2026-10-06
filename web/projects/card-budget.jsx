@@ -1,7 +1,8 @@
 import { Check, Eye, FolderInput, FolderOpen, Pencil, Plus, Trash2, X, Zap } from 'lucide-react';
 import { Badge, Button, Card, Divider, Group, Stack, Text } from '@mantine/core';
-import { FactRow, NodeChangesDiff, NodeStatusBadge, NodeUsageBars, PersonBadge, TokenBadgeList } from './component-common.jsx';
-import { COLOR, expiryTone, expiryValue, resourceSummaryText } from './util-project.jsx';
+import { FactRow, formatTerm, NodeChangesDiff, NodeStatusBadge, NodeUsageBars, PersonBadge, TokenBadgeList } from './component-common.jsx';
+import { useTranslation } from 'react-i18next';
+import { autoApproveFacts, COLOR, expiryTone, expiryValue, hasAutoApprove } from './util-project.jsx';
 
 // BudgetCard renders one budget (inner tree node): who manages it, who may
 // request under it, and how full it is. Like ProjectCard it is presentational —
@@ -11,6 +12,7 @@ import { COLOR, expiryTone, expiryValue, resourceSummaryText } from './util-proj
 //   onOpen          when set, an "Open" button drills into the budget's children
 //   manageable      the viewer manages this budget → edit/delegate/delete actions
 export function BudgetCard({ node, resources, onOpen, onAction, manageable = false }) {
+    const { t } = useTranslation();
     const act = (action) => onAction?.(action, node);
 
     const isApproved = node.status === 'approved';
@@ -18,7 +20,8 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
     // for a sub-budget, or proposed a change to an existing one.
     const isPending = node.status === 'pending';
     const isChangePending = node.status === 'change_pending';
-    const autoApprove = node.auto_approve?.per_requester_limit;
+    const autoApprove = hasAutoApprove(node);
+    const autoApproveInfo = autoApproveFacts(t, resources, node);
     const hasRequesters = (node.eligible_requesters || []).length > 0;
 
     return (
@@ -32,7 +35,7 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
                     {/* Scan marker only — the amount is spelled out below. */}
                     {autoApprove && (
                         <Badge size="sm" variant="light" color={COLOR.positive} leftSection={<Zap size="11" />} style={{ cursor: 'default' }}>
-                            Auto-approve
+                            {t('projects.budgetCard.autoApproveBadge')}
                         </Badge>
                     )}
                 </Group>
@@ -42,7 +45,7 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
 
             {/* ── Usage ──────────────────────────────────────────────────── */}
             <Stack gap="xs" mb="md" style={{ flex: 1 }}>
-                <Text size="xs" fw={600} c="dimmed" tt="uppercase">Resource usage</Text>
+                <Text size="xs" fw={600} c="dimmed" tt="uppercase">{t('projects.budgetCard.resourceUsage')}</Text>
                 <NodeUsageBars resources={resources} node={node} />
 
                 <Divider my="xs" />
@@ -57,41 +60,53 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
                         talk to: while it is a request the one asking, afterwards
                         the one who set it up. */}
                     {node.created_by && (
-                        <FactRow label={isPending || isChangePending ? 'Requested by' : 'Created by'}>
+                        <FactRow label={isPending || isChangePending ? t('projects.fact.requestedBy') : t('projects.fact.createdBy')}>
                             <PersonBadge email={node.created_by} size="xs" />
                         </FactRow>
                     )}
 
-                    <FactRow label="Managed by" hint="They approve requests and can pass parts of this budget on.">
+                    <FactRow label={t('projects.fact.managedBy')} hint={t('projects.budgetCard.managedByHint')}>
                         <TokenBadgeList size="xs" tokens={node.admin_scope}
-                            emptyMessage="Whoever manages the budget above" />
+                            emptyMessage={t('projects.fact.managedByEmpty')} />
                     </FactRow>
 
-                    <FactRow label="Can request"
-                        hint={hasRequesters
-                            ? `They may ask for ${node.allow_sub_budget_requests === false ? 'projects' : 'projects and sub-budgets'} out of this budget.`
-                            : undefined}>
+                    <FactRow label={t('projects.fact.canRequest')}>
                         <TokenBadgeList size="xs" tokens={node.eligible_requesters}
-                            emptyMessage="Nobody — only its managers can put anything here" />
+                            emptyMessage={t('projects.fact.canRequestEmpty')} />
                     </FactRow>
 
-                    {autoApprove && (
-                        <FactRow label="Auto-approve"
-                            hint="Requests up to this size are granted without asking; anything bigger needs a manager's decision.">
-                            <Text size="xs">
-                                <Zap size="11" style={{ verticalAlign: '-1px', marginRight: 4, color: 'var(--mantine-color-green-7)' }} />
-                                Up to {resourceSummaryText(resources, autoApprove) || 'the configured amount'} per person
-                            </Text>
+                    {hasRequesters && (
+                        <FactRow label={t('projects.fact.mayAskFor')}>
+                            {node.allow_sub_budget_requests === false
+                                ? t('projects.fact.mayAskProjects')
+                                : t('projects.fact.mayAskProjectsAndBudgets')}
                         </FactRow>
                     )}
 
+                    {autoApproveInfo && (
+                        <>
+                            <FactRow label={t('projects.fact.grantedAtOnce')}>
+                                <Text size="xs">
+                                    <Zap size="11" style={{ verticalAlign: '-1px', marginRight: 4, color: 'var(--mantine-color-green-7)' }} />
+                                    {autoApproveInfo.grants}
+                                </Text>
+                            </FactRow>
+                            <FactRow label={t('projects.fact.beyondThat')}>{autoApproveInfo.beyond}</FactRow>
+                        </>
+                    )}
+
                     {node.termination_date && (
-                        <FactRow label="Valid until">
+                        <FactRow label={t('projects.fact.validUntil')}>
                             <Text size="xs" c={expiryTone(node.termination_date) === 'gray'
                                 ? undefined
                                 : `${expiryTone(node.termination_date)}.7`}>
-                                {expiryValue(node.termination_date)}
+                                {expiryValue(t, node.termination_date)}
                             </Text>
+                        </FactRow>
+                    )}
+                    {node.max_project_term_days && (
+                        <FactRow label={t('projects.maxTerm.fact')}>
+                            <Text size="xs">{t('projects.maxTerm.factValue', { duration: formatTerm(t, node.max_project_term_days) })}</Text>
                         </FactRow>
                     )}
                 </Stack>
@@ -112,43 +127,43 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
                 <Group grow>
                     {onOpen && (
                         <Button variant="filled" size="xs" onClick={() => onOpen(node)}>
-                            <FolderOpen size="13" style={{ marginRight: 4 }} />Open
+                            <FolderOpen size="13" style={{ marginRight: 4 }} />{t('projects.actions.open')}
                         </Button>
                     )}
                     <Button variant="light" size="xs" onClick={() => act('details')}>
-                        <Eye size="13" style={{ marginRight: 4 }} />Details
+                        <Eye size="13" style={{ marginRight: 4 }} />{t('projects.actions.details')}
                     </Button>
                     {/* On a budget shown read-only, requesting is the one thing
                         the viewer CAN do here — offered only when the budget
                         takes sub-budget requests at all. */}
                     {!manageable && isApproved && node.allow_sub_budget_requests !== false && (
                         <Button variant="light" size="xs" onClick={() => act('request-here')}>
-                            <Plus size="13" style={{ marginRight: 4 }} />Request budget
+                            <Plus size="13" style={{ marginRight: 4 }} />{t('projects.actions.requestBudget')}
                         </Button>
                     )}
                     {manageable && (isPending || isChangePending) && (
                         <>
                             <Button color={COLOR.positive} variant="light" size="xs" onClick={() => act('approve')}>
-                                <Check size="13" style={{ marginRight: 4 }} />Approve
+                                <Check size="13" style={{ marginRight: 4 }} />{t('projects.actions.approve')}
                             </Button>
                             <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('reject')}>
-                                <X size="13" style={{ marginRight: 4 }} />Reject
+                                <X size="13" style={{ marginRight: 4 }} />{t('projects.actions.reject')}
                             </Button>
                         </>
                     )}
                     {manageable && isApproved && (
                         <>
                             <Button variant="light" size="xs" onClick={() => act('sub-budget')}>
-                                <Plus size="13" style={{ marginRight: 4 }} />Sub-budget
+                                <Plus size="13" style={{ marginRight: 4 }} />{t('projects.actions.subBudget')}
                             </Button>
                             <Button variant="light" size="xs" onClick={() => act('edit')}>
-                                <Pencil size="13" style={{ marginRight: 4 }} />Edit
+                                <Pencil size="13" style={{ marginRight: 4 }} />{t('projects.actions.edit')}
                             </Button>
                             <Button variant="light" size="xs" onClick={() => act('move')}>
-                                <FolderInput size="13" style={{ marginRight: 4 }} />Move
+                                <FolderInput size="13" style={{ marginRight: 4 }} />{t('projects.actions.move')}
                             </Button>
                             <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('delete')}>
-                                <Trash2 size="13" style={{ marginRight: 4 }} />Delete
+                                <Trash2 size="13" style={{ marginRight: 4 }} />{t('projects.actions.delete')}
                             </Button>
                         </>
                     )}

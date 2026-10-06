@@ -1,4 +1,5 @@
 import { Badge, Button, Group, Modal, Stack, Tabs, Text } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import { COLOR } from './util-project.jsx';
 
 // The shell every create/change dialog in this section shares: a modal holding a
@@ -53,9 +54,10 @@ export function FormTabs({ value, onChange, tabs }) {
  */
 export function FormModal({
     opened, onClose, title, size = 'lg',
-    onSubmit, submitting, submitError, submitLabel, submitColor,
+    onSubmit, submitting, submitError, submitLabel, submitColor, submitDisabled = false,
     children,
 }) {
+    const { t } = useTranslation();
     return (
         <Modal opened={opened} onClose={onClose} size={size} title={title}>
             {/* noValidate: these forms live in tabs, so a `required` field on an
@@ -71,8 +73,8 @@ export function FormModal({
                     {submitError && <Text c="red" size="sm">{submitError}</Text>}
 
                     <Group justify="flex-end" mt="md">
-                        <Button variant="default" type="button" onClick={onClose}>Cancel</Button>
-                        <Button type="submit" color={submitColor} loading={submitting}>{submitLabel}</Button>
+                        <Button variant="default" type="button" onClick={onClose}>{t('projects.actions.cancel')}</Button>
+                        <Button type="submit" color={submitColor} loading={submitting} disabled={submitDisabled}>{submitLabel}</Button>
                     </Group>
                 </Stack>
             </form>

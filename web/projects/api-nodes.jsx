@@ -78,8 +78,21 @@ export function useNodesApi() {
                 unwrapObject(await getNode({ client, path: { id } })),
             // The one list that has no natural bound: a course budget holds as
             // many projects as it has students. Loaded one page at a time.
-            listChildren: async (id, { limit = PAGE_SIZE, offset = 0 } = {}) =>
-                unwrapPage(await listNodeChildren({ client, path: { id }, query: { limit, offset } })),
+            //
+            // The filters narrow and order on the server (see ChildFilter in
+            // the API): the browser only ever holds the page it shows. Empty
+            // values are left out of the query rather than sent as "".
+            listChildren: async (id, { limit = PAGE_SIZE, offset = 0, kind, q, status, group, groupMode, sort, order } = {}) => {
+                const query = { limit, offset };
+                if (kind) query.kind = kind;
+                if (q) query.q = q;
+                if (status?.length) query.status = status.join(',');
+                if (group) query.group = group;
+                if (group && groupMode) query.group_mode = groupMode;
+                if (sort) query.sort = sort;
+                if (sort && order) query.order = order;
+                return unwrapPage(await listNodeChildren({ client, path: { id }, query }));
+            },
             // Full-text search over everything below the budgets the caller
             // manages. Server-side because the tree is no longer fully loaded.
             searchNodes: async (q, { limit = PAGE_SIZE, offset = 0 } = {}) =>
@@ -145,19 +158,11 @@ export function useNodesApi() {
             // without fetching a single row it would ever show.
             countToManage: async (scope = 'direct') =>
                 unwrapPage(await listNodesToManage({ client, query: { limit: 1, offset: 0, scope } })).total,
-            // Same trick, for the two questions the header asks about the
-            // budget view: does this user manage anything, and — if not —
-            // could they ask for a budget? Rows are not wanted, only whether
-            // there are any.
+            // Same trick, for the question the header asks about the budget
+            // view: does this user manage anything? Rows are not wanted, only
+            // whether there are any.
             countMyBudgets: async () =>
                 unwrapPage(await listMyBudgets({ client, query: { limit: 1, offset: 0 } })).total,
-            // Counts every budget that would take a request from this user,
-            // including the ones that accept project requests but no
-            // sub-budgets (allow_sub_budget_requests) — that flag sits on the
-            // rows this deliberately does not fetch. Erring towards offering
-            // the view: the worst case is a page that says "nobody to ask".
-            countEligibleForMe: async () =>
-                unwrapPage(await listEligibleBudgets({ client, query: { limit: 1, offset: 0 } })).total,
             getReconcileStatus: async () => {
                 const res = await getAdminReconcileStatus({ client });
                 // 503 = the reconciler is switched off in this environment. Not
@@ -188,7 +193,7 @@ export function useNodesApi() {
                 const data = unwrapObject(await searchPrincipals({ client, query: { q, limit } }));
                 return [
                     ...(data?.groups || []).filter(g => g?.token),
-                    ...(data?.users || []).map(email => ({ token: `user:${email}`, description: 'Individual person' })),
+                    ...(data?.users || []).map(email => ({ token: `user:${email}`, description: null })),
                 ];
             },
             searchPrincipals: async (q, limit = 50) => {

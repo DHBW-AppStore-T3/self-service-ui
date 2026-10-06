@@ -3,9 +3,34 @@ import { writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
 import react from '@vitejs/plugin-react';
 
+// Dev-server routes for the App Store, which in a deployment are Caddy's and
+// the oauth2-proxy's job (see APP-STORE.md).
+//
+// The App Store backend only accepts a real Keycloak access token, so there are
+// two useful setups: with a local oauth2-proxy (APP_STORE_BFF_UPSTREAM and
+// AUTH_PROXY_UPSTREAM pointing at it), the proxy receives the full path and
+// injects the bearer; without one, /api/app-store goes straight to FastAPI with
+// the prefix stripped — the page renders, the API answers 401.
+function appStoreProxy(env) {
+  const proxy = {};
+  if (env.AUTH_PROXY_UPSTREAM) {
+    proxy['/oauth2'] = { target: env.AUTH_PROXY_UPSTREAM, changeOrigin: true };
+  }
+  if (env.APP_STORE_BFF_UPSTREAM) {
+    proxy['/api/app-store'] = { target: env.APP_STORE_BFF_UPSTREAM, changeOrigin: true };
+  } else {
+    proxy['/api/app-store'] = {
+      target: env.APP_STORE_UPSTREAM || 'http://localhost:8000',
+      changeOrigin: true,
+      rewrite: p => p.replace(/^\/api\/app-store/, ''),
+    };
+  }
+  return proxy;
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const cfgPath = path.resolve(__dirname, 'web/config.js');
+  const cfgPath = path.resolve(import.meta.dirname, 'web/config.js');
 
   // During development, generate the config.js file dynamically
   // This allows us to use .env variables without hardcoding them.
@@ -23,11 +48,15 @@ export default defineConfig(({ mode }) => {
       cloudResourcesBaseUrl: env.CLOUD_RESOURCES_BASE_URL || '',
       cloudResourcesMcpUrl: env.CLOUD_RESOURCES_MCP_URL || '',
       dynamicZonesMcpUrl: env.DYNAMIC_ZONE_MCP_URL || '',
+      appStoreBaseUrl: env.APP_STORE_BASE_URL || '/api/app-store',
+      appStoreFrontendUrl: env.APP_STORE_FRONTEND_URL || 'http://localhost:5173',
+      appStoreEnabled: env.APP_STORE_ENABLED !== 'false',
       acmeServer: env.ACME_SERVER || 'https://certificates.dhbw.cloud',
       dummyAuth: env.DUMMY_AUTH === 'true',
       oidc: {
         client_id: env.OIDC_CLIENT_ID || '',
         issuer_url: env.OIDC_ISSUER_URL || '',
+        end_session_url: env.OIDC_END_SESSION_URL || '',
       },
     };
     mkdirSync(path.dirname(cfgPath), { recursive: true });
@@ -58,7 +87,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      port: 8084
+      port: 8084,
+      proxy: appStoreProxy(env),
     },
     // Unit tests. Two kinds, and the default stays the cheap one.
     //
