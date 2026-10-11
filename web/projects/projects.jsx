@@ -12,6 +12,7 @@ import { TokenLabelProvider } from './token-labels.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 
 import { MyProjectsView } from './view-my-projects.jsx';
+import { StartView } from './view-start.jsx';
 import { MyBudgetsView } from './view-my-budgets.jsx';
 import { RootAdminView } from './root-admin-view.jsx';
 
@@ -91,6 +92,7 @@ export function CloudProjectManagement() {
                         <Switch>
                             <Route path="/projects" component={MyProjectsView} />
                             <Route path="/budgets/:id?" component={MyBudgetsView} />
+                            <Route path="/start" component={StartView} />
                             {isRoot ? <Route path="/admin/:page?" component={RootAdminView} /> : null}
                             {/* The admin page used to be one page under this name. */}
                             <Route path="/admin-sync">

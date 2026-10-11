@@ -188,6 +188,7 @@
             "fromTree": "aus dem Budgetbaum"
         },
         "managed": "Budgetbaum",
-        "managedHint": "Dieses Projekt kommt aus dem Budgetbaum: Name, Mitglieder, Laufzeit, GPUs pro Klasse und die Budgets des Projekts werden dort unter „Projekte“ verwaltet. Hier lässt sich festlegen, wie es genutzt wird: Profile, Images, Grenzen und Anteile pro Person, kürzere Zeitfenster."
+        "managedHint": "Dieses Projekt kommt aus dem Budgetbaum: Name, Mitglieder, Laufzeit, GPUs pro Klasse und die Budgets des Projekts werden dort unter „Projekte“ verwaltet. Hier lässt sich festlegen, wie es genutzt wird: Profile, Images, Grenzen und Anteile pro Person, kürzere Zeitfenster.",
+        "getOne": "Projekt anlegen"
     }
 }

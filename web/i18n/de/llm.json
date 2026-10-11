@@ -358,5 +358,10 @@
         "title": "Kein Zugang zum LLM-Dienst",
         "text": "Für dieses Konto gibt es keine Zugriffsregel. Den Zugang vergibt die Administration des Dienstes.",
         "page": "Diese Seite ist für die eigene Rolle nicht freigegeben."
+    },
+    "noProject": {
+        "title": "Noch kein Projekt mit LLM-Tokens",
+        "text": "LLM-Tokens gibt es über Projekte. Für die meisten reicht ein persönliches Projekt aus einem Budget, das sofort genehmigt wird.",
+        "button": "Projekt anlegen"
     }
 }

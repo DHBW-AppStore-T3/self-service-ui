@@ -188,6 +188,7 @@
             "fromTree": "from the budget tree"
         },
         "managed": "Budget tree",
-        "managedHint": "This project comes from the budget tree: its name, members, end, GPUs per class and the project budgets are managed there, under “Projects”. Here you set how it is used: profiles, images, limits and shares per person, shorter windows."
+        "managedHint": "This project comes from the budget tree: its name, members, end, GPUs per class and the project budgets are managed there, under “Projects”. Here you set how it is used: profiles, images, limits and shares per person, shorter windows.",
+        "getOne": "Get a project"
     }
 }

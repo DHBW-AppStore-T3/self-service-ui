@@ -748,8 +748,15 @@
     },
     "resources": {
         "perWindow": "per {{window}}",
-        "window": { "24h": "day", "7d": "7 days", "30d": "30 days" },
-        "provider": { "openstack": "OpenStack", "aiaas": "AI service" },
+        "window": {
+            "24h": "day",
+            "7d": "7 days",
+            "30d": "30 days"
+        },
+        "provider": {
+            "openstack": "OpenStack",
+            "aiaas": "AI service"
+        },
         "usedOfGranted": "in use / granted, as of the last sync",
         "servers_one": "{{count}} VM",
         "servers_other": "{{count}} VMs",
@@ -802,5 +809,23 @@
         "reason": "Reason",
         "reasonHint": "Required when rejecting; it is shown to whoever asked.",
         "current": "Currently"
+    },
+    "start": {
+        "title": "Create projects for the {{provider}}",
+        "intro": "Workspaces, GPU time and LLM tokens come with projects. These budgets are available to you; ticked are those approved on the spot.",
+        "projectName": "{{budget}} (personal)",
+        "reason": "Personal project",
+        "instant": "on the spot",
+        "approval": "needs approval",
+        "has": "There already is a project under this budget.",
+        "nothing": "no amounts",
+        "create_one": "Create 1 project",
+        "create_other": "Create {{count}} projects",
+        "created": "Created: {{list}}.",
+        "failed": "Not created: {{list}}",
+        "none": "No budget is available for the {{provider}} right now. Access is granted by the faculty's or programme's administration.",
+        "back": "Back",
+        "skip": "Back without a project",
+        "toProjects": "To the projects"
     }
 }

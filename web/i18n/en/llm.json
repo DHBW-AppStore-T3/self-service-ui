@@ -358,5 +358,10 @@
         "title": "No access to the LLM service",
         "text": "There is no access rule for this account. Access is granted by the service's administrators.",
         "page": "This page is not available for this role."
+    },
+    "noProject": {
+        "title": "No project with LLM tokens yet",
+        "text": "LLM tokens come with projects. For most people a personal project from a budget that approves on the spot is enough.",
+        "button": "Get a project"
     }
 }

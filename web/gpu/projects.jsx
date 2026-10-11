@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ActionIcon, Alert, Badge, Button, Checkbox, Container, Group, Modal, MultiSelect, NumberInput, Paper, Progress, Select, SegmentedControl, SimpleGrid, Stack, Text, TextInput, Textarea, Title } from '@mantine/core';
 import { ExternalLink, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { LoadError, Loading, useApiMutation } from '/helper/query-state.jsx';
+import { startLink } from '/projects/start-link.js';
 import { useConfirm } from '/providers/confirm.jsx';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
@@ -72,7 +73,10 @@ export function WorkspaceProjects() {
                 </Paper>
 
                 {projects.isPending ? <Loading /> : projects.isError ? <LoadError query={projects} /> : list.length === 0 ? (
-                    <Alert color="gray" variant="light">{t(isAdmin ? 'gpu.projects.noneAdmin' : 'gpu.projects.none')}</Alert>
+                    <Alert color="gray" variant="light">
+                        <Text size="sm">{t(isAdmin ? 'gpu.projects.noneAdmin' : 'gpu.projects.none')}</Text>
+                        <Button size="xs" mt="sm" component="a" href={startLink('aiaas')}>{t('gpu.projects.getOne')}</Button>
+                    </Alert>
                 ) : (
                     <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
                         {list.map(p => (

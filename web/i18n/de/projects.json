@@ -748,8 +748,15 @@
     },
     "resources": {
         "perWindow": "pro {{window}}",
-        "window": { "24h": "Tag", "7d": "7 Tage", "30d": "30 Tage" },
-        "provider": { "openstack": "OpenStack", "aiaas": "KI-Dienst" },
+        "window": {
+            "24h": "Tag",
+            "7d": "7 Tage",
+            "30d": "30 Tage"
+        },
+        "provider": {
+            "openstack": "OpenStack",
+            "aiaas": "KI-Dienst"
+        },
         "usedOfGranted": "belegt / zugeteilt, Stand des letzten Abgleichs",
         "servers_one": "{{count}} VM",
         "servers_other": "{{count}} VMs",
@@ -802,5 +809,23 @@
         "reason": "Begründung",
         "reasonHint": "Beim Ablehnen Pflicht; sie wird der anfragenden Person angezeigt.",
         "current": "Bisher"
+    },
+    "start": {
+        "title": "Projekte für den {{provider}} anlegen",
+        "intro": "Workspaces, GPU-Zeit und LLM-Tokens gibt es über Projekte. Diese Budgets stehen zur Verfügung; angehakt sind die, die sofort genehmigt werden.",
+        "projectName": "{{budget}} (persönlich)",
+        "reason": "Persönliches Projekt",
+        "instant": "sofort",
+        "approval": "muss genehmigt werden",
+        "has": "Ein Projekt unter diesem Budget gibt es schon.",
+        "nothing": "keine Mengen",
+        "create_one": "1 Projekt anlegen",
+        "create_other": "{{count}} Projekte anlegen",
+        "created": "Angelegt: {{list}}.",
+        "failed": "Nicht angelegt: {{list}}",
+        "none": "Für den {{provider}} steht gerade kein Budget zur Verfügung. Den Zugang vergibt die Verwaltung der Fakultät bzw. des Studiengangs.",
+        "back": "Zurück",
+        "skip": "Ohne Projekt zurück",
+        "toProjects": "Zu den Projekten"
     }
 }
