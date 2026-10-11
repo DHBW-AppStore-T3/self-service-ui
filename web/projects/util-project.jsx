@@ -142,11 +142,24 @@ export function openstackProjectUrl(dashboardUrl, node) {
     return `${dashboardUrl.replace(/\/+$/, '')}/auth/switch/${encodeURIComponent(osID)}/?next=/project/`;
 }
 
-export function isProvisioning(node, provisioningEnabled) {
+// isProvisioning: approved, and the OpenStack project it is owed is not there
+// yet. Owed only when the project holds an OpenStack resource — one with only
+// workspace or LLM amounts gets none. Without the catalogue (resources) every
+// approved project counts, as before there were other providers.
+export function isProvisioning(node, provisioningEnabled, resources = null) {
     return Boolean(provisioningEnabled)
         && node?.kind === 'project'
         && node?.status === 'approved'
-        && !openstackSide(node).external_id;
+        && !openstackSide(node).external_id
+        && (!resources || holdsResourceOf(node, resources, 'openstack'));
+}
+
+// holdsResourceOf: the project holds more than zero of a resource of provider
+// (a resource without a provider belongs to every provider).
+export function holdsResourceOf(node, resources, provider) {
+    const limit = effectiveLimit(node, node?.limit) || {};
+    return resources.some(r => (!r.provider || r.provider === provider)
+        && ((limit[r.id] ?? 0) > 0 || limit[r.id] === UNLIMITED_QUOTA));
 }
 
 // Returns Mantine badge color + variant for a node status.

@@ -191,6 +191,10 @@ describe('statusLabel / isProvisioning', () => {
         expect(isProvisioning({ kind: 'project', status: 'approved', bindings: { openstack: { external_id: 'x' } } }, true)).toBe(false);
         expect(isProvisioning({ kind: 'project', status: 'approved' }, false)).toBe(false);
         expect(isProvisioning({ kind: 'budget', status: 'approved' }, true)).toBe(false);
+        // Only owed an OpenStack project when it holds an OpenStack resource.
+        const catalogue = [{ id: 'cores', provider: 'openstack' }, { id: 'ws-gpu-hours', provider: 'aiaas' }];
+        expect(isProvisioning({ kind: 'project', status: 'approved', limit: { cores: 0, 'ws-gpu-hours': 10 } }, true, catalogue)).toBe(false);
+        expect(isProvisioning({ kind: 'project', status: 'approved', limit: { cores: 2, 'ws-gpu-hours': 10 } }, true, catalogue)).toBe(true);
     });
 });
 

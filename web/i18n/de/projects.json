@@ -746,7 +746,7 @@
     "resources": {
         "perWindow": "pro {{window}}",
         "window": { "24h": "Tag", "7d": "7 Tage", "30d": "30 Tage" },
-        "provider": { "openstack": "OpenStack", "workspaces": "Workspaces" },
+        "provider": { "openstack": "OpenStack", "aiaas": "KI-Dienst" },
         "usedOfGranted": "belegt / zugeteilt, Stand des letzten Abgleichs",
         "servers_one": "{{count}} VM",
         "servers_other": "{{count}} VMs",
