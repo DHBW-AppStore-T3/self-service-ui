@@ -222,7 +222,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             ? {
                 parentId: null,
                 name: nodeTitle(node),
-                reason: t('projects.adopt.reasonDefault', { name: node.os_project_name || nodeTitle(node) }),
+                reason: t('projects.adopt.reasonDefault', { name: node.external_name || nodeTitle(node) }),
                 // What OpenStack grants it today, until someone decides otherwise.
                 quota: { ...(node.limit || {}) },
                 terminationDate: defaultEnd,
@@ -524,11 +524,11 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     // would fall below. OpenStack accepts such a quota silently — the servers
     // keep running, only new ones are refused — so nothing tells the requester
     // afterwards. Only resources OpenStack actually measures appear in
-    // os_in_use, so an absent entry means "unknown", not "zero".
+    // in_use, so an absent entry means "unknown", not "zero".
     // Compared with everything the project would hold — its allocations from
     // further up stay, so they count against what is in use too.
     const overcommitted = useMemo(() => {
-        const inUse = node?.os_in_use;
+        const inUse = node?.in_use;
         if (!inUse) return [];
         const total = effectiveLimit(node, quota);
         return (resources || [])
@@ -579,7 +579,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             <QuotaInputs
                 resources={offered}
                 value={quota}
-                usage={node?.os_in_use ? { inUse: node.os_in_use, grantUse: node.os_grant_use, total: effectiveLimit(node, quota) } : null}
+                usage={node?.in_use ? { inUse: node.in_use, grantUse: node.grant_use, total: effectiveLimit(node, quota) } : null}
                 errors={Object.fromEntries((resources || []).map(r => [r.id, form.errors[`quota.${r.id}`]]))}
                 onChange={(id, v) => {
                     quotaTouched.current = true;

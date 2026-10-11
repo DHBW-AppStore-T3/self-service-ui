@@ -10,17 +10,17 @@ import { COLOR, UNLIMITED_QUOTA, USAGE_COLOR, isAvailability, resourceSummaryTex
 
 export function ProjectResources({ node, resources, quota, size = 'xs' }) {
     const { t } = useTranslation();
-    if (!node?.os_in_use) {
+    if (!node?.in_use) {
         const text = resourceSummaryText(resources, quota);
         return text ? <Text size={size}>{text}</Text> : null;
     }
 
     const quantities = (resources || []).filter(r => !isAvailability(r) && (quota?.[r.id] ?? 0) !== 0);
-    const grantUse = node.os_grant_use;
+    const grantUse = node.grant_use;
     // Granted ones, and any that is used without being granted: that is the
     // one a reader most needs to see.
     const availabilities = (resources || []).filter(r => isAvailability(r) && (quota?.[r.id] === 1 || (grantUse?.[r.id] ?? 0) > 0));
-    const servers = node.os_servers;
+    const servers = node.servers;
 
     return (
         <Stack gap={6}>
@@ -28,10 +28,10 @@ export function ProjectResources({ node, resources, quota, size = 'xs' }) {
                 <Stack gap={6}>
                     {quantities.map(r => (
                         <UsageMeter key={r.id} label={r.unit ? `${r.name} (${r.unit})` : r.name}
-                            used={node.os_in_use[r.id]} limit={quota[r.id]} />
+                            used={node.in_use[r.id]} limit={quota[r.id]} />
                     ))}
                     {typeof servers === 'number' && (
-                        <UsageMeter label={t('projects.resources.vms')} used={servers} limit={node.os_server_limit} />
+                        <UsageMeter label={t('projects.resources.vms')} used={servers} limit={node.server_limit} />
                     )}
                 </Stack>
             </Tooltip>

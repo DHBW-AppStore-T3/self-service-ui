@@ -90,7 +90,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                                 {t('projects.projectCard.sharedBy', { owner })}
                             </Badge>
                         )}
-                        {node.os_overcommitted && (
+                        {node.overcommitted && (
                             <Tooltip label={overage.length > 0
                                 ? t('projects.projectCard.overcommittedWithAmount', { amount: overageText(overage) })
                                 : t('projects.projectCard.overcommitted')}>
@@ -120,7 +120,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                             style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                             {node.name || node.reason} <ExternalLink size="12" />
                         </Anchor>
-                    ) : (imported ? (node.os_project_name || node.os_project_id || node.id) : (node.name || node.reason))}
+                    ) : (imported ? (node.external_name || node.external_id || node.id) : (node.name || node.reason))}
                 </Text>
 
                 {imported && (

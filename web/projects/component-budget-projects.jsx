@@ -345,7 +345,7 @@ function resourceColumns(t, resources, items) {
     const cols = (resources || [])
         .filter(r => !isAvailability(r) && items.some(n => (quotaOf(n)[r.id] ?? 0) !== 0))
         .map(r => ({ id: r.id, label: r.name, unit: r.unit }));
-    if (items.some(n => n.os_servers !== undefined && n.os_servers !== null)) {
+    if (items.some(n => n.servers !== undefined && n.servers !== null)) {
         cols.push({ id: VMS, label: t('projects.resources.vms') });
     }
     return cols;
@@ -365,10 +365,10 @@ function resourceFigures(node, c) {
     const quota = effectiveLimit(node, node.pending?.limit || node.limit) || {};
     // VMs are no catalogue resource: what OpenStack allows is measured with
     // the count (for a managed project it follows the cores).
-    const reserved = c.id === VMS ? (node.os_server_limit ?? null)
+    const reserved = c.id === VMS ? (node.server_limit ?? null)
         : (quota[c.id] ?? 0) === 0 ? null
             : quota[c.id] === UNLIMITED_QUOTA ? '∞' : quota[c.id];
-    const used = c.id === VMS ? node.os_servers : node.os_in_use?.[c.id];
+    const used = c.id === VMS ? node.servers : node.in_use?.[c.id];
     return { reserved, used };
 }
 

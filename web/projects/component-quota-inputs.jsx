@@ -30,7 +30,7 @@ const SEARCH_THRESHOLD = 12;
 // `extra` is for an amount on top of something else — an allocation: smaller
 // fields, 0 allowed whatever the resource's minimum, no range text.
 // `usage` is what an existing project uses in OpenStack, for a line under each
-// field: { inUse, grantUse, total } — node.os_in_use, node.os_grant_use, and
+// field: { inUse, grantUse, total } — node.in_use, node.grant_use, and
 // what the project would hold in all (the entered values plus allocations).
 export function QuotaInputs({ resources, value, onChange, errors = {}, disabled = false, allowUnlimited = false, headroom = null, extra = false, usage = null }) {
     const { t } = useTranslation();

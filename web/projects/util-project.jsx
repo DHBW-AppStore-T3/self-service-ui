@@ -26,7 +26,7 @@ export function ownerEmail(node) {
 // Human-readable title of a node: budgets have names, projects usually only a purpose.
 export function nodeTitle(node) {
     if (!node) return '';
-    if (node.status === 'imported') return node.os_project_name || node.os_project_id || node.name || node.id;
+    if (node.status === 'imported') return node.external_name || node.external_id || node.name || node.id;
     return node.name || node.reason || node.id;
 }
 
@@ -122,16 +122,16 @@ const PROVISIONING_META = { color: COLOR.attention, variant: 'filled' };
 // project yet, or one that is on its way out. Horizon's project switch keeps
 // its target through the login, so the link works signed out as well.
 export function openstackProjectUrl(dashboardUrl, node) {
-    if (!dashboardUrl || !node?.os_project_id) return null;
+    if (!dashboardUrl || !node?.external_id) return null;
     if (node.status !== 'approved' && node.status !== 'change_pending') return null;
-    return `${dashboardUrl.replace(/\/+$/, '')}/auth/switch/${encodeURIComponent(node.os_project_id)}/?next=/project/`;
+    return `${dashboardUrl.replace(/\/+$/, '')}/auth/switch/${encodeURIComponent(node.external_id)}/?next=/project/`;
 }
 
 export function isProvisioning(node, provisioningEnabled) {
     return Boolean(provisioningEnabled)
         && node?.kind === 'project'
         && node?.status === 'approved'
-        && !node?.os_project_id;
+        && !node?.external_id;
 }
 
 // Returns Mantine badge color + variant for a node status.
@@ -556,7 +556,7 @@ export function resourceUsageItems(resources, quota, inUse, sep = '/') {
 //
 // Mirrors chargedQuota in the API (internal/tree/service.go) rather than
 // re-inventing the rule, including both of its edge cases: a resource MISSING
-// from os_in_use means "OpenStack does not measure this", not zero, and an
+// from in_use means "OpenStack does not measure this", not zero, and an
 // unlimited limit stays unlimited. Only a measured value strictly above a
 // finite limit is an overage.
 //
@@ -564,7 +564,7 @@ export function resourceUsageItems(resources, quota, inUse, sep = '/') {
 // limit — which is exactly the number that is NOT being billed, so the badge
 // states there is a problem while the figures next to it deny it.
 export function overageEntries(resources, node) {
-    const inUse = node?.os_in_use;
+    const inUse = node?.in_use;
     if (!resources || !inUse) return [];
     return resources.flatMap(r => {
         const limit = node.limit?.[r.id] ?? 0;

@@ -108,7 +108,7 @@ function ResourcesTab({ node, resources }) {
     const { t } = useTranslation();
     return (
         <Section label={isBudget(node) ? t('projects.inspect.resourceCap') : t('projects.fact.resources')}>
-            {!isBudget(node) && node.os_in_use
+            {!isBudget(node) && node.in_use
                 ? <ProjectResources node={node} resources={resources} quota={effectiveLimit(node, node.limit)} />
                 : <QuotaBadges resources={resources} quota={node.limit} size="xs" />}
         </Section>
@@ -183,9 +183,9 @@ function NodeFacts({ node }) {
                 {node.created_by && <Row label={t('projects.fact.createdBy')}>{node.created_by}</Row>}
                 {node.created_at && <Row label={t('projects.inspect.created')}>{formatRelativeDate(node.created_at)}</Row>}
                 <Row label={t('projects.inspect.id')}><Text size="xs" ff="monospace">{node.id}</Text></Row>
-                {(node.os_project_id || node.os_project_name) && (
+                {(node.external_id || node.external_name) && (
                     <Row label="OpenStack">
-                        <Text size="xs" ff="monospace">{[node.os_project_name, node.os_project_id].filter(Boolean).join(' · ')}</Text>
+                        <Text size="xs" ff="monospace">{[node.external_name, node.external_id].filter(Boolean).join(' · ')}</Text>
                     </Row>
                 )}
             </Table.Tbody>
@@ -196,7 +196,7 @@ function NodeFacts({ node }) {
 // showsUsage: a budget's consumption is its managers' business; a budget
 // someone may only request from does not show it. A project shows it to
 // everyone who sees the project — once it exists in OpenStack.
-const showsUsage = (node) => (isBudget(node) ? !node.request_only : !!node.os_project_id);
+const showsUsage = (node) => (isBudget(node) ? !node.request_only : !!node.external_id);
 
 // nodeExtraTabs are the read-only tabs the edit dialogs add after their own,
 // in FormTabs' shape. The usage panel fetches, so it renders only while its

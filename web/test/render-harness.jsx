@@ -81,8 +81,8 @@ export function fixtureTree() {
     });
     const project = (id, parentId, name, extra = {}) => ({
         id, parent_id: parentId, kind: 'project', status: 'approved', name,
-        child_count: 0, limit: { cores: 4, ram: 8 }, os_in_use: { cores: 2, ram: 4 },
-        owner: 'user:dennis.pfisterer@dhbw.de', os_project_id: 'os-1',
+        child_count: 0, limit: { cores: 4, ram: 8 }, in_use: { cores: 2, ram: 4 },
+        owner: 'user:dennis.pfisterer@dhbw.de', external_id: 'os-1',
         created_at: '2026-08-02T10:00:00Z',
         termination_date: '2027-03-31',
         authorized_users: [{ token: 'user:someone@dhbw.de', openstack_role: 'member' }],
