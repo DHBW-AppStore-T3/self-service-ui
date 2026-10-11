@@ -49,7 +49,9 @@ const USAGE = {
 const PROJECTS = [
     { slug: 'wwi23seb-ml', name: 'Machine Learning WWI23SEB', description: 'Übungen', role: 'manager', profiles: ['cpu', 'pytorch'], gpu_classes: ['l4-3q'],
       members: [{ token: 'group:wwi23seb', role: 'member' }], images: [], free_images: false,
-      limits: { servers_per_person: 2, cpu_per_person: 4, ram_gb_per_person: 16, gpus_per_person: 1, gpus: 4 }, budgets: [] },
+      limits: { servers_per_person: 2, cpu_per_person: 4, ram_gb_per_person: 16, gpus_per_person: 1, gpus: 4 },
+      budgets: [{ unit: 'vcpu_hours', window: '30d', amount: 40, per_person: true }],
+      budget_status: [{ unit: 'vcpu_hours', window: '30d', amount: 40, per_person: true, used: 34.5, exhausted: false }] },
     { slug: 'statistik', name: 'Statistik', role: 'member', profiles: ['cpu', 'git-cpu'], gpu_classes: [], members: [], images: [{ name: 'R', image: 'reg/envs/r:1' }],
       limits: { servers_per_person: 1 }, budgets: [], ends_at: '2027-03-31T00:00:00Z' },
 ];
@@ -103,6 +105,7 @@ describe('the GPU views render', () => {
         renderView(<WorkspaceProjects />);
         expect(await screen.findByText('Machine Learning WWI23SEB')).toBeTruthy();
         expect(screen.getByText('Statistik')).toBeTruthy();
+        expect(screen.getByText(/34.5 (von|of) 40/)).toBeTruthy();
         fireEvent.click(screen.getAllByLabelText(/Bearbeiten|Edit/)[0]);
         expect(await screen.findByDisplayValue('group:wwi23seb')).toBeTruthy();
         expectNoRenderFailure();

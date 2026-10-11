@@ -158,6 +158,32 @@
             "ramShort": "RAM (GB)",
             "gpusShort": "GPUs",
             "projectGpusShort": "GPUs in total"
+        },
+        "budgets": "Budgets",
+        "addBudget": "Add budget",
+        "budgetsHint": "Windows in calendar days: \"today\", 7 or 30 days including today, \"total\" since the project was created. When a budget is used up no server starts, and running servers are ended within 5 minutes (the home stays).",
+        "budget": {
+            "line": "{{amount}} {{unit}} {{window}} {{who}}",
+            "used": "{{used}} of {{amount}}",
+            "perPerson": "per person",
+            "wholeProject": "for the project",
+            "amount": "Amount",
+            "unit": "Unit",
+            "class": "GPU class",
+            "allClasses": "all",
+            "window": "Window",
+            "units": {
+                "vcpu_hours": "vCPU hours",
+                "ram_gb_hours": "RAM GB hours",
+                "gpu_hours": "GPU hours",
+                "server_hours": "server hours"
+            },
+            "windows": {
+                "24h": "today",
+                "7d": "in 7 days",
+                "30d": "in 30 days",
+                "total": "in total"
+            }
         }
     }
 }
