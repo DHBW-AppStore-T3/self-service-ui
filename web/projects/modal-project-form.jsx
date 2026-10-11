@@ -18,7 +18,7 @@ import { useNodeMutation } from './use-node-mutation.jsx';
 import { PersonInput, personEmail } from './principal-search.jsx';
 import { AllocationSection, useAllocationDraft } from './component-allocation-section.jsx';
 import { withCurrentParent } from './component-budget-select.jsx';
-import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
+import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide } from './util-project.jsx';
 import { AttributesEditor, AttributesView, hasAttributes, useAttributesTab } from './component-node-attributes.jsx';
 import { nodeExtraTabs } from './modal-inspect.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
@@ -222,7 +222,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             ? {
                 parentId: null,
                 name: nodeTitle(node),
-                reason: t('projects.adopt.reasonDefault', { name: node.external_name || nodeTitle(node) }),
+                reason: t('projects.adopt.reasonDefault', { name: openstackSide(node).external_name || nodeTitle(node) }),
                 // What OpenStack grants it today, until someone decides otherwise.
                 quota: { ...(node.limit || {}) },
                 terminationDate: defaultEnd,
@@ -527,14 +527,15 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     // in_use, so an absent entry means "unknown", not "zero".
     // Compared with everything the project would hold — its allocations from
     // further up stay, so they count against what is in use too.
+    const inUseNow = measuredUse(node);
     const overcommitted = useMemo(() => {
-        const inUse = node?.in_use;
+        const inUse = inUseNow;
         if (!inUse) return [];
         const total = effectiveLimit(node, quota);
         return (resources || [])
             .filter(r => typeof inUse[r.id] === 'number' && (total[r.id] ?? 0) < inUse[r.id])
             .map(r => ({ ...r, used: inUse[r.id], requested: total[r.id] ?? 0 }));
-    }, [node, resources, quota]);
+    }, [node, inUseNow, resources, quota]);
 
     const resourcesTab = (
         <Stack>
@@ -579,7 +580,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             <QuotaInputs
                 resources={offered}
                 value={quota}
-                usage={node?.in_use ? { inUse: node.in_use, grantUse: node.grant_use, total: effectiveLimit(node, quota) } : null}
+                usage={inUseNow ? { inUse: inUseNow, grantUse: openstackSide(node).grant_use, total: effectiveLimit(node, quota) } : null}
                 errors={Object.fromEntries((resources || []).map(r => [r.id, form.errors[`quota.${r.id}`]]))}
                 onChange={(id, v) => {
                     quotaTouched.current = true;

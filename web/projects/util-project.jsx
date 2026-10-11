@@ -23,10 +23,24 @@ export function ownerEmail(node) {
     return token.startsWith('user:') ? token.slice(5) : token;
 }
 
+// openstackSide is a project's OpenStack side — its project there and what the
+// reconciler measured; an empty object while there is none.
+export const openstackSide = (node) => node?.bindings?.openstack ?? {};
+
+// measuredUse is what a project uses across all its providers, by resource id;
+// null while nothing was measured. A missing id means "not measured", not zero.
+export function measuredUse(node) {
+    const measured = Object.values(node?.bindings ?? {}).map(b => b.in_use).filter(Boolean);
+    return measured.length ? Object.assign({}, ...measured) : null;
+}
+
 // Human-readable title of a node: budgets have names, projects usually only a purpose.
 export function nodeTitle(node) {
     if (!node) return '';
-    if (node.status === 'imported') return node.external_name || node.external_id || node.name || node.id;
+    if (node.status === 'imported') {
+        const os = openstackSide(node);
+        return os.external_name || os.external_id || node.name || node.id;
+    }
     return node.name || node.reason || node.id;
 }
 
@@ -122,16 +136,17 @@ const PROVISIONING_META = { color: COLOR.attention, variant: 'filled' };
 // project yet, or one that is on its way out. Horizon's project switch keeps
 // its target through the login, so the link works signed out as well.
 export function openstackProjectUrl(dashboardUrl, node) {
-    if (!dashboardUrl || !node?.external_id) return null;
+    const osID = openstackSide(node).external_id;
+    if (!dashboardUrl || !osID) return null;
     if (node.status !== 'approved' && node.status !== 'change_pending') return null;
-    return `${dashboardUrl.replace(/\/+$/, '')}/auth/switch/${encodeURIComponent(node.external_id)}/?next=/project/`;
+    return `${dashboardUrl.replace(/\/+$/, '')}/auth/switch/${encodeURIComponent(osID)}/?next=/project/`;
 }
 
 export function isProvisioning(node, provisioningEnabled) {
     return Boolean(provisioningEnabled)
         && node?.kind === 'project'
         && node?.status === 'approved'
-        && !node?.external_id;
+        && !openstackSide(node).external_id;
 }
 
 // Returns Mantine badge color + variant for a node status.
@@ -564,7 +579,7 @@ export function resourceUsageItems(resources, quota, inUse, sep = '/') {
 // limit — which is exactly the number that is NOT being billed, so the badge
 // states there is a problem while the figures next to it deny it.
 export function overageEntries(resources, node) {
-    const inUse = node?.in_use;
+    const inUse = measuredUse(node);
     if (!resources || !inUse) return [];
     return resources.flatMap(r => {
         const limit = node.limit?.[r.id] ?? 0;

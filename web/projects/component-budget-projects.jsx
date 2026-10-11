@@ -8,7 +8,7 @@ import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { InfoPopover, NodeStatusBadge } from './component-common.jsx';
 import { ProjectsPrincipalAutocomplete } from './principal-search.jsx';
-import { COLOR, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, expiryTone, expiryValue, hasAllocations, isAvailability, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel, USAGE_COLOR, usageLevel } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, expiryTone, expiryValue, hasAllocations, isAvailability, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel, USAGE_COLOR, usageLevel, measuredUse, openstackSide } from './util-project.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { LoadError } from '/helper/query-state.jsx';
 import { budgetPathText } from './component-budget-path.jsx';
@@ -345,7 +345,7 @@ function resourceColumns(t, resources, items) {
     const cols = (resources || [])
         .filter(r => !isAvailability(r) && items.some(n => (quotaOf(n)[r.id] ?? 0) !== 0))
         .map(r => ({ id: r.id, label: r.name, unit: r.unit }));
-    if (items.some(n => n.servers !== undefined && n.servers !== null)) {
+    if (items.some(n => openstackSide(n).servers != null)) {
         cols.push({ id: VMS, label: t('projects.resources.vms') });
     }
     return cols;
@@ -365,10 +365,10 @@ function resourceFigures(node, c) {
     const quota = effectiveLimit(node, node.pending?.limit || node.limit) || {};
     // VMs are no catalogue resource: what OpenStack allows is measured with
     // the count (for a managed project it follows the cores).
-    const reserved = c.id === VMS ? (node.server_limit ?? null)
+    const reserved = c.id === VMS ? (openstackSide(node).server_limit ?? null)
         : (quota[c.id] ?? 0) === 0 ? null
             : quota[c.id] === UNLIMITED_QUOTA ? '∞' : quota[c.id];
-    const used = c.id === VMS ? node.servers : node.in_use?.[c.id];
+    const used = c.id === VMS ? openstackSide(node).servers : measuredUse(node)?.[c.id];
     return { reserved, used };
 }
 
@@ -498,7 +498,7 @@ function ProjectRow({ node, resources, columns, compact = false, onAction, onOpe
                 fifth of the table. Being deleted says more than released. */}
             <Table.Td style={{ whiteSpace: 'nowrap' }}>
                 <Group gap={6} wrap="nowrap">
-                    <NodeStatusBadge icon status={node.status} deleting={deletionRequested(node)} purge={node.purge} />
+                    <NodeStatusBadge icon status={node.status} deleting={deletionRequested(node)} purge={openstackSide(node).purge} />
                     {/* A given-up project has no end date that means anything.
                         The colour says whether it is close; how far, on hover. */}
                     {node.termination_date && !isRetired(node) ? (

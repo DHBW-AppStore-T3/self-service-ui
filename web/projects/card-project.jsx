@@ -1,7 +1,7 @@
 import { AlertTriangle, ExternalLink, Eye, Gift, Pencil, Rocket, Scale, Trash2, Users, X } from 'lucide-react';
 import { Alert, Anchor, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { CopyLinkButton, DeletingBadge, FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, PurgeProgress, TokenBadgeList } from './component-common.jsx';
-import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, scheduledDeletion } from './util-project.jsx';
+import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, scheduledDeletion, openstackSide } from './util-project.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useTranslation } from 'react-i18next';
 import { useProjectConfig } from './projects.jsx';
@@ -81,7 +81,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                 <Group justify="space-between" mb="xs">
                     <Group gap="xs">
                         <NodeStatusBadge status={node.status} provisioning={provisioning} />
-                        {deletionRequested(node) && <DeletingBadge size="sm" purge={node.purge} />}
+                        {deletionRequested(node) && <DeletingBadge size="sm" purge={openstackSide(node).purge} />}
                         {/* Who shared it says it all, so it stands on the badge rather
                             than behind a hover nobody finds. Not uppercased: an
                             address in capitals is hard to read. */}
@@ -90,7 +90,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                                 {t('projects.projectCard.sharedBy', { owner })}
                             </Badge>
                         )}
-                        {node.overcommitted && (
+                        {openstackSide(node).overcommitted && (
                             <Tooltip label={overage.length > 0
                                 ? t('projects.projectCard.overcommittedWithAmount', { amount: overageText(overage) })
                                 : t('projects.projectCard.overcommitted')}>
@@ -108,7 +108,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                 </Group>
 
                 {/* Emptying before the deletion takes passes; this is how far it got. */}
-                {deletionRequested(node) && <PurgeProgress purge={node.purge} />}
+                {deletionRequested(node) && <PurgeProgress purge={openstackSide(node).purge} />}
 
                 {/* ── Purpose ────────────────────────────────────────────── */}
                 {/* The name opens the project in OpenStack wherever there is
@@ -120,7 +120,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                             style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                             {node.name || node.reason} <ExternalLink size="12" />
                         </Anchor>
-                    ) : (imported ? (node.external_name || node.external_id || node.id) : (node.name || node.reason))}
+                    ) : (imported ? (openstackSide(node).external_name || openstackSide(node).external_id || node.id) : (node.name || node.reason))}
                 </Text>
 
                 {imported && (

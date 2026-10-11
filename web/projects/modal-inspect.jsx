@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { NodeChangesDiff, NodeStatusBadge, QuotaBadges, TokenBadgeList, UserRoleBadgeList } from './component-common.jsx';
-import { autoApproveFacts, effectiveLimit, formatRelativeDate, isBudget, nodeTitle, ownerEmail, statusLabel } from './util-project.jsx';
+import { autoApproveFacts, effectiveLimit, formatRelativeDate, isBudget, nodeTitle, ownerEmail, statusLabel, measuredUse, openstackSide } from './util-project.jsx';
 import { ProjectResources } from './component-project-resources.jsx';
 import { formatDateTime } from '../format-date.js';
 import { UsagePanel } from './component-usage.jsx';
@@ -108,7 +108,7 @@ function ResourcesTab({ node, resources }) {
     const { t } = useTranslation();
     return (
         <Section label={isBudget(node) ? t('projects.inspect.resourceCap') : t('projects.fact.resources')}>
-            {!isBudget(node) && node.in_use
+            {!isBudget(node) && measuredUse(node)
                 ? <ProjectResources node={node} resources={resources} quota={effectiveLimit(node, node.limit)} />
                 : <QuotaBadges resources={resources} quota={node.limit} size="xs" />}
         </Section>
@@ -176,6 +176,7 @@ function AutoApproveTab({ node, resources }) {
 // History tab.
 function NodeFacts({ node }) {
     const { t } = useTranslation();
+    const os = openstackSide(node);
     return (
         <Table withRowBorders={false} verticalSpacing="4">
             <Table.Tbody>
@@ -183,9 +184,9 @@ function NodeFacts({ node }) {
                 {node.created_by && <Row label={t('projects.fact.createdBy')}>{node.created_by}</Row>}
                 {node.created_at && <Row label={t('projects.inspect.created')}>{formatRelativeDate(node.created_at)}</Row>}
                 <Row label={t('projects.inspect.id')}><Text size="xs" ff="monospace">{node.id}</Text></Row>
-                {(node.external_id || node.external_name) && (
+                {(os.external_id || os.external_name) && (
                     <Row label="OpenStack">
-                        <Text size="xs" ff="monospace">{[node.external_name, node.external_id].filter(Boolean).join(' · ')}</Text>
+                        <Text size="xs" ff="monospace">{[os.external_name, os.external_id].filter(Boolean).join(' · ')}</Text>
                     </Row>
                 )}
             </Table.Tbody>
@@ -196,7 +197,7 @@ function NodeFacts({ node }) {
 // showsUsage: a budget's consumption is its managers' business; a budget
 // someone may only request from does not show it. A project shows it to
 // everyone who sees the project — once it exists in OpenStack.
-const showsUsage = (node) => (isBudget(node) ? !node.request_only : !!node.external_id);
+const showsUsage = (node) => (isBudget(node) ? !node.request_only : !!openstackSide(node).external_id);
 
 // nodeExtraTabs are the read-only tabs the edit dialogs add after their own,
 // in FormTabs' shape. The usage panel fetches, so it renders only while its

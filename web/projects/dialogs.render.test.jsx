@@ -48,7 +48,7 @@ function project(extra = {}) {
     return {
         ...p, parent_name: 'Mannheim', parent_path: [{ id: 'b_ma', name: 'Mannheim' }],
         allocations: [{ budget_id: 'b_root', budget_name: 'Organization Root', limit: { cores: 2 }, granted_by: 'x@y', granted_at: '2026-08-01T10:00:00Z', reason: 'GPU work' }],
-        external_group_assignments: [{ group_id: 'g1', group_name: 'fakultaet-wi', role: 'member' }],
+        bindings: { openstack: { ...p.bindings?.openstack, external_group_assignments: [{ group_id: 'g1', group_name: 'fakultaet-wi', role: 'member' }] } },
         ...extra,
     };
 }

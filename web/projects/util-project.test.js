@@ -74,9 +74,9 @@ describe('nodeTitle', () => {
     // empty name for it would make it unidentifiable in the very list where
     // someone has to decide whether to adopt it.
     it('prefers the OpenStack name for imported nodes', () => {
-        expect(nodeTitle({ status: 'imported', external_name: 'legacy-proj', name: 'ignored' }))
+        expect(nodeTitle({ status: 'imported', bindings: { openstack: { external_name: 'legacy-proj' } }, name: 'ignored' }))
             .toBe('legacy-proj');
-        expect(nodeTitle({ status: 'imported', external_id: 'abc123' })).toBe('abc123');
+        expect(nodeTitle({ status: 'imported', bindings: { openstack: { external_id: 'abc123' } } })).toBe('abc123');
     });
 });
 
@@ -225,7 +225,7 @@ describe('statusLabel / isProvisioning', () => {
     });
 
     it('is not provisioning once the project exists, or when nothing provisions', () => {
-        expect(isProvisioning({ kind: 'project', status: 'approved', external_id: 'x' }, true)).toBe(false);
+        expect(isProvisioning({ kind: 'project', status: 'approved', bindings: { openstack: { external_id: 'x' } } }, true)).toBe(false);
         expect(isProvisioning({ kind: 'project', status: 'approved' }, false)).toBe(false);
         expect(isProvisioning({ kind: 'budget', status: 'approved' }, true)).toBe(false);
     });
@@ -407,7 +407,7 @@ describe('overageEntries / overageText', () => {
     ];
 
     it('reports only what OpenStack measures above the limit', () => {
-        const node = { limit: { cores: 4, ram: 2, storage: 5 }, in_use: { cores: 8, ram: 1 } };
+        const node = { limit: { cores: 4, ram: 2, storage: 5 }, bindings: { openstack: { in_use: { cores: 8, ram: 1 } } } };
         expect(overageEntries(resources, node).map(r => r.id)).toEqual(['cores']);
         expect(overageText(overageEntries(resources, node))).toBe('8 Cores');
     });
@@ -415,24 +415,24 @@ describe('overageEntries / overageText', () => {
     // A key missing from in_use means "not measured", not zero — treating it
     // as zero would be an overage of nothing and hide the ones that are real.
     it('ignores resources OpenStack does not measure', () => {
-        const node = { limit: { cores: 4, storage: 5 }, in_use: { cores: 4 } };
+        const node = { limit: { cores: 4, storage: 5 }, bindings: { openstack: { in_use: { cores: 4 } } } };
         expect(overageEntries(resources, node)).toEqual([]);
     });
 
     // max(-1, n) would turn "no cap" into a finite number and report an overage
     // against a project that cannot have one.
     it('never treats an unlimited limit as exceeded', () => {
-        const node = { limit: { cores: -1 }, in_use: { cores: 9999 } };
+        const node = { limit: { cores: -1 }, bindings: { openstack: { in_use: { cores: 9999 } } } };
         expect(overageEntries(resources, node)).toEqual([]);
     });
 
     it('is empty when nothing was measured at all', () => {
         expect(overageEntries(resources, { limit: { cores: 4 } })).toEqual([]);
-        expect(overageEntries(null, { in_use: { cores: 8 } })).toEqual([]);
+        expect(overageEntries(null, { bindings: { openstack: { in_use: { cores: 8 } } } })).toEqual([]);
     });
 
     it('formats several resources with their units', () => {
-        const node = { limit: { cores: 4, ram: 2 }, in_use: { cores: 8, ram: 5 } };
+        const node = { limit: { cores: 4, ram: 2 }, bindings: { openstack: { in_use: { cores: 8, ram: 5 } } } };
         expect(overageText(overageEntries(resources, node))).toBe('8 Cores · 5 GB RAM');
     });
 });
@@ -598,7 +598,7 @@ describe('resourceSummaryText with availabilities', () => {
 });
 
 describe('openstackProjectUrl', () => {
-    const node = { status: 'approved', external_id: 'abc123' };
+    const node = { status: 'approved', bindings: { openstack: { external_id: 'abc123' } } };
 
     it('switches Horizon to the project, keeping the target through the login', () => {
         expect(openstackProjectUrl('https://newstack.dhbw.cloud/', node))

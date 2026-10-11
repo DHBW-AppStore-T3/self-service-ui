@@ -7,6 +7,7 @@ import { projectKeys } from './query-keys.js';
 import { useApiMutation } from '/helper/query-state.jsx';
 import { formatError } from '/helper/api-error.js';
 import { useConfirm } from '/providers/confirm.jsx';
+import { openstackSide } from './util-project.jsx';
 
 // ExternalGroups lists the groups a project was given in OpenStack rather than
 // here — kept by the reconciler as long as the project names them, so this is
@@ -19,13 +20,13 @@ export function ExternalGroups({ node, removable = false }) {
     const confirm = useConfirm();
     // The dialog's node is not refreshed while it is open; what the removal
     // returns is the current list.
-    const [groups, setGroups] = useState(node?.external_group_assignments || []);
+    const [groups, setGroups] = useState(openstackSide(node).external_group_assignments || []);
 
     const remove = useApiMutation({
         mutationFn: (groupId) => api.removeExternalGroup(node.id, groupId),
         invalidates: [projectKeys.tree()],
         reportErrors: 'inline',
-        onSuccess: (result) => setGroups(result?.external_group_assignments || []),
+        onSuccess: (result) => setGroups(openstackSide(result).external_group_assignments || []),
     });
 
     if (groups.length === 0) return null;
