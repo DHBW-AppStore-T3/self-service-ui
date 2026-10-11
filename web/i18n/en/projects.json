@@ -744,6 +744,9 @@
         "restoreText": "It can be granted again afterwards. Where it was withdrawn it stays withdrawn until it is granted anew."
     },
     "resources": {
+        "perWindow": "per {{window}}",
+        "window": { "24h": "day", "7d": "7 days", "30d": "30 days" },
+        "provider": { "openstack": "OpenStack", "workspaces": "Workspaces" },
         "usedOfGranted": "in use / granted, as of the last sync",
         "servers_one": "{{count}} VM",
         "servers_other": "{{count}} VMs",

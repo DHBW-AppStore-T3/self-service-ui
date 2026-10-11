@@ -18,7 +18,7 @@ import { useNodeMutation } from './use-node-mutation.jsx';
 import { PersonInput, personEmail } from './principal-search.jsx';
 import { AllocationSection, useAllocationDraft } from './component-allocation-section.jsx';
 import { withCurrentParent } from './component-budget-select.jsx';
-import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide } from './util-project.jsx';
+import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide, resourceLabel } from './util-project.jsx';
 import { AttributesEditor, AttributesView, hasAttributes, useAttributesTab } from './component-node-attributes.jsx';
 import { nodeExtraTabs } from './modal-inspect.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
@@ -567,7 +567,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                             <Table.Tbody>
                                 {overcommitted.map(r => (
                                     <Table.Tr key={r.id}>
-                                        <Table.Td>{r.unit ? `${r.name} (${r.unit})` : r.name}</Table.Td>
+                                        <Table.Td>{resourceLabel(t, r)}</Table.Td>
                                         <Table.Td>{r.requested}</Table.Td>
                                         <Table.Td>{r.used}</Table.Td>
                                     </Table.Tr>

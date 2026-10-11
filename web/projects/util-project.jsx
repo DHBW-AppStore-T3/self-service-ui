@@ -202,13 +202,24 @@ export function visibleResources(resources, node) {
     return all.filter(r => inScope.has(r.id));
 }
 
+// resourceLabel is how a resource is named next to a value: its name, its unit,
+// and for an amount per window the window — "GPU hours (h per 30 days)".
+export function resourceLabel(t, r) {
+    const per = r.window ? t('projects.resources.perWindow', { window: t(`projects.resources.window.${r.window}`, { defaultValue: r.window }) }) : '';
+    const suffix = [r.unit, per].filter(Boolean).join(' ');
+    return suffix ? `${r.name} (${suffix})` : r.name;
+}
+
 // groupResources sorts the catalogue into its display groups, keeping the
 // catalogue's own order inside each one so two nodes never reshuffle relative to
 // each other. Resources without a group land in one unnamed bucket at the end.
-export function groupResources(resources) {
+// Once the catalogue spans more than one provider, the provider heads each
+// group ("Workspaces · GPU"); providerLabel names it.
+export function groupResources(resources, providerLabel = (p) => p) {
+    const multi = new Set((resources || []).map(r => r.provider).filter(Boolean)).size > 1;
     const groups = new Map();
     for (const r of resources || []) {
-        const key = r.group || '';
+        const key = multi && r.provider ? [providerLabel(r.provider), r.group].filter(Boolean).join(' · ') : (r.group || '');
         if (!groups.has(key)) groups.set(key, []);
         groups.get(key).push(r);
     }

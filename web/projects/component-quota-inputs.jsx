@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Checkbox, Grid, Group, NumberInput, Stack, Switch, Text, TextInput } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { UNLIMITED_QUOTA, groupResources, isAvailability } from './util-project.jsx';
+import { UNLIMITED_QUOTA, groupResources, isAvailability, resourceLabel } from './util-project.jsx';
 import { UsageMeter, grantUseText } from './component-project-resources.jsx';
 
 // Above this many fields the list stops being scannable and gets a filter. The
@@ -47,7 +47,7 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
 
     if (!resources) return null;
 
-    const groups = groupResources(matching);
+    const groups = groupResources(matching, p => t(`projects.resources.provider.${p}`, { defaultValue: p }));
     const searchable = resources.length > SEARCH_THRESHOLD;
 
     return (
@@ -141,7 +141,7 @@ function QuantityField({ resource: r, value: current, onChange, error, disabled,
     return (
         <Stack gap="4">
             <NumberInput
-                label={r.unit ? `${r.name} (${r.unit})` : r.name}
+                label={resourceLabel(t, r)}
                 size={extra ? 'xs' : undefined}
                 min={allowUnlimited || extra ? 0 : r.min}
                 max={r.max}

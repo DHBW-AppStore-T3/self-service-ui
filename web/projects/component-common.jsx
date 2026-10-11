@@ -6,7 +6,7 @@ import { ActionIcon, Anchor, Badge, Box, Button, Checkbox, Group, NumberInput, P
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { COLOR, UNLIMITED_QUOTA, formatRoleLabel, isAvailability, limitDelta, nodeChanges, resourceBarSegments, statusDescription, statusLabel, statusStyle } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, formatRoleLabel, isAvailability, limitDelta, nodeChanges, resourceBarSegments, statusDescription, statusLabel, statusStyle, resourceLabel } from './util-project.jsx';
 import { tokenDisplay, tokenEmail, useTokenLabels } from './token-labels.jsx';
 import { formatDate } from '../format-date.js';
 
@@ -241,7 +241,7 @@ function usageText(t, approved, changePending, incoming, limit, retired = 0) {
 // incoming (optional) adds a highlighted segment previewing a pending grant's impact.
 export function ResourceBar({ resource, limit, approved = 0, changePending = 0, incoming = 0, retired = 0 }) {
     const { t } = useTranslation();
-    const label = resource.unit ? `${resource.name} (${resource.unit})` : resource.name;
+    const label = resourceLabel(t, resource);
     const unlimited = limit === UNLIMITED_QUOTA;
 
     if (unlimited) {
@@ -364,7 +364,7 @@ export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateT
                             const d = diff(r.id);
                             return (
                                 <Table.Tr key={r.id}>
-                                    <Table.Td>{r.unit ? `${r.name} (${r.unit})` : r.name}</Table.Td>
+                                    <Table.Td>{resourceLabel(t, r)}</Table.Td>
                                     <Table.Td>{d.before}</Table.Td>
                                     <Table.Td>{d.after}</Table.Td>
                                     <Table.Td c={d.color}>{d.d > 0 ? '+' : ''}{d.d}</Table.Td>

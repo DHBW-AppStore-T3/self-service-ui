@@ -1,6 +1,6 @@
 import { Badge, Group, Progress, Stack, Text, Tooltip } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { COLOR, UNLIMITED_QUOTA, USAGE_COLOR, isAvailability, resourceSummaryText, usageLevel, measuredUse, openstackSide } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, USAGE_COLOR, isAvailability, resourceSummaryText, usageLevel, measuredUse, openstackSide, resourceLabel } from './util-project.jsx';
 
 // ProjectResources: what a project was granted and, where the reconciler has
 // measured it, how much of that is in use right now — a bar per quantity, the
@@ -29,7 +29,7 @@ export function ProjectResources({ node, resources, quota, size = 'xs' }) {
             <Tooltip label={t('projects.resources.usedOfGranted')} openDelay={600}>
                 <Stack gap={6}>
                     {quantities.map(r => (
-                        <UsageMeter key={r.id} label={r.unit ? `${r.name} (${r.unit})` : r.name}
+                        <UsageMeter key={r.id} label={resourceLabel(t, r)}
                             used={inUse[r.id]} limit={quota[r.id]} />
                     ))}
                     {typeof servers === 'number' && (

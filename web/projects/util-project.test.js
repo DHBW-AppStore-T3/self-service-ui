@@ -4,44 +4,7 @@ import i18n from '/i18n/index.js';
 // The real English resources, so a renamed key fails here rather than showing
 // the key itself on the screen.
 const t = i18n.getFixedT('en');
-import { resourceUsageText, sortProjects, usageLevel,
-    UNLIMITED_QUOTA,
-    deletesOnRequest,
-    deletionRequested,
-    isRetired,
-    lastEventAt,
-    scheduledDeletion,
-    autoApproveHeadroom,
-    childrenById,
-    expiryTone,
-    freeAmount,
-    groupResources,
-    headroomExhaustedBy,
-    isAvailability,
-    isExpired,
-    isProvisioning,
-    limitDelta,
-    nodeChanges,
-    nodeTitle,
-    normalizeObjectResponse,
-    openstackProjectUrl,
-    overageEntries,
-    overageText,
-    ownerEmail,
-    quotaFits,
-    requestType,
-    resourceBarSegments,
-    resourceSummaryText,
-    statusLabel,
-    usedAmount,
-    visibleResources,
-    defaultsWithin,
-    projectActions,
-    effectiveLimit,
-    availabilityElsewhere,
-    hasAllocations,
-    roomIn,
-} from './util-project.jsx';
+import { resourceUsageText, sortProjects, usageLevel, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, isRetired, lastEventAt, scheduledDeletion, autoApproveHeadroom, childrenById, expiryTone, freeAmount, groupResources, headroomExhaustedBy, isAvailability, isExpired, isProvisioning, limitDelta, nodeChanges, nodeTitle, normalizeObjectResponse, openstackProjectUrl, overageEntries, overageText, ownerEmail, quotaFits, requestType, resourceBarSegments, resourceSummaryText, statusLabel, usedAmount, visibleResources, defaultsWithin, projectActions, effectiveLimit, availabilityElsewhere, hasAllocations, roomIn, resourceLabel } from './util-project.jsx';
 
 const RESOURCES = [
     { id: 'cpu', name: 'vCPUs' },
@@ -760,5 +723,25 @@ describe('sortProjects', () => {
         expect(names('created')).toEqual(['Alpha', 'gamma', 'beta']);
         expect(names('expiry')).toEqual(['gamma', 'beta', 'Alpha']);
         expect(names('status')).toEqual(['gamma', 'beta', 'Alpha']);
+    });
+});
+
+describe('resourceLabel / groupResources with providers', () => {
+    const t = (key, opts) => ({
+        'projects.resources.perWindow': `per ${opts?.window}`,
+        'projects.resources.window.30d': '30 days',
+    })[key] ?? opts?.defaultValue ?? key;
+
+    it('names the window of an amount per window', () => {
+        expect(resourceLabel(t, { name: 'GPU hours', unit: 'h', window: '30d' })).toBe('GPU hours (h per 30 days)');
+        expect(resourceLabel(t, { name: 'Cores' })).toBe('Cores');
+        expect(resourceLabel(t, { name: 'RAM', unit: 'GB' })).toBe('RAM (GB)');
+    });
+
+    it('heads the groups with the provider only once there are several', () => {
+        const os = [{ id: 'cores', group: 'Compute', provider: 'openstack' }];
+        expect(groupResources(os).map(([k]) => k)).toEqual(['Compute']);
+        const both = [...os, { id: 'gpu', group: 'GPU', provider: 'workspaces' }];
+        expect(groupResources(both, p => p.toUpperCase()).map(([k]) => k)).toEqual(['OPENSTACK · Compute', 'WORKSPACES · GPU']);
     });
 });
