@@ -4,6 +4,7 @@ import { apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled, llmEnabled } f
 import { TOKEN_SCOPES, tokenScopeLabel, tokenScopePath } from '/tokens/scopes.js';
 import { useCloudStatus } from '/projects/cloud-status.jsx';
 import { useDnsPolicyStatus } from '/dyndns/use-policy.jsx';
+import { hasWorkspaces } from '/gpu/access.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 
 // The whole navigation as data, in one place: the header renders it two ways
@@ -94,18 +95,17 @@ export function useNav() {
                 { label: t('nav.apiDocumentation'), href: '/llm/api-doc' },
             ].filter(Boolean),
         },
-        // The GPU part of the same service: environments from Git repositories and JupyterHub servers. Visible with a GPU tier from the access rules, independent of the LLM role.
-        llmEnabled && !!llm.me?.gpu_tier && {
-            id: 'gpu',
-            label: t('nav.gpu'),
-            base: '/gpu',
+        // Workspaces (Jupyter now, Coder later; docs/plan-workspaces.md) from the same service: for members of a project, and admins, who manage the projects.
+        llmEnabled && hasWorkspaces(llm.me, llm.isAdmin) && {
+            id: 'workspaces',
+            label: t('nav.workspaces'),
+            base: '/workspaces',
             items: [
-                { label: t('nav.gpuEnvironments'), href: '/gpu/environments' },
-                { label: t('nav.gpuServers'), href: '/gpu/servers' },
-                { label: t('nav.gpuUsage'), href: '/gpu/usage' },
-                // The access rules are one list for LLM and GPU (same service); admins find them here too.
-                llm.isAdmin && { label: t('nav.llmAccess'), href: '/llm/access' },
-            ].filter(Boolean),
+                { label: t('nav.workspaceProjects'), href: '/workspaces/projects' },
+                { label: t('nav.gpuEnvironments'), href: '/workspaces/environments' },
+                { label: t('nav.gpuServers'), href: '/workspaces/servers' },
+                { label: t('nav.gpuUsage'), href: '/workspaces/usage' },
+            ],
         },
         // Last, and a category of its own with nothing under it: tokens belong
         // to the account rather than to one of the domains above — both APIs

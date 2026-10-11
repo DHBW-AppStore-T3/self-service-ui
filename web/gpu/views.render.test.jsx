@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { renderView } from '/test/render-harness.jsx';
 
 // Does each GPU view render at all, with data in it? Same question as llm/views.render.test.jsx.
@@ -46,9 +46,19 @@ const USAGE = {
     ],
 };
 
+const PROJECTS = [
+    { slug: 'wwi23seb-ml', name: 'Machine Learning WWI23SEB', description: 'Übungen', role: 'manager', profiles: ['cpu', 'pytorch'], gpu_classes: ['l4-3q'],
+      members: [{ token: 'group:wwi23seb', role: 'member' }], images: [], free_images: false,
+      limits: { servers_per_person: 2, cpu_per_person: 4, ram_gb_per_person: 16, gpus_per_person: 1, gpus: 4 }, budgets: [] },
+    { slug: 'statistik', name: 'Statistik', role: 'member', profiles: ['cpu', 'git-cpu'], gpu_classes: [], members: [], images: [{ name: 'R', image: 'reg/envs/r:1' }],
+      limits: { servers_per_person: 1 }, budgets: [], ends_at: '2027-03-31T00:00:00Z' },
+];
+const CATALOG = { profiles: [{ slug: 'cpu', name: 'CPU' }, { slug: 'pytorch', name: 'PyTorch (GPU)', gpu_class: 'l4-3q' }, { slug: 'git-cpu', name: 'Umgebung aus Git (CPU)' }], gpuClasses: ['l4-3q'] };
+
 const { GpuEnvironments } = await import('/gpu/environments.jsx');
 const { GpuServers } = await import('/gpu/servers.jsx');
 const { GpuUsage, groupUsage } = await import('/gpu/usage.jsx');
+const { WorkspaceProjects } = await import('/gpu/projects.jsx');
 
 let consoleErrors = [];
 beforeEach(() => {
@@ -57,6 +67,8 @@ beforeEach(() => {
         listServers: async () => SERVERS,
         environmentLog: async () => 'log',
         myWorkspaceUsage: async () => USAGE,
+        listProjects: async () => PROJECTS,
+        catalog: async () => CATALOG,
         workspaceUsage: async () => USAGE,
     };
     consoleErrors = [];
@@ -84,6 +96,15 @@ describe('the GPU views render', () => {
     it('Servers lists the servers', async () => {
         renderView(<GpuServers />);
         expect(await screen.findByText('conda-beispiel-2')).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('Projects shows the projects and opens the editor', async () => {
+        renderView(<WorkspaceProjects />);
+        expect(await screen.findByText('Machine Learning WWI23SEB')).toBeTruthy();
+        expect(screen.getByText('Statistik')).toBeTruthy();
+        fireEvent.click(screen.getAllByLabelText(/Bearbeiten|Edit/)[0]);
+        expect(await screen.findByDisplayValue('group:wwi23seb')).toBeTruthy();
         expectNoRenderFailure();
     });
 

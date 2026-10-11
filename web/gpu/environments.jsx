@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
-import { Alert, Anchor, Badge, Button, Container, Group, Loader, Modal, Paper, Stack, Table, Text, TextInput, Title, Tooltip } from '@mantine/core';
+import { Alert, Anchor, Badge, Button, Container, Group, Loader, Modal, Paper, Select, Stack, Table, Text, TextInput, Title, Tooltip } from '@mantine/core';
 import { Cpu, ExternalLink, FileText, Play, Plus, RotateCcw, Trash2, Zap } from 'lucide-react';
 import { formatDateTime } from '/format-date.js';
 import { CodeBlock } from '/helper/codeblock.jsx';
@@ -24,6 +24,12 @@ export function GpuEnvironments() {
     const [name, setName] = useState('');
     const [logOf, setLogOf] = useState(null);
     const [started, setStarted] = useState(null);
+    const [project, setProject] = useState(null);
+    // Started servers run in a project (W2); the service picks the first fitting one when nothing is chosen.
+    const projects = useQuery({ queryKey: gpuKeys.projects(false), queryFn: () => api.listProjects(false) });
+    const myProjects = projects.data ?? [];
+    const chosen = myProjects.find(p => p.slug === project) ?? myProjects[0];
+    const allows = (profile) => !chosen || (chosen.profiles ?? []).includes(profile);
 
     // While something builds, ask again every 5 s; otherwise the list only changes through this page.
     const envs = useQuery({
@@ -41,7 +47,7 @@ export function GpuEnvironments() {
     const remove = useApiMutation({ mutationFn: (id) => api.deleteEnvironment(id), invalidates: [gpuKeys.environments()] });
     const rebuild = useApiMutation({ mutationFn: (id) => api.rebuildEnvironment(id), invalidates: [gpuKeys.environments()] });
     const start = useApiMutation({
-        mutationFn: ({ id, gpu }) => api.startEnvironment(id, gpu),
+        mutationFn: ({ id, gpu }) => api.startEnvironment(id, gpu, chosen?.slug),
         invalidates: [gpuKeys.servers()],
         onSuccess: (res, vars) => setStarted({ ...res, gpu: vars.gpu }),
     });
@@ -88,6 +94,10 @@ export function GpuEnvironments() {
                         </Button>
                     </Group>
                     <Text size="xs" c="dimmed" mt={6}>{t('gpu.envs.addHint')}</Text>
+                    {myProjects.length > 1 && (
+                        <Select mt="sm" w={360} label={t('gpu.envs.project')} description={t('gpu.envs.projectHint')} allowDeselect={false}
+                            value={chosen?.slug} onChange={setProject} data={myProjects.map(p => ({ value: p.slug, label: p.name }))} />
+                    )}
                     {create.error && <Alert color="red" variant="light" mt="sm">{create.error.message}</Alert>}
 
                     <Table striped highlightOnHover mt="md">
@@ -126,12 +136,12 @@ export function GpuEnvironments() {
                                     <Table.Td align="right">
                                         <Group gap={4} justify="flex-end" wrap="nowrap">
                                             <Tooltip label={t('gpu.envs.startCpuHint')}>
-                                                <Button size="xs" variant="light" leftSection={<Cpu size={14} />} disabled={e.status !== 'ready'}
+                                                <Button size="xs" variant="light" leftSection={<Cpu size={14} />} disabled={e.status !== 'ready' || !allows('git-cpu')}
                                                     loading={start.isPending && start.variables?.id === e.id && !start.variables?.gpu}
                                                     onClick={() => start.mutate({ id: e.id, gpu: false })}>{t('gpu.envs.startCpu')}</Button>
                                             </Tooltip>
                                             <Tooltip label={t('gpu.envs.startGpuHint')}>
-                                                <Button size="xs" variant="light" color="grape" leftSection={<Zap size={14} />} disabled={e.status !== 'ready'}
+                                                <Button size="xs" variant="light" color="grape" leftSection={<Zap size={14} />} disabled={e.status !== 'ready' || !allows('git-gpu')}
                                                     loading={start.isPending && start.variables?.id === e.id && start.variables?.gpu}
                                                     onClick={() => start.mutate({ id: e.id, gpu: true })}>{t('gpu.envs.startGpu')}</Button>
                                             </Tooltip>

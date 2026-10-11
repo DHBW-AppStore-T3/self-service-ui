@@ -5,7 +5,7 @@ import './app.css';
 
 import { createRoot } from 'react-dom/client';
 import { lazy, Suspense, useState } from 'react';
-import { Router, Route, Switch, useLocation } from 'wouter';
+import { Redirect, Router, Route, Switch, useLocation } from 'wouter';
 
 import { apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled, llmEnabled } from '/features.js';
 // Imported for its side effect: initialising i18next before the first render,
@@ -151,7 +151,9 @@ function AppRoutes() {
                     {dnsZonesEnabled && <Route path="/dyndns" component={DynamicDnsManagement} nest />}
                     {cloudProjectsEnabled && <Route path="/projects" component={CloudProjectManagement} nest />}
                     {llmEnabled && <Route path="/llm" component={LlmManagement} nest />}
-                    {llmEnabled && <Route path="/gpu" component={GpuManagement} nest />}
+                    {llmEnabled && <Route path="/workspaces" component={GpuManagement} nest />}
+                    {/* The section was called GPU until W2; old links keep working. */}
+                    {llmEnabled && <Route path="/gpu/*?">{(params) => <Redirect to={`/workspaces/${params['*'] ?? ''}`} replace />}</Route>}
                     {apiTokensEnabled && <Route path="/tokens" component={ApiTokens} nest />}
                     <Route component={NotFound} />
                 </Switch>

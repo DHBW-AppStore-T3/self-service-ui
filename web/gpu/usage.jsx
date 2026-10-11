@@ -49,15 +49,18 @@ export function GpuUsage() {
     const { t } = useTranslation();
     const api = useGpuApi();
     const { isAdmin } = useLlmMe();
-    const [scope, setScope] = useState('mine');
+    const [scope, setScope] = useState('mine'); // mine, all (admins) or project:<slug> (managers and admins)
     const [periodKey, setPeriodKey] = useState('30');
     const [by, setBy] = useState('profile');
     const all = isAdmin && scope === 'all';
+    const project = scope.startsWith('project:') ? scope.slice(8) : '';
     const period = useMemo(() => periodRange(periodKey === 'lifetime' ? '1098' : periodKey), [periodKey]);
+    const projects = useQuery({ queryKey: gpuKeys.projects(false), queryFn: () => api.listProjects(false) });
+    const managed = (projects.data ?? []).filter(p => isAdmin || p.role === 'manager');
 
     const query = useQuery({
-        queryKey: gpuKeys.usage(all ? 'all' : 'mine', period),
-        queryFn: () => (all ? api.workspaceUsage(period) : api.myWorkspaceUsage(period)),
+        queryKey: gpuKeys.usage(scope, period),
+        queryFn: () => (all || project ? api.workspaceUsage(period, project) : api.myWorkspaceUsage(period)),
         staleTime: 5 * 60 * 1000,
     });
     const report = query.data;
@@ -82,7 +85,7 @@ export function GpuUsage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `workspace-usage-${all ? 'all' : 'mine'}-${by}-${period.from}-${period.to}.csv`;
+        a.download = `workspace-usage-${scope.replace(':', '-')}-${by}-${period.from}-${period.to}.csv`;
         a.click();
         URL.revokeObjectURL(url);
     };
@@ -98,9 +101,13 @@ export function GpuUsage() {
                             <Text size="xs" c="dimmed">{t('gpu.usage.hint', period)}</Text>
                         </div>
                         <Group gap="xs" wrap="wrap">
-                            {isAdmin && (
-                                <SegmentedControl size="xs" value={scope} onChange={setScope}
-                                    data={[{ value: 'mine', label: t('gpu.usage.mine') }, { value: 'all', label: t('gpu.usage.all') }]} />
+                            {(isAdmin || managed.length > 0) && (
+                                <Select size="xs" w={220} value={scope} onChange={(v) => v && setScope(v)} allowDeselect={false}
+                                    data={[
+                                        { value: 'mine', label: t('gpu.usage.mine') },
+                                        ...(isAdmin ? [{ value: 'all', label: t('gpu.usage.all') }] : []),
+                                        ...managed.map(p => ({ value: `project:${p.slug}`, label: t('gpu.usage.project', { name: p.name }) })),
+                                    ]} />
                             )}
                             <Select size="xs" w={160} value={by} onChange={(v) => v && setBy(v)} allowDeselect={false}
                                 data={USAGE_GROUPINGS.map(g => ({ value: g, label: t(`gpu.usage.groupBy.${g}`) }))} />

@@ -4,4 +4,6 @@ export const gpuKeys = {
     log: (id) => ['gpu', 'environments', id, 'log'],
     servers: () => ['gpu', 'servers'],
     usage: (scope, period) => ['gpu', 'usage', scope, period.from, period.to],
+    projects: (all) => ['gpu', 'projects', all ? 'all' : 'mine'],
+    catalog: () => ['gpu', 'catalog'],
 };
