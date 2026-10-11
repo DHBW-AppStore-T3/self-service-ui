@@ -32,7 +32,7 @@ const TAB_ATTRIBUTES = 'attributes';
 
 // OutcomeNote says, while the form is being filled in, what pressing the button
 // will do — the one thing a requester cannot otherwise tell before it happened.
-function OutcomeNote({ outcome, isChange, budget, hasPolicy }) {
+function OutcomeNote({ outcome, isChange, budget, hasPolicy, over = [] }) {
     const { t } = useTranslation();
     if (!outcome) return null;
     // One whole sentence per outcome — the budget is named by the picker above,
@@ -48,6 +48,7 @@ function OutcomeNote({ outcome, isChange, budget, hasPolicy }) {
         return (
             <Text size="sm" c={COLOR.negative} mt="sm">
                 {t('projects.projectForm.outcomeRefused')}
+                {over.length > 0 && ` ${t('projects.projectForm.outcomeRefusedWhich', { list: over.map(r => t('projects.projectForm.overItem', { name: resourceLabel(t, r), asked: r.asked, free: r.free })).join(', ') })}`}
             </Text>
         );
     }
@@ -296,6 +297,14 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         });
 
     const offered = offeredFor(parentId);
+    // For a new project: what the chosen budget still has free per quantity,
+    // shown under each field, and the quantities asking for more than that —
+    // the refusal names them instead of leaving the person to guess. A change
+    // is left out: the project's own share is in the budget's use already.
+    const newRoom = !isChange && outcomeBudget ? roomIn(outcomeBudget, offered) : null;
+    const over = newRoom ? offered
+        .filter(r => !isAvailability(r) && (quota?.[r.id] ?? 0) > (newRoom[r.id] ?? Infinity))
+        .map(r => ({ ...r, asked: quota[r.id], free: newRoom[r.id] })) : [];
     const latestEnd = latestEndOf(isChange ? node.parent_id : parentId);
 
     // Picking a budget with auto-approve fills the resources with the most it
@@ -580,6 +589,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             <QuotaInputs
                 resources={offered}
                 value={quota}
+                headroom={newRoom}
                 usage={inUseNow ? { inUse: inUseNow, grantUse: openstackSide(node).grant_use, total: effectiveLimit(node, quota) } : null}
                 errors={Object.fromEntries((resources || []).map(r => [r.id, form.errors[`quota.${r.id}`]]))}
                 onChange={(id, v) => {
@@ -687,6 +697,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             )}
 
             <OutcomeNote
+                over={over}
                 outcome={outcome}
                 isChange={isChange}
                 budget={outcomeBudget}

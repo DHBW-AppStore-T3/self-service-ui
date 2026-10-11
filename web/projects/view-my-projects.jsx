@@ -17,7 +17,7 @@ import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 import { useTranslation } from 'react-i18next';
-import { COLOR, PROJECT_SORTS, getAuthUserEmail, ownerEmail, sortProjects } from './util-project.jsx';
+import { COLOR, PROJECT_SORTS, getAuthUserEmail, ownerEmail, sortProjects, pollWhileDeleting } from './util-project.jsx';
 
 // MyProjectsView lists the projects the signed-in user owns and lets them
 // request new ones, propose changes and release finished projects. Above them
@@ -49,7 +49,7 @@ export function MyProjectsView() {
     // giving one place to ask "are we still loading".
     const [projectsQuery, myBudgetsQuery, eligibleQuery] = useQueries({
         queries: [
-            { queryKey: projectKeys.mine(), queryFn: () => api.listMine(), enabled: !!api },
+            { queryKey: projectKeys.mine(), queryFn: () => api.listMine(), enabled: !!api, refetchInterval: pollWhileDeleting },
             { queryKey: projectKeys.myBudgets(), queryFn: () => api.listMyBudgets(), enabled: !!api },
             { queryKey: projectKeys.eligibleForMe(), queryFn: () => api.listEligibleForMe(), enabled: !!api },
         ],

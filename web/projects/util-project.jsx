@@ -101,6 +101,15 @@ export function deletionRequested(node) {
     return (node?.flags || []).includes('delete_requested');
 }
 
+// pollWhileDeleting is a react-query refetchInterval for a page of nodes: while
+// one of them is being deleted, the page is fetched again every 10 s, so its
+// progress moves and the project disappears once it is gone instead of
+// standing at the step it was at when the page loaded.
+export const DELETING_POLL_MS = 10000;
+export function pollWhileDeleting(query) {
+    return (query?.state?.data?.items ?? []).some(deletionRequested) ? DELETING_POLL_MS : false;
+}
+
 // deletesOnRequest: the deployment deletes a released project when asked.
 export function deletesOnRequest(retirement) {
     const mode = retirement?.delete;

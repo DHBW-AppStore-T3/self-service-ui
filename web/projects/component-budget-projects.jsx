@@ -8,7 +8,7 @@ import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { InfoPopover, NodeStatusBadge } from './component-common.jsx';
 import { ProjectsPrincipalAutocomplete } from './principal-search.jsx';
-import { COLOR, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, expiryTone, expiryValue, hasAllocations, isAvailability, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel, USAGE_COLOR, usageLevel, measuredUse, openstackSide } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, expiryTone, expiryValue, hasAllocations, isAvailability, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel, USAGE_COLOR, usageLevel, measuredUse, openstackSide, pollWhileDeleting } from './util-project.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { LoadError } from '/helper/query-state.jsx';
 import { budgetPathText } from './component-budget-path.jsx';
@@ -81,6 +81,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
         // Keep the old rows while the next page or filter loads, so the table
         // does not collapse to nothing on every keystroke.
         placeholderData: keepPreviousData,
+        refetchInterval: pollWhileDeleting,
     });
 
     const items = query.data?.items ?? [];

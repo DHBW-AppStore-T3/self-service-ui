@@ -4,7 +4,7 @@ import i18n from '/i18n/index.js';
 // The real English resources, so a renamed key fails here rather than showing
 // the key itself on the screen.
 const t = i18n.getFixedT('en');
-import { resourceUsageText, sortProjects, usageLevel, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, isRetired, lastEventAt, scheduledDeletion, autoApproveHeadroom, childrenById, expiryTone, freeAmount, groupResources, headroomExhaustedBy, isAvailability, isExpired, isProvisioning, limitDelta, nodeChanges, nodeTitle, normalizeObjectResponse, openstackProjectUrl, overageEntries, overageText, ownerEmail, quotaFits, requestType, resourceBarSegments, resourceSummaryText, statusLabel, usedAmount, visibleResources, defaultsWithin, projectActions, effectiveLimit, availabilityElsewhere, hasAllocations, roomIn, resourceLabel } from './util-project.jsx';
+import { resourceUsageText, sortProjects, usageLevel, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, isRetired, lastEventAt, scheduledDeletion, autoApproveHeadroom, childrenById, expiryTone, freeAmount, groupResources, headroomExhaustedBy, isAvailability, isExpired, isProvisioning, limitDelta, nodeChanges, nodeTitle, normalizeObjectResponse, openstackProjectUrl, overageEntries, overageText, ownerEmail, quotaFits, requestType, resourceBarSegments, resourceSummaryText, statusLabel, usedAmount, visibleResources, defaultsWithin, projectActions, effectiveLimit, availabilityElsewhere, hasAllocations, roomIn, resourceLabel, pollWhileDeleting, DELETING_POLL_MS } from './util-project.jsx';
 
 const RESOURCES = [
     { id: 'cpu', name: 'vCPUs' },
@@ -747,5 +747,14 @@ describe('resourceLabel / groupResources with providers', () => {
         expect(groupResources(os).map(([k]) => k)).toEqual(['Compute']);
         const both = [...os, { id: 'gpu', group: 'GPU', provider: 'workspaces' }];
         expect(groupResources(both, p => p.toUpperCase()).map(([k]) => k)).toEqual(['OPENSTACK · Compute', 'WORKSPACES · GPU']);
+    });
+});
+
+describe('pollWhileDeleting', () => {
+    const page = (items) => ({ state: { data: { items } } });
+    it('polls only while a listed project is being deleted', () => {
+        expect(pollWhileDeleting(page([{ id: 'a', flags: ['delete_requested'] }, { id: 'b' }]))).toBe(DELETING_POLL_MS);
+        expect(pollWhileDeleting(page([{ id: 'b' }]))).toBe(false);
+        expect(pollWhileDeleting({ state: {} })).toBe(false);
     });
 });

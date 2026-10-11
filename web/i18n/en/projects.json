@@ -332,6 +332,8 @@
         "belowInUse": "OpenStack keeps the existing servers running and only refuses new ones, so this does not free anything up — the project stays over its quota until the resources are actually released.",
         "requested": "Requested",
         "outcomeBlocked": "This budget grants no more than your share, and it takes no requests beyond that. Ask for less, or ask one of its managers to raise your share.",
+        "outcomeRefusedWhich": "Too much: {{list}}.",
+        "overItem": "{{name}} {{asked}}, {{free}} free",
         "outcomeRefused": "More than this budget has free — creating the project will be refused. Lower the amount, or raise the budget first.",
         "outcomeDirect": "You manage this budget — the project is created right away.",
         "outcomeInstantChange": "Takes effect right away — no approval needed.",

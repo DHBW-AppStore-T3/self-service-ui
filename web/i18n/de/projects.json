@@ -332,6 +332,8 @@
         "belowInUse": "OpenStack lässt die vorhandenen Server weiterlaufen und lehnt nur neue ab. Dadurch wird nichts frei — das Projekt liegt über seiner Quota, bis die Ressourcen wirklich freigegeben werden.",
         "requested": "Angefragt",
         "outcomeBlocked": "Dieses Budget gewährt nicht mehr als den persönlichen Anteil und nimmt darüber hinaus keine Anfragen an. Entweder weniger anfragen oder eine verwaltende Person um einen höheren Anteil bitten.",
+        "outcomeRefusedWhich": "Zu viel: {{list}}.",
+        "overItem": "{{name}} {{asked}}, frei {{free}}",
         "outcomeRefused": "Mehr, als dieses Budget frei hat — das Projekt wird nicht angelegt. Entweder die Menge verringern oder zuerst das Budget erhöhen.",
         "outcomeDirect": "Dieses Budget ist in eigener Verwaltung — das Projekt wird sofort angelegt.",
         "outcomeInstantChange": "Wird sofort wirksam — keine Genehmigung nötig.",
