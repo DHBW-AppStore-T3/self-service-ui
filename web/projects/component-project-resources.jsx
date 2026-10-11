@@ -22,7 +22,7 @@ export function ProjectResources({ node, resources, quota, size = 'xs' }) {
     // Granted ones, and any that is used without being granted: that is the
     // one a reader most needs to see.
     const availabilities = (resources || []).filter(r => isAvailability(r) && (quota?.[r.id] === 1 || (grantUse?.[r.id] ?? 0) > 0));
-    const servers = os.servers;
+    const servers = os.facts?.servers;
 
     return (
         <Stack gap={6}>
@@ -33,7 +33,7 @@ export function ProjectResources({ node, resources, quota, size = 'xs' }) {
                             used={inUse[r.id]} limit={quota[r.id]} />
                     ))}
                     {typeof servers === 'number' && (
-                        <UsageMeter label={t('projects.resources.vms')} used={servers} limit={os.server_limit} />
+                        <UsageMeter label={t('projects.resources.vms')} used={servers} limit={os.facts?.server_limit} />
                     )}
                 </Stack>
             </Tooltip>

@@ -29,7 +29,7 @@ describe('ProjectResources', () => {
 
     it('draws a bar per quantity and the VMs, and counts what uses an availability', () => {
         const { container } = renderIt(
-            { bindings: { openstack: { in_use: { cores: 12 }, servers: 2, server_limit: 25, grant_use: { ipv4: 2, gpu: 0, img: 1 } } } },
+            { bindings: { openstack: { in_use: { cores: 12 }, facts: { servers: 2, server_limit: 25 }, grant_use: { ipv4: 2, gpu: 0, img: 1 } } } },
             { cores: 25, ipv4: 1, gpu: 1, img: 0 },
         );
         expect(container.querySelectorAll('[role="progressbar"]').length).toBe(2);
