@@ -75,6 +75,20 @@ export function formatDate(value) {
     return d ? d.toLocaleDateString(LOCALES[language], DATE_FORMATS[language]) : EMPTY;
 }
 
+// Day and month without the year, for an axis of recent days: 09.10. / 9 Oct.
+// Read in UTC, because the days it is given are UTC days ("2026-10-09") and
+// west of Greenwich midnight UTC is still the day before.
+const DAY_FORMATS = {
+    de: { day: '2-digit', month: '2-digit', timeZone: 'UTC' },
+    en: { day: 'numeric', month: 'short', timeZone: 'UTC' },
+};
+
+// formatDay renders a day without its year: 09.10. / 9 Oct
+export function formatDay(value) {
+    const d = toDate(value);
+    return d ? d.toLocaleDateString(LOCALES[language], DAY_FORMATS[language]) : EMPTY;
+}
+
 // formatDateTime adds hours and minutes: 25.08.2026 19:36
 export function formatDateTime(value) {
     const d = toDate(value);
