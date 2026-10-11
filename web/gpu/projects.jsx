@@ -11,10 +11,11 @@ import { gpuKeys } from '/gpu/query-keys.js';
 import { formatDate } from '/format-date.js';
 
 // Projects (docs/plan-workspaces.md, W2): through a project people start workspaces; it says who (members), what (profiles, GPU classes, images) and how much at the same time (limits). Admins create and change projects; a project's managers change its description, members and images.
+// A project from the budget tree (tree_node set) gets its name, members, end, GPUs per class and its budgets from the tree; here its managers set how it is used — profiles, images, limits per person, shares per person and shorter windows.
 
 const EMPTY = {
     slug: '', name: '', description: '', members: [], profiles: ['cpu'], gpu_classes: [], images: [], free_images: false,
-    limits: { servers_per_person: 2, cpu_per_person: 4, ram_gb_per_person: 16, gpus_per_person: 0, gpus: 0 }, budgets: [], ends_at: null,
+    limits: { servers_per_person: 2, cpu_per_person: 4, ram_gb_per_person: 16, gpus_per_person: 0 }, gpus_by_class: {}, budgets: [], ends_at: null,
 };
 
 export function WorkspaceProjects() {
@@ -78,7 +79,10 @@ export function WorkspaceProjects() {
                             <Paper key={p.slug} p="md" radius="md" withBorder>
                                 <Group justify="space-between" align="flex-start" wrap="nowrap">
                                     <div>
-                                        <Title order={5}>{p.name}</Title>
+                                        <Group gap={6}>
+                                            <Title order={5}>{p.name}</Title>
+                                            {p.tree_node && <Badge size="xs" variant="light" color="blue" style={{ textTransform: 'none' }}>{t('gpu.projects.managed')}</Badge>}
+                                        </Group>
                                         <Text size="xs" c="dimmed" ff="monospace">{p.slug}</Text>
                                     </div>
                                     <Group gap={4} wrap="nowrap">
@@ -100,7 +104,7 @@ export function WorkspaceProjects() {
                                     {(p.gpu_classes ?? []).map(c => <Badge key={c} variant="light" color="grape" size="sm" style={{ textTransform: 'none' }}>GPU {c}</Badge>)}
                                     {p.free_images && <Badge variant="light" color="orange" size="sm" style={{ textTransform: 'none' }}>{t('gpu.projects.freeImages')}</Badge>}
                                 </Group>
-                                <Text size="xs" c="dimmed" mt="sm">{limitsText(t, p.limits)}</Text>
+                                <Text size="xs" c="dimmed" mt="sm">{limitsText(t, p.limits, p.gpus_by_class)}</Text>
                                 {(p.budget_status ?? []).length > 0 && (
                                     <Stack gap={6} mt="sm">
                                         {p.budget_status.map((b, i) => <BudgetBar key={i} b={b} />)}
@@ -153,20 +157,22 @@ function BudgetBar({ b }) {
     );
 }
 
-export function limitsText(t, l = {}) {
+export function limitsText(t, l = {}, gpusByClass = {}) {
     const parts = [];
     if (l.servers_per_person) parts.push(t('gpu.projects.limit.servers', { count: l.servers_per_person }));
     if (l.cpu_per_person) parts.push(t('gpu.projects.limit.cpu', { value: l.cpu_per_person }));
     if (l.ram_gb_per_person) parts.push(t('gpu.projects.limit.ram', { value: l.ram_gb_per_person }));
     parts.push(l.gpus_per_person ? t('gpu.projects.limit.gpus', { count: l.gpus_per_person }) : t('gpu.projects.limit.noGpu'));
-    if (l.gpus) parts.push(t('gpu.projects.limit.projectGpus', { count: l.gpus }));
-    return `${t('gpu.projects.limit.perPerson')}: ${parts.join(' · ')}`;
+    const project = Object.entries(gpusByClass || {}).filter(([, n]) => n > 0)
+        .map(([c, n]) => t('gpu.projects.limit.projectGpusClass', { count: n, class: c }));
+    const text = `${t('gpu.projects.limit.perPerson')}: ${parts.join(' · ')}`;
+    return project.length ? `${text} · ${t('gpu.projects.limit.project')}: ${project.join(' · ')}` : text;
 }
 
 function ProjectEditor({ project, isNew, asAdmin, catalog, onClose }) {
     const { t } = useTranslation();
     const api = useGpuApi();
-    const [p, setP] = useState(() => ({ ...EMPTY, ...project, limits: { ...EMPTY.limits, ...(project.limits ?? {}) } }));
+    const [p, setP] = useState(() => ({ ...EMPTY, ...project, limits: { ...EMPTY.limits, ...(project.limits ?? {}) }, gpus_by_class: { ...(project.gpus_by_class ?? {}) } }));
     const set = (k, v) => setP(cur => ({ ...cur, [k]: v }));
     const setLimit = (k, v) => setP(cur => ({ ...cur, limits: { ...cur.limits, [k]: Number(v) || 0 } }));
     const save = useApiMutation({
@@ -178,7 +184,12 @@ function ProjectEditor({ project, isNew, asAdmin, catalog, onClose }) {
         reportErrors: 'inline',
         onSuccess: onClose,
     });
-    const locked = !asAdmin; // managers: description, members, images only
+    // From the tree: the tree owns name, members, end, GPUs per class and its budgets; managers set the rest.
+    // Otherwise managers change description, members and images only.
+    const managed = !!p.tree_node;
+    const locked = managed ? false : !asAdmin;
+    const treeLocked = managed || !asAdmin;
+    const setClassGpus = (c, v) => setP(cur => ({ ...cur, gpus_by_class: { ...cur.gpus_by_class, [c]: Number(v) || 0 } }));
 
     const members = p.members ?? [];
     const images = p.images ?? [];
@@ -187,60 +198,72 @@ function ProjectEditor({ project, isNew, asAdmin, catalog, onClose }) {
     return (
         <Modal opened onClose={onClose} size="lg" centered title={isNew ? t('gpu.projects.new') : t('gpu.projects.editTitle', { name: project.name })}>
             <Stack gap="sm">
+                {managed && <Alert color="blue" variant="light">{t('gpu.projects.managedHint')}</Alert>}
                 <Group grow>
                     <TextInput label={t('gpu.projects.slug')} description={t('gpu.projects.slugHint')} disabled={!isNew}
                         value={p.slug} onChange={e => set('slug', e.currentTarget.value.toLowerCase())} />
-                    <TextInput label={t('gpu.projects.name')} disabled={locked} value={p.name} onChange={e => set('name', e.currentTarget.value)} />
+                    <TextInput label={t('gpu.projects.name')} disabled={treeLocked} value={p.name} onChange={e => set('name', e.currentTarget.value)} />
                 </Group>
                 <Textarea label={t('gpu.projects.description')} autosize minRows={2} value={p.description} onChange={e => set('description', e.currentTarget.value)} />
 
                 <Text size="sm" fw={600}>{t('gpu.projects.members')}</Text>
                 {members.map((m, i) => (
                     <Group key={i} gap="xs" wrap="nowrap">
-                        <TextInput style={{ flex: 1 }} placeholder="group:wwi23seb · user:a@dhbw.de" value={m.token}
+                        <TextInput style={{ flex: 1 }} placeholder="group:wwi23seb · user:a@dhbw.de" value={m.token} disabled={managed}
                             onChange={e => set('members', members.map((x, j) => (j === i ? { ...x, token: e.currentTarget.value.trim() } : x)))} />
-                        <Select w={150} allowDeselect={false} value={m.role || 'member'}
+                        <Select w={150} allowDeselect={false} value={m.role || 'member'} disabled={managed}
                             data={[{ value: 'member', label: t('gpu.projects.roles.member') }, { value: 'manager', label: t('gpu.projects.roles.manager') }]}
                             onChange={v => set('members', members.map((x, j) => (j === i ? { ...x, role: v } : x)))} />
-                        <ActionIcon variant="subtle" color="red" aria-label={t('gpu.projects.remove')} onClick={() => set('members', members.filter((_, j) => j !== i))}><X size={16} /></ActionIcon>
+                        {!managed && <ActionIcon variant="subtle" color="red" aria-label={t('gpu.projects.remove')} onClick={() => set('members', members.filter((_, j) => j !== i))}><X size={16} /></ActionIcon>}
                     </Group>
                 ))}
-                <Button size="xs" variant="subtle" leftSection={<Plus size={14} />} w="fit-content"
-                    onClick={() => set('members', [...members, { token: '', role: 'member' }])}>{t('gpu.projects.addMember')}</Button>
+                {!managed && (
+                    <Button size="xs" variant="subtle" leftSection={<Plus size={14} />} w="fit-content"
+                        onClick={() => set('members', [...members, { token: '', role: 'member' }])}>{t('gpu.projects.addMember')}</Button>
+                )}
 
                 <MultiSelect label={t('gpu.projects.profiles')} disabled={locked} value={p.profiles ?? []} onChange={v => set('profiles', v)}
                     data={(catalog?.profiles ?? []).map(x => ({ value: x.slug, label: x.gpu_class ? `${x.name} · ${x.gpu_class}` : x.name }))} />
-                <MultiSelect label={t('gpu.projects.gpuClasses')} disabled={locked} value={p.gpu_classes ?? []} onChange={v => set('gpu_classes', v)}
+                <MultiSelect label={t('gpu.projects.gpuClasses')} disabled={treeLocked} value={p.gpu_classes ?? []} onChange={v => set('gpu_classes', v)}
                     data={catalog?.gpuClasses ?? []} />
                 <Checkbox label={t('gpu.projects.freeImagesLabel')} description={t('gpu.projects.freeImagesHint')} disabled={locked}
                     checked={!!p.free_images} onChange={e => set('free_images', e.currentTarget.checked)} />
 
                 <Text size="sm" fw={600}>{t('gpu.projects.limits')}</Text>
-                <SimpleGrid cols={{ base: 2, sm: 5 }} spacing="xs">
+                <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
                     <NumberInput label={t('gpu.projects.limit.serversShort')} min={0} disabled={locked} value={p.limits.servers_per_person} onChange={v => setLimit('servers_per_person', v)} />
                     <NumberInput label={t('gpu.projects.limit.cpuShort')} min={0} decimalScale={1} disabled={locked} value={p.limits.cpu_per_person} onChange={v => setLimit('cpu_per_person', v)} />
                     <NumberInput label={t('gpu.projects.limit.ramShort')} min={0} disabled={locked} value={p.limits.ram_gb_per_person} onChange={v => setLimit('ram_gb_per_person', v)} />
                     <NumberInput label={t('gpu.projects.limit.gpusShort')} min={0} disabled={locked} value={p.limits.gpus_per_person} onChange={v => setLimit('gpus_per_person', v)} />
-                    <NumberInput label={t('gpu.projects.limit.projectGpusShort')} min={0} disabled={locked} value={p.limits.gpus} onChange={v => setLimit('gpus', v)} />
                 </SimpleGrid>
+                {(catalog?.gpuClasses ?? []).length > 0 && (
+                    <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
+                        {(catalog?.gpuClasses ?? []).map(c => (
+                            <NumberInput key={c} label={t('gpu.projects.limit.projectGpusClassShort', { class: c })} min={0} disabled={treeLocked}
+                                value={p.gpus_by_class?.[c] ?? 0} onChange={v => setClassGpus(c, v)} />
+                        ))}
+                    </SimpleGrid>
+                )}
                 <Text size="xs" c="dimmed">{t('gpu.projects.limitsHint')}</Text>
 
                 <Text size="sm" fw={600}>{t('gpu.projects.budgets')}</Text>
                 {budgets.map((b, i) => (
                     <Group key={i} gap="xs" wrap="nowrap" align="flex-end">
-                        <NumberInput w={110} min={0} disabled={locked} label={i === 0 ? t('gpu.projects.budget.amount') : undefined} value={b.amount}
+                        <NumberInput w={110} min={0} disabled={locked || b.tree} label={i === 0 ? t('gpu.projects.budget.amount') : undefined} value={b.amount}
                             onChange={v => setBudget(i, { amount: Number(v) || 0 })} />
-                        <Select w={170} allowDeselect={false} disabled={locked} label={i === 0 ? t('gpu.projects.budget.unit') : undefined} value={b.unit}
+                        <Select w={170} allowDeselect={false} disabled={locked || b.tree} label={i === 0 ? t('gpu.projects.budget.unit') : undefined} value={b.unit}
                             data={UNITS.map(u => ({ value: u, label: t(`gpu.projects.budget.units.${u}`) }))} onChange={v => setBudget(i, { unit: v })} />
                         {b.unit === 'gpu_hours' && (
-                            <Select w={110} disabled={locked} clearable label={i === 0 ? t('gpu.projects.budget.class') : undefined} value={b.gpu_class || null}
+                            <Select w={110} disabled={locked || b.tree} clearable label={i === 0 ? t('gpu.projects.budget.class') : undefined} value={b.gpu_class || null}
                                 placeholder={t('gpu.projects.budget.allClasses')} data={catalog?.gpuClasses ?? []} onChange={v => setBudget(i, { gpu_class: v || '' })} />
                         )}
-                        <Select w={130} allowDeselect={false} disabled={locked} label={i === 0 ? t('gpu.projects.budget.window') : undefined} value={b.window}
+                        <Select w={130} allowDeselect={false} disabled={locked || b.tree} label={i === 0 ? t('gpu.projects.budget.window') : undefined} value={b.window}
                             data={WINDOWS.map(w => ({ value: w, label: t(`gpu.projects.budget.windows.${w}`) }))} onChange={v => setBudget(i, { window: v })} />
-                        <Checkbox disabled={locked} label={t('gpu.projects.budget.perPerson')} checked={!!b.per_person} mb={8}
-                            onChange={e => setBudget(i, { per_person: e.currentTarget.checked })} />
-                        {!locked && <ActionIcon variant="subtle" color="red" mb={4} aria-label={t('gpu.projects.remove')} onClick={() => set('budgets', budgets.filter((_, j) => j !== i))}><X size={16} /></ActionIcon>}
+                        {b.tree
+                            ? <Badge size="sm" variant="light" color="blue" mb={8} style={{ textTransform: 'none' }}>{t('gpu.projects.budget.fromTree')}</Badge>
+                            : <Checkbox disabled={locked} label={t('gpu.projects.budget.perPerson')} checked={!!b.per_person} mb={8}
+                                onChange={e => setBudget(i, { per_person: e.currentTarget.checked })} />}
+                        {!locked && !b.tree && <ActionIcon variant="subtle" color="red" mb={4} aria-label={t('gpu.projects.remove')} onClick={() => set('budgets', budgets.filter((_, j) => j !== i))}><X size={16} /></ActionIcon>}
                     </Group>
                 ))}
                 {!locked && (
@@ -262,7 +285,7 @@ function ProjectEditor({ project, isNew, asAdmin, catalog, onClose }) {
                 <Button size="xs" variant="subtle" leftSection={<Plus size={14} />} w="fit-content"
                     onClick={() => set('images', [...images, { name: '', image: '' }])}>{t('gpu.projects.addImage')}</Button>
 
-                <TextInput type="date" label={t('gpu.projects.endsAtLabel')} disabled={locked} w={200}
+                <TextInput type="date" label={t('gpu.projects.endsAtLabel')} disabled={treeLocked} w={200}
                     value={p.ends_at ? p.ends_at.slice(0, 10) : ''} onChange={e => set('ends_at', e.currentTarget.value ? `${e.currentTarget.value}T00:00:00Z` : null)} />
 
                 {save.error && <Alert color="red" variant="light">{save.error.message}</Alert>}

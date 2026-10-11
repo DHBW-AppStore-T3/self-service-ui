@@ -29,7 +29,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
 
     const imported = isImported(node);
     // Approved but not in OpenStack yet — the reconciler runs on an interval.
-    const provisioning = isProvisioning(node, config?.provisioningEnabled, resources);
+    const provisioning = isProvisioning(node, config?.provisioningEnabled, resources, config?.providers);
     const openstackUrl = openstackProjectUrl(config?.openstackDashboardUrl, node);
     const isChangePending = node.status === 'change_pending';
     const isRejected = node.status === 'rejected';

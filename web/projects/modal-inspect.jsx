@@ -172,11 +172,10 @@ function AutoApproveTab({ node, resources }) {
 }
 
 // NodeFacts is what the edit dialogs do not show as fields: status, who
-// created it and when, its ID and the OpenStack project. It heads their
-// History tab.
+// created it and when, its ID and where it runs at each provider. It heads
+// their History tab.
 function NodeFacts({ node }) {
     const { t } = useTranslation();
-    const os = openstackSide(node);
     return (
         <Table withRowBorders={false} verticalSpacing="4">
             <Table.Tbody>
@@ -184,11 +183,11 @@ function NodeFacts({ node }) {
                 {node.created_by && <Row label={t('projects.fact.createdBy')}>{node.created_by}</Row>}
                 {node.created_at && <Row label={t('projects.inspect.created')}>{formatRelativeDate(node.created_at)}</Row>}
                 <Row label={t('projects.inspect.id')}><Text size="xs" ff="monospace">{node.id}</Text></Row>
-                {(os.external_id || os.external_name) && (
-                    <Row label="OpenStack">
-                        <Text size="xs" ff="monospace">{[os.external_name, os.external_id].filter(Boolean).join(' · ')}</Text>
+                {Object.entries(node.bindings || {}).filter(([, b]) => b.external_id || b.external_name).map(([provider, b]) => (
+                    <Row key={provider} label={t(`projects.resources.provider.${provider}`, { defaultValue: provider })}>
+                        <Text size="xs" ff="monospace">{[b.external_name, b.external_id].filter(Boolean).join(' · ')}</Text>
                     </Row>
-                )}
+                ))}
             </Table.Tbody>
         </Table>
     );

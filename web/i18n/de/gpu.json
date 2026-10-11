@@ -135,7 +135,7 @@
         "freeImagesLabel": "Freie Images erlauben",
         "freeImagesHint": "Beliebiges Image, nur CPU, ohne Home und ohne Zugangsdaten.",
         "limits": "Grenzen pro Person (gleichzeitig)",
-        "limitsHint": "0 heißt: keine Grenze. Ausnahme GPUs pro Person: 0 heißt keine GPU. „GPUs gesamt“ begrenzt das ganze Projekt.",
+        "limitsHint": "0 heißt: keine Grenze. Ausnahme GPUs pro Person: 0 heißt keine GPU. „GPUs … im Projekt“ begrenzt das ganze Projekt je GPU-Klasse.",
         "images": "Hinterlegte Images",
         "imageName": "Name",
         "addImage": "Image hinzufügen",
@@ -151,13 +151,14 @@
             "gpus_one": "1 GPU",
             "gpus_other": "{{count}} GPUs",
             "noGpu": "keine GPU",
-            "projectGpus_one": "Projekt: 1 GPU",
-            "projectGpus_other": "Projekt: {{count}} GPUs",
             "serversShort": "Server",
             "cpuShort": "Kerne",
             "ramShort": "RAM (GB)",
             "gpusShort": "GPUs",
-            "projectGpusShort": "GPUs gesamt"
+            "project": "Projekt",
+            "projectGpusClass_one": "1 GPU {{class}} gleichzeitig",
+            "projectGpusClass_other": "{{count}} GPUs {{class}} gleichzeitig",
+            "projectGpusClassShort": "GPUs {{class}} im Projekt"
         },
         "budgets": "Budgets",
         "addBudget": "Budget hinzufügen",
@@ -183,7 +184,10 @@
                 "7d": "in 7 Tagen",
                 "30d": "in 30 Tagen",
                 "total": "gesamt"
-            }
-        }
+            },
+            "fromTree": "aus dem Budgetbaum"
+        },
+        "managed": "Budgetbaum",
+        "managedHint": "Dieses Projekt kommt aus dem Budgetbaum: Name, Mitglieder, Laufzeit, GPUs pro Klasse und die Budgets des Projekts werden dort unter „Projekte“ verwaltet. Hier lässt sich festlegen, wie es genutzt wird: Profile, Images, Grenzen und Anteile pro Person, kürzere Zeitfenster."
     }
 }

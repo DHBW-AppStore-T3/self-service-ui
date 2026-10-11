@@ -183,7 +183,7 @@ describe('statusLabel / isProvisioning', () => {
     // for something that is not there; the reconciler runs on an interval.
     it('says "Setting up" for an approved leaf without an OpenStack project', () => {
         const node = { kind: 'project', status: 'approved' };
-        expect(isProvisioning(node, true)).toBe(true);
+        expect(isProvisioning(node, true)).toBe('openstack');
         expect(statusLabel(t, 'approved', true)).toBe('Setting up');
     });
 
@@ -194,7 +194,10 @@ describe('statusLabel / isProvisioning', () => {
         // Only owed an OpenStack project when it holds an OpenStack resource.
         const catalogue = [{ id: 'cores', provider: 'openstack' }, { id: 'ws-gpu-hours', provider: 'aiaas' }];
         expect(isProvisioning({ kind: 'project', status: 'approved', limit: { cores: 0, 'ws-gpu-hours': 10 } }, true, catalogue)).toBe(false);
-        expect(isProvisioning({ kind: 'project', status: 'approved', limit: { cores: 2, 'ws-gpu-hours': 10 } }, true, catalogue)).toBe(true);
+        expect(isProvisioning({ kind: 'project', status: 'approved', limit: { cores: 2, 'ws-gpu-hours': 10 } }, true, catalogue)).toBe('openstack');
+        // The AI service is owed its side where it runs and the project holds its resources.
+        expect(isProvisioning({ kind: 'project', status: 'approved', limit: { cores: 0, 'ws-gpu-hours': 10 } }, true, catalogue, ['aiaas'])).toBe('aiaas');
+        expect(isProvisioning({ kind: 'project', status: 'approved', limit: { 'ws-gpu-hours': 10 }, bindings: { aiaas: { external_id: 't-1' } } }, true, catalogue, ['aiaas'])).toBe(false);
     });
 });
 

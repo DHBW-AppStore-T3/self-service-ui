@@ -452,7 +452,8 @@
         },
         "provisioning": {
             "label": "Setting up",
-            "description": "Approved. The OpenStack project is being created — this usually takes a few minutes."
+            "description": "Approved. The OpenStack project is being created — this usually takes a few minutes.",
+            "descriptionAiaas": "Approved. The project is being set up at the AI service — this usually takes seconds to a few minutes."
         }
     },
     "tokenList": {

@@ -151,23 +151,25 @@ export function openstackProjectUrl(dashboardUrl, node) {
     return `${dashboardUrl.replace(/\/+$/, '')}/auth/switch/${encodeURIComponent(osID)}/?next=/project/`;
 }
 
-// isProvisioning: approved, and the OpenStack project it is owed is not there
-// yet. Owed only when the project holds an OpenStack resource — one with only
-// workspace or LLM amounts gets none. Without the catalogue (resources) every
-// approved project counts, as before there were other providers.
-export function isProvisioning(node, provisioningEnabled, resources = null) {
-    return Boolean(provisioningEnabled)
-        && node?.kind === 'project'
-        && node?.status === 'approved'
-        && !openstackSide(node).external_id
-        && (!resources || holdsResourceOf(node, resources, 'openstack'));
+// isProvisioning: approved, and a provider's side it is owed is not there yet —
+// the provider it waits for ('openstack', 'aiaas'), or false. OpenStack is owed
+// when the project holds an OpenStack resource and the reconciler runs
+// (provisioningEnabled); another provider of `providers` when the project holds
+// one of its resources. Without the catalogue (resources) every approved
+// project is owed an OpenStack project, as before there were other providers.
+export function isProvisioning(node, provisioningEnabled, resources = null, providers = []) {
+    if (node?.kind !== 'project' || node?.status !== 'approved') return false;
+    if (provisioningEnabled && !openstackSide(node).external_id
+        && (!resources || holdsResourceOf(node, resources, 'openstack'))) return 'openstack';
+    if (!resources) return false;
+    return (providers || []).find(p => !node.bindings?.[p]?.external_id && holdsResourceOf(node, resources, p, true)) ?? false;
 }
 
 // holdsResourceOf: the project holds more than zero of a resource of provider
 // (a resource without a provider belongs to every provider).
-export function holdsResourceOf(node, resources, provider) {
+export function holdsResourceOf(node, resources, provider, ownOnly = false) {
     const limit = effectiveLimit(node, node?.limit) || {};
-    return resources.some(r => (!r.provider || r.provider === provider)
+    return resources.some(r => ((!ownOnly && !r.provider) || r.provider === provider)
         && ((limit[r.id] ?? 0) > 0 || limit[r.id] === UNLIMITED_QUOTA));
 }
 
@@ -188,6 +190,7 @@ export function statusLabel(t, status, provisioning = false) {
 // Returns the sentence explaining a status, or '' for one we have no words for
 // — callers render no tooltip rather than an empty one.
 export function statusDescription(t, status, provisioning = false) {
+    if (provisioning === 'aiaas') return t('projects.status.provisioning.descriptionAiaas');
     if (provisioning) return t('projects.status.provisioning.description');
     return STATUS_META[status] ? t(`projects.status.${status}.description`) : '';
 }

@@ -135,7 +135,7 @@
         "freeImagesLabel": "Allow free images",
         "freeImagesHint": "Any image, CPU only, without home and without credentials.",
         "limits": "Limits per person (at the same time)",
-        "limitsHint": "0 means no limit. Except GPUs per person: 0 means no GPU. \"GPUs in total\" limits the whole project.",
+        "limitsHint": "0 means no limit. Except GPUs per person: 0 means no GPU. “… GPUs in the project” limits the whole project per GPU class.",
         "images": "Stored images",
         "imageName": "Name",
         "addImage": "Add image",
@@ -151,13 +151,14 @@
             "gpus_one": "1 GPU",
             "gpus_other": "{{count}} GPUs",
             "noGpu": "no GPU",
-            "projectGpus_one": "project: 1 GPU",
-            "projectGpus_other": "project: {{count}} GPUs",
             "serversShort": "Servers",
             "cpuShort": "Cores",
             "ramShort": "RAM (GB)",
             "gpusShort": "GPUs",
-            "projectGpusShort": "GPUs in total"
+            "project": "Project",
+            "projectGpusClass_one": "1 {{class}} GPU at once",
+            "projectGpusClass_other": "{{count}} {{class}} GPUs at once",
+            "projectGpusClassShort": "{{class}} GPUs in the project"
         },
         "budgets": "Budgets",
         "addBudget": "Add budget",
@@ -183,7 +184,10 @@
                 "7d": "in 7 days",
                 "30d": "in 30 days",
                 "total": "in total"
-            }
-        }
+            },
+            "fromTree": "from the budget tree"
+        },
+        "managed": "Budget tree",
+        "managedHint": "This project comes from the budget tree: its name, members, end, GPUs per class and the project budgets are managed there, under “Projects”. Here you set how it is used: profiles, images, limits and shares per person, shorter windows."
     }
 }

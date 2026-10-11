@@ -452,7 +452,8 @@
         },
         "provisioning": {
             "label": "Wird eingerichtet",
-            "description": "Genehmigt. Das OpenStack-Projekt wird gerade angelegt — das dauert meist ein paar Minuten."
+            "description": "Genehmigt. Das OpenStack-Projekt wird gerade angelegt — das dauert meist ein paar Minuten.",
+            "descriptionAiaas": "Genehmigt. Das Projekt wird im KI-Dienst eingerichtet — das dauert meist nur Sekunden bis wenige Minuten."
         }
     },
     "tokenList": {
