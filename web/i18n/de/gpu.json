@@ -14,7 +14,7 @@
         "name": "Name",
         "namePlaceholder": "aus dem Repository",
         "add": "Hinzufügen",
-        "addHint": "Zugelassen sind öffentliche Repositories auf GitHub und GitLab. Gibt es den Stand schon als fertige Umgebung, ist sie sofort startbereit; sonst wird sie gebaut (meist 2–10 Minuten).",
+        "addHint": "Zugelassen sind öffentliche Repositories auf GitHub und GitLab. Gibt es den Stand schon als fertige Umgebung, ist sie sofort startbereit; sonst wird sie gebaut (meist 2–10 Minuten). Ein eigenes Dockerfile ist erlaubt, wenn es auf einem Plattform-Image aus registry.gpu.services.dhbw.cloud/platform/ aufbaut.",
         "version": "Stand",
         "status": "Status",
         "none": "Noch keine Umgebung.",

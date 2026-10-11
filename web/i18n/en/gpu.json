@@ -14,7 +14,7 @@
         "name": "Name",
         "namePlaceholder": "from the repository",
         "add": "Add",
-        "addHint": "Public repositories on GitHub and GitLab are allowed. If this version already exists as a built environment, it can be started at once; otherwise it is built (usually 2–10 minutes).",
+        "addHint": "Public repositories on GitHub and GitLab are allowed. If this version already exists as a built environment, it can be started at once; otherwise it is built (usually 2–10 minutes). A Dockerfile of its own is allowed if it builds on a platform image from registry.gpu.services.dhbw.cloud/platform/.",
         "version": "Version",
         "status": "Status",
         "none": "No environment yet.",
