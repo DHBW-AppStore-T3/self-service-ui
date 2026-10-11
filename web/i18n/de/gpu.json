@@ -69,5 +69,30 @@
         "pytorch": "PyTorch (GPU)",
         "tensorflow": "TensorFlow (GPU)",
         "cpu-gpukernel": "CPU + GPU-Kernel (Probe)"
+    },
+    "usage": {
+        "title": "Nutzung",
+        "hint": "Was Workspaces reserviert haben, vom {{from}} bis {{to}}: Server-Stunden, vCPU-, RAM- und GPU-Stunden, Home-Größe. Erfasst jede Minute; der heutige Tag ist noch nicht vollständig.",
+        "mine": "Eigene",
+        "all": "Alle",
+        "people": "Personen",
+        "serverHours": "Server-h",
+        "vcpuHours": "vCPU-h",
+        "ramGbHours": "RAM-GB-h",
+        "gpuHours": "GPU-h",
+        "homeGbDays": "Home-GB-Tage",
+        "cpuUsed": "CPU genutzt",
+        "cpuUsedHours": "vCPU-h genutzt",
+        "ramUsedGbHours": "RAM-GB-h genutzt",
+        "noGpu": "ohne GPU",
+        "empty": "Keine Nutzung in diesem Zeitraum.",
+        "csvHint": "Die angezeigte Gruppierung als CSV, mit den gemessenen Werten.",
+        "explain": "Abgerechnet wird die Reservierung (angefragte Kerne und Speicher), wie bei Flavors in OpenStack. „CPU genutzt“ setzt die gemessene Nutzung ins Verhältnis dazu. Home-GB-Tage: belegter Platz, einmal täglich gemessen. Projekt ist bis zur Einführung von Projekten die Zugriffsregel, die den Zugang gibt.",
+        "groupBy": {
+            "project": "Projekt",
+            "person": "Person",
+            "profile": "Profil",
+            "gpu_class": "GPU-Klasse"
+        }
     }
 }

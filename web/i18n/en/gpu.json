@@ -69,5 +69,30 @@
         "pytorch": "PyTorch (GPU)",
         "tensorflow": "TensorFlow (GPU)",
         "cpu-gpukernel": "CPU + GPU kernel (trial)"
+    },
+    "usage": {
+        "title": "Usage",
+        "hint": "What workspaces reserved from {{from}} to {{to}}: server hours, vCPU, RAM and GPU hours, home size. Collected every minute; today is not complete yet.",
+        "mine": "Own",
+        "all": "All",
+        "people": "People",
+        "serverHours": "Server h",
+        "vcpuHours": "vCPU h",
+        "ramGbHours": "RAM GB h",
+        "gpuHours": "GPU h",
+        "homeGbDays": "Home GB-days",
+        "cpuUsed": "CPU used",
+        "cpuUsedHours": "vCPU h used",
+        "ramUsedGbHours": "RAM GB h used",
+        "noGpu": "no GPU",
+        "empty": "No usage in this period.",
+        "csvHint": "The grouping shown as CSV, with the measured values.",
+        "explain": "Billed is the reservation (requested cores and memory), like flavors in OpenStack. \"CPU used\" relates the measured use to it. Home GB-days: space used, measured once a day. Until projects exist, the project is the access rule that grants access.",
+        "groupBy": {
+            "project": "Project",
+            "person": "Person",
+            "profile": "Profile",
+            "gpu_class": "GPU class"
+        }
     }
 }

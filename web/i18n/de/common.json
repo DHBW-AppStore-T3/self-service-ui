@@ -23,7 +23,8 @@
         "llmAccess": "Zugriffsregeln",
         "gpu": "GPU",
         "gpuEnvironments": "Umgebungen",
-        "gpuServers": "Laufende Server"
+        "gpuServers": "Laufende Server",
+        "gpuUsage": "Nutzung"
     },
     "account": {
         "signIn": "Anmelden",

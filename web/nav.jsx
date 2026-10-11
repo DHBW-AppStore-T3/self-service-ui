@@ -102,6 +102,7 @@ export function useNav() {
             items: [
                 { label: t('nav.gpuEnvironments'), href: '/gpu/environments' },
                 { label: t('nav.gpuServers'), href: '/gpu/servers' },
+                { label: t('nav.gpuUsage'), href: '/gpu/usage' },
                 // The access rules are one list for LLM and GPU (same service); admins find them here too.
                 llm.isAdmin && { label: t('nav.llmAccess'), href: '/llm/access' },
             ].filter(Boolean),

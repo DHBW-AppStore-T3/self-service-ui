@@ -5,6 +5,7 @@ import { LoadError, Loading } from '/helper/query-state.jsx';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { GpuEnvironments } from '/gpu/environments.jsx';
 import { GpuServers } from '/gpu/servers.jsx';
+import { GpuUsage } from '/gpu/usage.jsx';
 
 // The GPU section: environments from Git repositories and JupyterHub servers in the GPU cluster. Served by llm-management-api; who may use it is its decision (an access rule with a GPU tier, reported as gpu_tier in /v1/me).
 export function GpuManagement() {
@@ -24,6 +25,7 @@ export function GpuManagement() {
         <Switch>
             <Route path="/environments" component={GpuEnvironments} />
             <Route path="/servers" component={GpuServers} />
+            <Route path="/usage" component={GpuUsage} />
             <Route path="/"><Redirect to="/environments" replace /></Route>
             <Route>
                 <Container size="md" py="md">

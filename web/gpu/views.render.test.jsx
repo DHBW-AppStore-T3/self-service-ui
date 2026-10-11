@@ -35,8 +35,20 @@ const SERVERS = [
       image: 'reg/envs/github-com-binder-examples-conda:f00a783146e9' },
 ];
 
+const USAGE = {
+    from: '2026-09-11T00:00:00Z', to: '2026-10-10T00:00:00Z',
+    total: { days: 3, server_hours: 12, vcpu_hours: 8, ram_gb_hours: 30, gpu_hours: 2, cpu_used_hours: 2, ram_used_gb_hours: 10, home_gb_days: 4.5 },
+    per_day: [],
+    entries: [
+        { project: 'group:wwi23seb', person: 'a@dhbw.de', profile: 'cpu', days: 2, server_hours: 8, vcpu_hours: 4, ram_gb_hours: 16, gpu_hours: 0, cpu_used_hours: 1, ram_used_gb_hours: 6, home_gb_days: 0 },
+        { project: 'group:wwi23seb', person: 'b@dhbw.de', profile: 'pytorch', gpu_class: 'l4-3q', days: 1, server_hours: 2, vcpu_hours: 2, ram_gb_hours: 4, gpu_hours: 2, cpu_used_hours: 1, ram_used_gb_hours: 4, home_gb_days: 0 },
+        { project: 'group:wwi23seb', person: 'a@dhbw.de', profile: 'home', days: 3, server_hours: 0, vcpu_hours: 0, ram_gb_hours: 0, gpu_hours: 0, cpu_used_hours: 0, ram_used_gb_hours: 0, home_gb_days: 4.5 },
+    ],
+};
+
 const { GpuEnvironments } = await import('/gpu/environments.jsx');
 const { GpuServers } = await import('/gpu/servers.jsx');
+const { GpuUsage, groupUsage } = await import('/gpu/usage.jsx');
 
 let consoleErrors = [];
 beforeEach(() => {
@@ -44,6 +56,8 @@ beforeEach(() => {
         listEnvironments: async () => ENVS,
         listServers: async () => SERVERS,
         environmentLog: async () => 'log',
+        myWorkspaceUsage: async () => USAGE,
+        workspaceUsage: async () => USAGE,
     };
     consoleErrors = [];
     vi.spyOn(console, 'error').mockImplementation((...args) => { consoleErrors.push(args.join(' ')); });
@@ -71,5 +85,23 @@ describe('the GPU views render', () => {
         renderView(<GpuServers />);
         expect(await screen.findByText('conda-beispiel-2')).toBeTruthy();
         expectNoRenderFailure();
+    });
+
+    it('Usage shows the units per profile', async () => {
+        renderView(<GpuUsage />);
+        expect(await screen.findByText('pytorch')).toBeTruthy();
+        expect(screen.getByText('home')).toBeTruthy();
+        expectNoRenderFailure();
+    });
+});
+
+describe('groupUsage', () => {
+    it('sums by a dimension and counts people', () => {
+        const byProject = groupUsage(USAGE.entries, 'project');
+        expect(byProject).toHaveLength(1);
+        expect(byProject[0]).toMatchObject({ name: 'group:wwi23seb', people: 2, vcpu_hours: 6, gpu_hours: 2, home_gb_days: 4.5 });
+        expect(byProject[0].cpu_utilization).toBeCloseTo(2 / 6);
+        const byClass = groupUsage(USAGE.entries, 'gpu_class');
+        expect(byClass.map(g => g.name).sort()).toEqual(['', 'l4-3q']);
     });
 });
