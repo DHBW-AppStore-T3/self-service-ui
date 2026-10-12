@@ -17,6 +17,7 @@ import { AlertCircle, Globe, CornerDownRight, Plus, Users, RefreshCw, LogOut } f
 import { subzoneLabelError } from '/helper/dns-validation.js';
 import { CopyableText } from '/helper/copyable-text.jsx';
 import { useZoneEvents, ZoneEventIndicator, ZoneEventsBanner } from '/dyndns/zones/zone-events-banner.jsx';
+import { subzonesUnder } from '/dyndns/zone-tree.js';
 
 
 // ----------------------------------------
@@ -49,13 +50,8 @@ export function DynDnsZones() {
     const zones = zonesQuery.data ?? [];
 
     // Group zones: policy base zones (no parent) plus the user's created subzones
-    // grouped under their parent base zone (shown indented by label depth).
+    // under their base zone, at any depth (shown indented by label depth).
     const baseZones = zones.filter(z => !z.parent);
-    const subzonesByParent = {};
-    for (const z of zones) {
-        if (z.parent) (subzonesByParent[z.parent] ??= []).push(z);
-    }
-    for (const k in subzonesByParent) subzonesByParent[k].sort((a, b) => a.name.localeCompare(b.name));
 
     return (
         <Container size="xl" py="md">
@@ -88,7 +84,7 @@ export function DynDnsZones() {
                                         </Button>
                                     ) : null}
                                 />
-                                {(subzonesByParent[base.name] || []).map(sz => (
+                                {subzonesUnder(zones, base.name).map(sz => (
                                     <NavLink
                                         key={sz.name}
                                         component={Link}
