@@ -5,7 +5,7 @@ import { useClient } from '/providers/client.jsx';
 // URL as the LLM section), under /v1/gpu. Named imports, as in llm/api-llm.jsx:
 // an operation missing from the client fails the build, not the browser.
 import {
-    createGpuEnvironment, createWorkspaceProject, deleteGpuEnvironment, deleteWorkspaceProject, getGpuEnvironmentLog, getMyWorkspaceUsage, getWorkspaceCatalog, getWorkspaceUsage,
+    createGpuEnvironment, deleteGpuEnvironment, deleteWorkspaceProject, getGpuEnvironmentLog, getMyWorkspaceUsage, getWorkspaceCatalog, getWorkspaceUsage,
     listGpuEnvironments, listGpuServers, listWorkspaceProjects, updateWorkspaceProject,
     rebuildGpuEnvironment, startGpuEnvironment, stopGpuServer,
 } from '@dhbw-cloud/llm-client';
@@ -37,7 +37,6 @@ export function useGpuApi() {
             // Projects (W2): own projects, or all for admins.
             listProjects: async (all) => (await call(listWorkspaceProjects, all ? { query: { all: true } } : {})) ?? [],
             catalog: () => call(getWorkspaceCatalog),
-            createProject: (p) => call(createWorkspaceProject, { body: p, headers: JSON_HEADERS }),
             updateProject: (p) => call(updateWorkspaceProject, { path: { slug: p.slug }, body: p, headers: JSON_HEADERS }),
             deleteProject: (slug) => call(deleteWorkspaceProject, { path: { slug } }),
         };

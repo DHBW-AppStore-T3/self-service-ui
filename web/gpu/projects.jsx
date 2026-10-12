@@ -25,7 +25,7 @@ export function WorkspaceProjects() {
     const { me, isAdmin } = useLlmMe();
     const confirm = useConfirm();
     const [scope, setScope] = useState('mine');
-    const [editing, setEditing] = useState(null); // { project, isNew, asAdmin }
+    const [editing, setEditing] = useState(null); // { project, asAdmin }; projects themselves come only from the budget tree
     const all = isAdmin && scope === 'all';
 
     const projects = useQuery({ queryKey: gpuKeys.projects(all), queryFn: () => api.listProjects(all) });
@@ -58,11 +58,6 @@ export function WorkspaceProjects() {
                                 <SegmentedControl size="xs" value={scope} onChange={setScope}
                                     data={[{ value: 'mine', label: t('gpu.projects.mine') }, { value: 'all', label: t('gpu.projects.all') }]} />
                             )}
-                            {isAdmin && (
-                                <Button size="xs" leftSection={<Plus size={14} />} onClick={() => setEditing({ project: EMPTY, isNew: true, asAdmin: true })}>
-                                    {t('gpu.projects.new')}
-                                </Button>
-                            )}
                             {me?.jupyter_url && (
                                 <Button size="xs" component="a" href={me.jupyter_url} target="_blank" rel="noreferrer" variant="light" rightSection={<ExternalLink size={14} />}>
                                     {t('gpu.envs.openHub')}
@@ -74,7 +69,7 @@ export function WorkspaceProjects() {
 
                 {projects.isPending ? <Loading /> : projects.isError ? <LoadError query={projects} /> : list.length === 0 ? (
                     <Alert color="gray" variant="light">
-                        <Text size="sm">{t(isAdmin ? 'gpu.projects.noneAdmin' : 'gpu.projects.none')}</Text>
+                        <Text size="sm">{t('gpu.projects.none')}</Text>
                         <Button size="xs" mt="sm" component="a" href={startLink('aiaas')}>{t('gpu.projects.getOne')}</Button>
                     </Alert>
                 ) : (
@@ -95,7 +90,7 @@ export function WorkspaceProjects() {
                                         </Badge>
                                         {(isAdmin || p.role === 'manager') && (
                                             <ActionIcon variant="subtle" aria-label={t('gpu.projects.edit')}
-                                                onClick={() => setEditing({ project: p, isNew: false, asAdmin: isAdmin })}><Pencil size={16} /></ActionIcon>
+                                                onClick={() => setEditing({ project: p, asAdmin: isAdmin })}><Pencil size={16} /></ActionIcon>
                                         )}
                                         {isAdmin && (
                                             <ActionIcon variant="subtle" color="red" aria-label={t('gpu.projects.delete')} onClick={() => onDelete(p)}><Trash2 size={16} /></ActionIcon>
@@ -173,7 +168,7 @@ export function limitsText(t, l = {}, gpusByClass = {}) {
     return project.length ? `${text} · ${t('gpu.projects.limit.project')}: ${project.join(' · ')}` : text;
 }
 
-function ProjectEditor({ project, isNew, asAdmin, catalog, onClose }) {
+function ProjectEditor({ project, asAdmin, catalog, onClose }) {
     const { t } = useTranslation();
     const api = useGpuApi();
     const [p, setP] = useState(() => ({ ...EMPTY, ...project, limits: { ...EMPTY.limits, ...(project.limits ?? {}) }, gpus_by_class: { ...(project.gpus_by_class ?? {}) } }));
@@ -182,7 +177,7 @@ function ProjectEditor({ project, isNew, asAdmin, catalog, onClose }) {
     const save = useApiMutation({
         mutationFn: () => {
             const { role: _role, budget_status: _status, ...body } = p; // view fields, not part of the project
-            return isNew ? api.createProject(body) : api.updateProject(body);
+            return api.updateProject(body);
         },
         invalidates: [['gpu', 'projects']],
         reportErrors: 'inline',
@@ -200,12 +195,11 @@ function ProjectEditor({ project, isNew, asAdmin, catalog, onClose }) {
     const budgets = p.budgets ?? [];
     const setBudget = (i, patch) => set('budgets', budgets.map((x, j) => (j === i ? { ...x, ...patch } : x)));
     return (
-        <Modal opened onClose={onClose} size="lg" centered title={isNew ? t('gpu.projects.new') : t('gpu.projects.editTitle', { name: project.name })}>
+        <Modal opened onClose={onClose} size="lg" centered title={t('gpu.projects.editTitle', { name: project.name })}>
             <Stack gap="sm">
                 {managed && <Alert color="blue" variant="light">{t('gpu.projects.managedHint')}</Alert>}
                 <Group grow>
-                    <TextInput label={t('gpu.projects.slug')} description={t('gpu.projects.slugHint')} disabled={!isNew}
-                        value={p.slug} onChange={e => set('slug', e.currentTarget.value.toLowerCase())} />
+                    <TextInput label={t('gpu.projects.slug')} disabled value={p.slug} />
                     <TextInput label={t('gpu.projects.name')} disabled={treeLocked} value={p.name} onChange={e => set('name', e.currentTarget.value)} />
                 </Group>
                 <Textarea label={t('gpu.projects.description')} autosize minRows={2} value={p.description} onChange={e => set('description', e.currentTarget.value)} />
