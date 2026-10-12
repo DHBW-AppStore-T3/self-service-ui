@@ -227,10 +227,15 @@ export function visibleResources(resources, node) {
     return all.filter(r => inScope.has(r.id));
 }
 
+// windowName names a window: "30 Tage" for 30d.
+export function windowName(t, window) {
+    return t(`projects.resources.window.${window}`, { defaultValue: window });
+}
+
 // resourceLabel is how a resource is named next to a value: its name, its unit,
 // and for an amount per window the window — "GPU hours (h per 30 days)".
 export function resourceLabel(t, r) {
-    const per = r.window ? t('projects.resources.perWindow', { window: t(`projects.resources.window.${r.window}`, { defaultValue: r.window }) }) : '';
+    const per = r.window ? t('projects.resources.perWindow', { window: windowName(t, r.window) }) : '';
     const suffix = [r.unit, per].filter(Boolean).join(' ');
     return suffix ? `${r.name} (${suffix})` : r.name;
 }

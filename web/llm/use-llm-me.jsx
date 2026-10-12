@@ -6,9 +6,7 @@ import { llmKeys } from '/llm/query-keys.js';
 
 const RANK = { user: 1, 'fleet-admin': 2, admin: 3 };
 
-// Who the caller is to the LLM service. The service decides — from the access
-// rules — and this hook only reads the answer, so the navigation, the home page
-// and the routes cannot disagree about it.
+// Who the caller is to the LLM service. The service decides and this hook only reads the answer, so the navigation, the home page and the routes cannot disagree about it: the LLM is open to whoever has LLM tokens through a project (llm_mtokens), the access rules give the admin roles.
 //
 // A failed request counts as "no access" for the menu: offering a section that
 // cannot load helps nobody. The section's own pages show the error instead.
@@ -28,7 +26,7 @@ export function useLlmMe() {
     return {
         query,
         me,
-        hasAccess: rank >= RANK.user,
+        hasAccess: (me?.llm_mtokens ?? 0) > 0 || rank >= RANK['fleet-admin'],
         isFleetAdmin: rank >= RANK['fleet-admin'],
         isAdmin: rank >= RANK.admin,
     };

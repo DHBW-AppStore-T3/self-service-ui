@@ -8,7 +8,6 @@ export const llmKeys = {
     fleetInference: () => ['llm', 'fleet', 'inference'],
     accessRules: () => ['llm', 'access-rules'],
     tiers: () => ['llm', 'tiers'],
-    gpuTiers: () => ['llm', 'gpu-tiers'],
     // Prefix only; the autocomplete appends the search term and limit.
     principals: () => ['llm', 'principals'],
 };

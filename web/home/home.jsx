@@ -22,7 +22,8 @@ export function Home() {
     const { t } = useTranslation();
     const acmeServer = window.appconfig?.acmeServer || 'https://certificates.dhbw.cloud';
     const acmeHost = acmeServer.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    const { hasAccess: withLlm } = useLlmMe();
+    const { me: llmMe } = useLlmMe();
+    const withLlm = !!llmMe;
 
     const services = [
         cloudProjectsEnabled && {

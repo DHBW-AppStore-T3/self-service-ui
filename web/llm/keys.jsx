@@ -6,7 +6,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { formatDateTime } from '/format-date.js';
 import { CodeBlock } from '/helper/codeblock.jsx';
 import { LoadError, Loading, useApiMutation } from '/helper/query-state.jsx';
-import { startLink } from '/projects/start-link.js';
+import { NoProject } from '/projects/no-project.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { useLlmApi } from '/llm/api-llm.jsx';
 import { llmKeys } from '/llm/query-keys.js';
@@ -53,14 +53,7 @@ export function LlmKeys() {
     if (usage.isPending) return <Container size="lg" py="md"><Loading /></Container>;
     // No LLM tokens through any project: the way to get some, instead of an error.
     if (usage.isError && usage.error?.status === 403) {
-        return (
-            <Container size="lg" py="md">
-                <Alert color="blue" variant="light" title={t('llm.noProject.title')}>
-                    <Text size="sm" mb="sm">{t('llm.noProject.text')}</Text>
-                    <Button component="a" href={startLink('aiaas')}>{t('llm.noProject.button')}</Button>
-                </Alert>
-            </Container>
-        );
+        return <NoProject title={t('llm.noAccess.title')} text={t('llm.noAccess.text')} />;
     }
     if (usage.isError) return <Container size="lg" py="md"><LoadError query={usage} /></Container>;
 

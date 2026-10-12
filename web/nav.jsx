@@ -78,11 +78,11 @@ export function useNav() {
                 { label: t('nav.apiDocumentation'), href: '/dyndns/api-doc' },
             ].filter(Boolean),
         },
-        // Only for someone with an access rule: without one the service
-        // refuses everything, chat included, so the menu offers nothing.
+        // For everybody the service answers: without LLM tokens the section
+        // shows the way to a project, so the menu offers only that page.
         // Its API keys are LiteLLM keys for the model endpoint — a different
         // thing from the API tokens below, which manage this platform.
-        llmEnabled && llm.hasAccess && {
+        llmEnabled && llm.me && (llm.hasAccess ? {
             id: 'llm',
             label: t('nav.llm'),
             base: '/llm',
@@ -94,9 +94,9 @@ export function useNav() {
                 llm.isAdmin && { label: t('nav.llmAccess'), href: '/llm/access' },
                 { label: t('nav.apiDocumentation'), href: '/llm/api-doc' },
             ].filter(Boolean),
-        },
-        // Workspaces (Jupyter now, Coder later; docs/plan-workspaces.md) from the same service: for members of a project, and admins, who manage the projects.
-        llmEnabled && hasWorkspaces(llm.me, llm.isAdmin) && {
+        } : { id: 'llm', label: t('nav.llm'), base: '/llm', items: [{ label: t('nav.llmOverview'), href: '/llm/overview' }] }),
+        // Workspaces (Jupyter now, Coder later; docs/plan-workspaces.md) from the same service: for members of a project, and admins, who manage the projects; for everybody else the way to a project.
+        llmEnabled && llm.me && (hasWorkspaces(llm.me, llm.isAdmin) ? {
             id: 'workspaces',
             label: t('nav.workspaces'),
             base: '/workspaces',
@@ -106,7 +106,7 @@ export function useNav() {
                 { label: t('nav.gpuServers'), href: '/workspaces/servers' },
                 { label: t('nav.gpuUsage'), href: '/workspaces/usage' },
             ],
-        },
+        } : { id: 'workspaces', label: t('nav.workspaces'), base: '/workspaces', items: [{ label: t('nav.workspaceProjects'), href: '/workspaces/projects' }] }),
         // Last, and a category of its own with nothing under it: tokens belong
         // to the account rather than to one of the domains above — both APIs
         // issue their own, and a credential has to be findable in one place to

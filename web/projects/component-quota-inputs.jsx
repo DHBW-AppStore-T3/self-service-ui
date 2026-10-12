@@ -153,7 +153,7 @@ function QuantityField({ resource: r, value: current, onChange, error, disabled,
                 description={isUnlimited ? t('projects.quotaInputs.noCapHint') : (extra ? undefined : r.message)}
             />
             <HeadroomShare free={free} value={isUnlimited ? UNLIMITED_QUOTA : current} />
-            <UsageMeter used={used} limit={typeof total === 'number' ? total : undefined} />
+            <UsageMeter used={used} limit={typeof total === 'number' ? total : undefined} window={r.window} />
             {allowUnlimited && (
                 <Checkbox
                     size="xs"

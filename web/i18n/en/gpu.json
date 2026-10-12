@@ -1,7 +1,7 @@
 {
     "noAccess": {
-        "title": "No access to GPU environments",
-        "text": "GPU environments and JupyterHub are open to people whose access rule includes a GPU tier. Access is granted by the administrators of the LLM service.",
+        "title": "No access to workspaces",
+        "text": "Workspaces, GPU time and JupyterHub come with projects. For most people a personal project from a budget that is approved at once is enough.",
         "page": "This page does not exist."
     },
     "envs": {

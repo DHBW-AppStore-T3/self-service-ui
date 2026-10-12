@@ -319,7 +319,7 @@
     },
     "access": {
         "title": "Zugriffsregeln",
-        "hint": "Wer den LLM-Dienst nutzen darf, mit welcher Rolle und welchem Kontingent. Personen und Gruppen kommen aus dem role-provider. Ohne passende Regel gibt es keinen Zugang — auch nicht zum Chat.",
+        "hint": "Rollen und Kontingentklassen. Die Rolle Nutzung ist der Normalfall; Flotten- und Dienst-Administration geben Zugriff auf die Verwaltung. Die Kontingentklasse legt Ratenlimits und Modelle fest; ohne Regel gilt die Standardklasse. Zugang zum LLM, zum Chat und zu Workspaces gibt es nur über Projekte mit Budget, nicht über eine Regel. Personen und Gruppen kommen aus dem role-provider.",
         "add": "Regel hinzufügen",
         "token": "Token",
         "role": "Rolle",
@@ -344,10 +344,7 @@
         "commentPlaceholder": "z. B. Kurs WWI23SEB",
         "cancel": "Abbrechen",
         "save": "Speichern",
-        "tokenInvalid": "Bitte ein Token der Form user:<E-Mail> oder group:<Kennung> angeben.",
-        "gpuTier": "GPU-Klasse",
-        "gpuTierHint": "Zugang zu GPU-Umgebungen und JupyterHub; die Klasse legt fest, wie viele GPUs gleichzeitig möglich sind.",
-        "gpuTierNone": "kein GPU-Zugang"
+        "tokenInvalid": "Bitte ein Token der Form user:<E-Mail> oder group:<Kennung> angeben."
     },
     "roles": {
         "user": "Nutzung",
@@ -356,12 +353,7 @@
     },
     "noAccess": {
         "title": "Kein Zugang zum LLM-Dienst",
-        "text": "Für dieses Konto gibt es keine Zugriffsregel. Den Zugang vergibt die Administration des Dienstes.",
-        "page": "Diese Seite ist für die eigene Rolle nicht freigegeben."
-    },
-    "noProject": {
-        "title": "Noch kein Projekt mit LLM-Tokens",
         "text": "LLM-Tokens gibt es über Projekte. Für die meisten reicht ein persönliches Projekt aus einem Budget, das sofort genehmigt wird.",
-        "button": "Projekt anlegen"
+        "page": "Diese Seite ist für die eigene Rolle nicht freigegeben."
     }
 }

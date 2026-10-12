@@ -319,7 +319,7 @@
     },
     "access": {
         "title": "Access rules",
-        "hint": "Who may use the LLM service, with which role and quota. People and groups come from the role-provider. Without a matching rule there is no access — not to the chat either.",
+        "hint": "Roles and quota classes. The role Usage is the normal case; fleet and service administration give access to the management pages. The quota class sets rate limits and models; without a rule the default class applies. Access to the LLM, the chat and workspaces comes only from projects with a budget, not from a rule. People and groups come from the role-provider.",
         "add": "Add rule",
         "token": "Token",
         "role": "Role",
@@ -344,10 +344,7 @@
         "commentPlaceholder": "e.g. course WWI23SEB",
         "cancel": "Cancel",
         "save": "Save",
-        "tokenInvalid": "Please enter a token of the form user:<email> or group:<id>.",
-        "gpuTier": "GPU tier",
-        "gpuTierHint": "Access to GPU environments and JupyterHub; the tier sets how many GPUs can be used at the same time.",
-        "gpuTierNone": "no GPU access"
+        "tokenInvalid": "Please enter a token of the form user:<email> or group:<id>."
     },
     "roles": {
         "user": "Use",
@@ -356,12 +353,7 @@
     },
     "noAccess": {
         "title": "No access to the LLM service",
-        "text": "There is no access rule for this account. Access is granted by the service's administrators.",
+        "text": "LLM tokens come with projects. For most people a personal project from a budget that is approved at once is enough.",
         "page": "This page is not available for this role."
-    },
-    "noProject": {
-        "title": "No project with LLM tokens yet",
-        "text": "LLM tokens come with projects. For most people a personal project from a budget that approves on the spot is enough.",
-        "button": "Get a project"
     }
 }

@@ -6,7 +6,7 @@ import { renderView } from '/test/render-harness.jsx';
 // Does each GPU view render at all, with data in it? Same question as llm/views.render.test.jsx.
 
 const ME = {
-    email: 'dennis.pfisterer@dhbw.de', role: 'admin', tier: 'staff', gpu_tier: 'standard', jupyter_url: 'https://jupyter.example',
+    email: 'dennis.pfisterer@dhbw.de', role: 'admin', tier: 'staff', jupyter_url: 'https://jupyter.example',
 };
 
 vi.mock('/llm/use-llm-me.jsx', () => ({

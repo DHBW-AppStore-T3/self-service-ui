@@ -259,7 +259,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                                                 in use, what was granted — the same marks as
                                                 in front of the rows. VMs have only the first. */}
                                             <Group gap={2} justify="flex-end" wrap="nowrap" mt={2}>
-                                                <ResourceSort icon={Activity} label={t('projects.resources.sortInUse', { name: c.label })}
+                                                <ResourceSort icon={Activity} label={t(c.window ? 'projects.resources.sortConsumed' : 'projects.resources.sortInUse', { name: c.label })}
                                                     sortKey={c.id === VMS ? 'servers' : `used:${c.id}`} sort={sort} onSort={toggleSort} />
                                                 {c.id !== VMS && (
                                                     <ResourceSort icon={Package} label={t('projects.resources.sortReserved', { name: c.label })}
@@ -345,7 +345,7 @@ function resourceColumns(t, resources, items) {
     const quotaOf = (n) => effectiveLimit(n, n.pending?.limit || n.limit) || {};
     const cols = (resources || [])
         .filter(r => !isAvailability(r) && items.some(n => (quotaOf(n)[r.id] ?? 0) !== 0))
-        .map(r => ({ id: r.id, label: r.name, unit: r.unit }));
+        .map(r => ({ id: r.id, label: r.name, unit: r.unit, window: r.window }));
     if (items.some(n => openstackSide(n).facts?.servers != null)) {
         cols.push({ id: VMS, label: t('projects.resources.vms') });
     }

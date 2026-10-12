@@ -1,6 +1,6 @@
 import { Badge, Group, Progress, Stack, Text, Tooltip } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { COLOR, UNLIMITED_QUOTA, USAGE_COLOR, isAvailability, resourceSummaryText, usageLevel, measuredUse, openstackSide, resourceLabel } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, USAGE_COLOR, isAvailability, resourceSummaryText, usageLevel, measuredUse, openstackSide, resourceLabel, windowName } from './util-project.jsx';
 
 // ProjectResources: what a project was granted and, where the reconciler has
 // measured it, how much of that is in use right now — a bar per quantity, the
@@ -16,7 +16,10 @@ export function ProjectResources({ node, resources, quota, size = 'xs' }) {
         return text ? <Text size={size}>{text}</Text> : null;
     }
 
-    const quantities = (resources || []).filter(r => !isAvailability(r) && (quota?.[r.id] ?? 0) !== 0);
+    const granted = (resources || []).filter(r => !isAvailability(r) && (quota?.[r.id] ?? 0) !== 0);
+    // An amount per window is consumed rather than held: its bar has its own tooltip.
+    const quantities = granted.filter(r => !r.window);
+    const consumed = granted.filter(r => r.window);
     const os = openstackSide(node);
     const grantUse = os.grant_use;
     // Granted ones, and any that is used without being granted: that is the
@@ -37,6 +40,13 @@ export function ProjectResources({ node, resources, quota, size = 'xs' }) {
                     )}
                 </Stack>
             </Tooltip>
+            {consumed.map(r => (
+                <Tooltip key={r.id} label={t('projects.resources.consumedOfGranted', { window: windowName(t, r.window) })} openDelay={600}>
+                    <div>
+                        <UsageMeter label={resourceLabel(t, r)} used={inUse[r.id]} limit={quota[r.id]} />
+                    </div>
+                </Tooltip>
+            ))}
             {availabilities.length > 0 && (
                 <Group gap={4} wrap="wrap">
                     {availabilities.map(r => (
@@ -53,8 +63,9 @@ export function ProjectResources({ node, resources, quota, size = 'xs' }) {
 // bar out. Coloured by usageLevel, like the table: a hint from 80 %, a warning
 // when everything is in use — or more, which OpenStack allows after a quota
 // was lowered below what is running.
-// Without a label it is the line under an input field.
-export function UsageMeter({ label, used, limit }) {
+// Without a label it is the line under an input field; for an amount per window
+// that line says it was consumed in the window.
+export function UsageMeter({ label, used, limit, window }) {
     const { t } = useTranslation();
     const measured = typeof used === 'number';
     const capped = typeof limit === 'number' && limit !== UNLIMITED_QUOTA && limit >= 0;
@@ -63,7 +74,7 @@ export function UsageMeter({ label, used, limit }) {
     const level = usageLevel(used, capped ? limit : null);
     const color = level && USAGE_COLOR[level];
     const text = measured
-        ? (label ? `${used} / ${limitText}` : t('projects.resources.usedOf', { used, limit: limitText }))
+        ? (label ? `${used} / ${limitText}` : (window ? t('projects.resources.consumedOf', { used, limit: limitText, window: windowName(t, window) }) : t('projects.resources.usedOf', { used, limit: limitText })))
         : (label ? `${limitText}` : null);
     if (!label && !measured) return null;
 

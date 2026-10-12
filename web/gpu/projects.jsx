@@ -82,14 +82,14 @@ export function WorkspaceProjects() {
                         {list.map(p => (
                             <Paper key={p.slug} p="md" radius="md" withBorder>
                                 <Group justify="space-between" align="flex-start" wrap="nowrap">
-                                    <div>
+                                    <div style={{ minWidth: 0 }}>
                                         <Group gap={6}>
                                             <Title order={5}>{p.name}</Title>
                                             {p.tree_node && <Badge size="xs" variant="light" color="blue" style={{ textTransform: 'none' }}>{t('gpu.projects.managed')}</Badge>}
                                         </Group>
                                         <Text size="xs" c="dimmed" ff="monospace">{p.slug}</Text>
                                     </div>
-                                    <Group gap={4} wrap="nowrap">
+                                    <Group gap={4} wrap="nowrap" style={{ flexShrink: 0 }}>
                                         <Badge variant="light" color={p.role === 'manager' ? 'blue' : p.role === 'admin' ? 'grape' : 'gray'} style={{ textTransform: 'none' }}>
                                             {t(`gpu.projects.roles.${p.role}`, { defaultValue: p.role })}
                                         </Badge>

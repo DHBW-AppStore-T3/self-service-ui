@@ -8,8 +8,9 @@ import { GpuEnvironments } from '/gpu/environments.jsx';
 import { GpuServers } from '/gpu/servers.jsx';
 import { GpuUsage } from '/gpu/usage.jsx';
 import { WorkspaceProjects } from '/gpu/projects.jsx';
+import { NoProject } from '/projects/no-project.jsx';
 
-// Workspaces (docs/plan-workspaces.md): projects, environments from Git repositories, running servers and usage. Served by llm-management-api; who may use it is its decision: a member of a project (workspace_projects in /v1/me), before projects an access rule with a GPU tier; admins always, they manage the projects.
+// Workspaces (docs/plan-workspaces.md): projects, environments from Git repositories, running servers and usage. Served by llm-management-api; who may use it is its decision: a member of a project (workspace_projects in /v1/me); admins always, they manage the projects. Without a project it offers the way to one.
 export function GpuManagement() {
     const { t } = useTranslation();
     const { query, me, isAdmin } = useLlmMe();
@@ -17,11 +18,7 @@ export function GpuManagement() {
     if (query.isPending) return <Container size="lg" py="md"><Loading /></Container>;
     if (query.isError) return <Container size="lg" py="md"><LoadError query={query} /></Container>;
     if (!hasWorkspaces(me, isAdmin)) {
-        return (
-            <Container size="md" py="md">
-                <Alert color="gray" variant="light" title={t('gpu.noAccess.title')}>{t('gpu.noAccess.text')}</Alert>
-            </Container>
-        );
+        return <NoProject title={t('gpu.noAccess.title')} text={t('gpu.noAccess.text')} />;
     }
     return (
         <Switch>

@@ -1,7 +1,7 @@
 {
     "noAccess": {
-        "title": "Kein Zugang zu GPU-Umgebungen",
-        "text": "GPU-Umgebungen und JupyterHub stehen Personen offen, deren Zugriffsregel eine GPU-Klasse enthält. Freischaltungen vergeben die Administratorinnen und Administratoren des LLM-Dienstes.",
+        "title": "Kein Zugang zu Workspaces",
+        "text": "Workspaces, GPU-Zeit und JupyterHub gibt es über Projekte. Für die meisten reicht ein persönliches Projekt aus einem Budget, das sofort genehmigt wird.",
         "page": "Diese Seite gibt es nicht."
     },
     "envs": {

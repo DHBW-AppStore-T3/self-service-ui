@@ -767,6 +767,9 @@
         "sortReserved": "Sort by reserved {{name}}",
         "sortInUse": "Sort by {{name}} in use",
         "usedOf": "{{used}} of {{limit}} in use",
+        "consumedOfGranted": "consumed / granted per {{window}}, as of the last sync",
+        "consumedOf": "{{used}} of {{limit}} consumed per {{window}}",
+        "sortConsumed": "Sort by {{name}} consumed",
         "grantUnused": "Not in use",
         "grantDevices_one": "Used by {{count}} device (server, router or load balancer)",
         "grantDevices_other": "Used by {{count}} devices (servers, routers or load balancers)",
@@ -824,6 +827,7 @@
         "created": "Created: {{list}}.",
         "failed": "Not created: {{list}}",
         "none": "No budget is available for the {{provider}} right now. Access is granted by the faculty's or programme's administration.",
+        "getOne": "Create a project",
         "back": "Back",
         "skip": "Back without a project",
         "toProjects": "To the projects"

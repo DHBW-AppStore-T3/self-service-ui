@@ -767,6 +767,9 @@
         "sortReserved": "Nach reserviertem {{name}} sortieren",
         "sortInUse": "Nach belegtem {{name}} sortieren",
         "usedOf": "{{used}} von {{limit}} belegt",
+        "consumedOfGranted": "verbraucht / zugeteilt pro {{window}}, Stand des letzten Abgleichs",
+        "consumedOf": "{{used}} von {{limit}} pro {{window}} verbraucht",
+        "sortConsumed": "Nach verbrauchtem {{name}} sortieren",
         "grantUnused": "Nicht in Verwendung",
         "grantDevices_one": "Von {{count}} Gerät verwendet (Server, Router oder Load Balancer)",
         "grantDevices_other": "Von {{count}} Geräten verwendet (Server, Router oder Load Balancer)",
@@ -824,6 +827,7 @@
         "created": "Angelegt: {{list}}.",
         "failed": "Nicht angelegt: {{list}}",
         "none": "Für den {{provider}} steht gerade kein Budget zur Verfügung. Den Zugang vergibt die Verwaltung der Fakultät bzw. des Studiengangs.",
+        "getOne": "Projekt anlegen",
         "back": "Zurück",
         "skip": "Ohne Projekt zurück",
         "toProjects": "Zu den Projekten"
