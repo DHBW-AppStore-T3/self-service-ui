@@ -100,7 +100,12 @@
         "shellHint": "Beide Zeilen zusammen — viele Werkzeuge lesen genau diese beiden Variablen.",
         "close": "Schließen",
         "project": "Projekt",
-        "noProject": "keinem Projekt (gesperrt)"
+        "noProject": "keinem Projekt (gesperrt)",
+        "unnamed": "(ohne Namen)",
+        "shortTerm": "Kurzfrist-Budget des Keys",
+        "per": "pro {{window}}",
+        "poolPer": "Topf pro {{window}}",
+        "poolUsed": "{{spend}} von {{budget}} verbraucht, gemeinsam mit allen Mitgliedern"
     },
     "usage": {
         "monthly": "Monatskontingent",

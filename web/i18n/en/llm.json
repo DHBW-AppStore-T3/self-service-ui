@@ -100,7 +100,12 @@
         "shellHint": "Both lines together — many tools read exactly these two variables.",
         "close": "Close",
         "project": "Project",
-        "noProject": "no project (blocked)"
+        "noProject": "no project (blocked)",
+        "unnamed": "(unnamed)",
+        "shortTerm": "Key’s short-term budget",
+        "per": "per {{window}}",
+        "poolPer": "pool per {{window}}",
+        "poolUsed": "{{spend}} of {{budget}} used, shared by all members"
     },
     "usage": {
         "monthly": "Monthly quota",

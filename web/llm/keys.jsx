@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Alert, Button, Container, Group, Modal, Paper, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core';
+import { Alert, Button, Container, Group, Modal, Paper, Progress, Select, SimpleGrid, Stack, Table, Text, TextInput, Title } from '@mantine/core';
 import { Plus, Trash2 } from 'lucide-react';
 import { formatDateTime } from '/format-date.js';
 import { CodeBlock } from '/helper/codeblock.jsx';
@@ -11,14 +11,14 @@ import { useConfirm } from '/providers/confirm.jsx';
 import { useLlmApi } from '/llm/api-llm.jsx';
 import { llmKeys } from '/llm/query-keys.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
-import { units } from '/llm/format.js';
+import { barColour, percent, units } from '/llm/format.js';
 import { VscodeSetup } from '/llm/vscode-setup.jsx';
 
 // Names that contain at least one letter or digit, as the API requires.
 const NAME_OK = /[\p{L}\p{N}]/u;
 
 export function keyLabel(k, t) {
-    return k.chat ? t('llm.keys.chatKey') : (k.name || '—');
+    return k.chat ? t('llm.keys.chatKey') : (k.name || t('llm.keys.unnamed'));
 }
 
 export function LlmKeys() {
@@ -101,12 +101,33 @@ export function LlmKeys() {
                     </Group>
                     {full && <Text size="xs" c="orange" mt="xs">{t('llm.keys.full')}</Text>}
 
+                    {/* What actually caps the keys: the pool of their project,
+                        shared with its members. The column below is only each
+                        key's own short-term budget on top of it. */}
+                    {projects.length > 0 && (
+                        <SimpleGrid cols={{ base: 1, sm: Math.min(projects.length, 3) }} spacing="sm" mt="md">
+                            {projects.map(p => {
+                                const pp = percent(p.spend, p.budget);
+                                return (
+                                    <Paper key={p.slug} p="sm" radius="md" withBorder>
+                                        <Group justify="space-between" wrap="nowrap">
+                                            <Text size="sm" fw={600} truncate>{p.name || p.slug}</Text>
+                                            <Text size="xs" c="dimmed">{t('llm.keys.poolPer', { window: p.budget_duration || '—' })}</Text>
+                                        </Group>
+                                        <Text size="sm">{t('llm.keys.poolUsed', { spend: units(p.spend), budget: units(p.budget) })}</Text>
+                                        {p.budget > 0 && <Progress value={pp} color={barColour(pp)} size="sm" mt={4} />}
+                                    </Paper>
+                                );
+                            })}
+                        </SimpleGrid>
+                    )}
+
                     <Table striped highlightOnHover mt="md">
                         <Table.Thead>
                             <Table.Tr>
                                 <Table.Th>{t('llm.keys.name')}</Table.Th>
                                 <Table.Th>{t('llm.keys.project')}</Table.Th>
-                                <Table.Th>{t('llm.keys.spend')}</Table.Th>
+                                <Table.Th>{t('llm.keys.shortTerm')}</Table.Th>
                                 <Table.Th>{t('llm.keys.reset')}</Table.Th>
                                 <Table.Th />
                             </Table.Tr>
@@ -119,7 +140,7 @@ export function LlmKeys() {
                                 <Table.Tr key={k.id}>
                                     <Table.Td>{keyLabel(k, t)}</Table.Td>
                                     <Table.Td>{k.project_name || <Text span size="sm" c="dimmed">{t('llm.keys.noProject')}</Text>}</Table.Td>
-                                    <Table.Td>{units(k.spend, 4)} / {units(k.budget)}</Table.Td>
+                                    <Table.Td>{units(k.spend, 4)} / {units(k.budget)}{k.budget_duration && <Text span size="xs" c="dimmed"> {t('llm.keys.per', { window: k.budget_duration })}</Text>}</Table.Td>
                                     <Table.Td>{k.reset_at ? formatDateTime(k.reset_at) : '—'}</Table.Td>
                                     <Table.Td align="right">
                                         <Button size="xs" variant="subtle" color="red" leftSection={<Trash2 size={14} />}
