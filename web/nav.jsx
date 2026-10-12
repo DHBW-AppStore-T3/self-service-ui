@@ -44,24 +44,6 @@ export function useNav() {
 
     const sections = [
         { id: 'home', label: t('nav.home'), href: '/', items: [] },
-        dnsZonesEnabled && {
-            id: 'dyndns',
-            label: t('nav.dnsZones'),
-            base: '/dyndns',
-            // Like the projects' pending requests: a dot, not a count, wherever
-            // a zone problem is waiting to be looked at.
-            dot: adminEvents > 0 || ownEvents > 0,
-            items: [
-                { label: t('nav.zoneManagement'), href: '/dyndns/zones', dot: ownEvents > 0 },
-                // Read-only for most users, and worth reading only if a rule
-                // actually applies to them; empty for a student. Named for
-                // what the page became: policy rules are one tab among the
-                // administrative ones (delegations, orphaned zones, zone
-                // events). Old /policy links redirect (see dyndns-routes).
-                hasPolicy && { label: t('nav.administration'), href: '/dyndns/administration', dot: adminEvents > 0 },
-                { label: t('nav.apiDocumentation'), href: '/dyndns/api-doc' },
-            ].filter(Boolean),
-        },
         cloudProjectsEnabled && {
             id: 'projects',
             label: t('nav.projects'),
@@ -112,6 +94,24 @@ export function useNav() {
         // issue their own, and a credential has to be findable in one place to
         // be revocable in a hurry. It used to sit under DNS Zones, from when
         // that was the only API that had them.
+        dnsZonesEnabled && {
+            id: 'dyndns',
+            label: t('nav.dnsZones'),
+            base: '/dyndns',
+            // Like the projects' pending requests: a dot, not a count, wherever
+            // a zone problem is waiting to be looked at.
+            dot: adminEvents > 0 || ownEvents > 0,
+            items: [
+                { label: t('nav.zoneManagement'), href: '/dyndns/zones', dot: ownEvents > 0 },
+                // Read-only for most users, and worth reading only if a rule
+                // actually applies to them; empty for a student. Named for
+                // what the page became: policy rules are one tab among the
+                // administrative ones (delegations, orphaned zones, zone
+                // events). Old /policy links redirect (see dyndns-routes).
+                hasPolicy && { label: t('nav.administration'), href: '/dyndns/administration', dot: adminEvents > 0 },
+                { label: t('nav.apiDocumentation'), href: '/dyndns/api-doc' },
+            ].filter(Boolean),
+        },
         apiTokensEnabled && {
             id: 'tokens',
             label: t('nav.apiTokens'),

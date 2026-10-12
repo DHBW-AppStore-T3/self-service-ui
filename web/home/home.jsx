@@ -26,12 +26,6 @@ export function Home() {
     const withLlm = !!llmMe;
 
     const services = [
-        dnsZonesEnabled && {
-            key: 'dns',
-            icon: Globe,
-            color: 'teal',
-            to: '/dyndns/zones',
-        },
         cloudProjectsEnabled && {
             key: 'projects',
             icon: FolderKanban,
@@ -43,6 +37,12 @@ export function Home() {
             icon: Sparkles,
             color: 'grape',
             to: '/llm/overview',
+        },
+        dnsZonesEnabled && {
+            key: 'dns',
+            icon: Globe,
+            color: 'teal',
+            to: '/dyndns/zones',
         },
     ].filter(Boolean);
 
