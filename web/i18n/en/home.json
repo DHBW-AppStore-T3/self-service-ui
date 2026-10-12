@@ -5,8 +5,8 @@
     },
     "services": {
         "projects": {
-            "title": "Cloud projects",
-            "lead": "Your own space in the DHBW cloud with CPU, RAM and storage.",
+            "title": "Projects",
+            "lead": "Cloud projects with virtual machines and AI projects with workspaces and LLM tokens.",
             "a": "Small requests are often approved instantly",
             "b": "Add others to work on it together",
             "c": "Runs until the end date you choose, and can be extended",

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useAuth, DEV_DEFAULT_EMAIL } from '/providers/auth.jsx';
+import { useAuth, initialDevUser } from '/providers/auth.jsx';
 import { useSession } from '/providers/session.jsx';
 
 import { client as projectsClient } from '@dhbw-cloud/os-mgt-client';
@@ -38,9 +38,7 @@ const useDummyAuth = import.meta.env.DEV && window.appconfig?.dummyAuth === true
 const session = {
     token: null,
     useDummyAuth,
-    devUser: useDummyAuth
-        ? (new URLSearchParams(window.location.search).get('dev_user') || DEV_DEFAULT_EMAIL)
-        : null,
+    devUser: useDummyAuth ? initialDevUser() : null,
     expire: () => { },
 };
 

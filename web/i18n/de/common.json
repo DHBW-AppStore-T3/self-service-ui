@@ -5,7 +5,7 @@
     },
     "nav": {
         "home": "Start",
-        "cloudProjects": "Cloud-Projekte",
+        "projects": "Projekte",
         "dnsZones": "DNS-Zonen",
         "apiTokens": "API-Tokens",
         "myProjects": "Meine Projekte",
@@ -26,14 +26,15 @@
         "gpuServers": "Laufend",
         "gpuUsage": "Nutzung",
         "workspaces": "Workspaces",
-        "workspaceProjects": "Projekte"
+        "workspaceProjects": "Projekt-Einstellungen"
     },
     "account": {
         "signIn": "Anmelden",
         "signOut": "Abmelden",
         "greeting": "Hallo, {{name}}!",
         "signOutTitle": "Abmelden?",
-        "signOutMessage": "Damit endet die Sitzung in der DHBW-Cloud, anschließend erscheint wieder die Anmeldeseite. Die bwIDM-Anmeldung bleibt bestehen, eine erneute Anmeldung fragt also womöglich nicht nach einem Passwort. Sie endet erst mit dem Schließen des Browsers."
+        "signOutMessage": "Damit endet die Sitzung in der DHBW-Cloud, anschließend erscheint wieder die Anmeldeseite. Die bwIDM-Anmeldung bleibt bestehen, eine erneute Anmeldung fragt also womöglich nicht nach einem Passwort. Sie endet erst mit dem Schließen des Browsers.",
+        "devSwitch": "Lokal wechseln zu (Testdaten)"
     },
     "footer": {
         "copyright": "© Dennis Pfisterer, DHBW"

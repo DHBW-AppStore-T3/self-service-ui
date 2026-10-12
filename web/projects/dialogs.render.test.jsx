@@ -23,6 +23,7 @@ const { ProjectFormModal } = await import('/projects/modal-project-form.jsx');
 const { BudgetFormModal } = await import('/projects/modal-budget-form.jsx');
 const { DecisionModal } = await import('/projects/modal-decide.jsx');
 const { NodeInspectModal } = await import('/projects/modal-inspect.jsx');
+const { NewProjectButton } = await import('/projects/component-new-project-button.jsx');
 
 const RESOURCES = [
     { id: 'cores', name: 'Cores', default: 4, min: 1, max: 64 },
@@ -66,6 +67,48 @@ describe('node dialogs', () => {
         fireEvent.click(screen.getByRole('tab', { name: /Members|Mitglieder/ }));
         expect(await screen.findByText('fakultaet-wi')).toBeTruthy();
         expect(fatal()).toEqual([]);
+    });
+
+    it('a new AI project offers only AI budgets and resources, and members without OpenStack roles', async () => {
+        const tree = fixtureTree();
+        const mixed = [
+            { id: 'cores', name: 'Cores', default: 4, min: 1, max: 64, provider: 'openstack' },
+            { id: 'llm-mtokens', name: 'LLM tokens', unit: 'M tokens', kind: 'window', window: '30d', default: 0, min: 0, max: 1000, provider: 'aiaas' },
+        ];
+        const cloudOnly = { ...tree.roots[0], id: 'b_cloud', name: 'Cloud budget', available_resources: ['cores'] };
+        const both = { ...tree.roots[0], id: 'b_both', name: 'Both budget', available_resources: ['cores', 'llm-mtokens'] };
+        renderView(<ProjectFormModal opened onClose={() => {}} resources={mixed} openstackRoles={['member', 'reader']}
+            myBudgets={[cloudOnly, both]} initialKind="aiaas" />);
+
+        expect(await screen.findByText(/New AI project|Neues KI-Projekt/)).toBeTruthy();
+        fireEvent.click(screen.getByRole('tab', { name: /Resources|Ressourcen/ }));
+        expect(await screen.findByText(/LLM tokens \(M tokens/)).toBeTruthy();
+        expect(screen.queryByText(/^Cores/)).toBeNull();
+        fireEvent.click(screen.getByRole('tab', { name: /Members|Mitglieder/ }));
+        expect(await screen.findByText(/shared pool|gemeinsamer Topf/)).toBeTruthy();
+        expect(fatal()).toEqual([]);
+    });
+
+    it('a project holding both kinds shows both in its members tab', async () => {
+        const mixed = [
+            { id: 'cores', name: 'Cores', default: 4, min: 1, max: 64, provider: 'openstack' },
+            { id: 'llm-mtokens', name: 'LLM tokens', unit: 'M tokens', kind: 'window', window: '30d', default: 0, min: 0, max: 1000, provider: 'aiaas' },
+        ];
+        renderView(<ProjectFormModal opened onClose={() => {}} resources={mixed} openstackRoles={['member', 'reader']}
+            node={project({ limit: { cores: 2, 'llm-mtokens': 50 }, allocations: [] })} />);
+        fireEvent.click(screen.getByRole('tab', { name: /Members|Mitglieder/ }));
+        expect(await screen.findByText(/in OpenStack with the chosen role|in OpenStack mit der gewählten Rolle/)).toBeTruthy();
+        expect(fatal()).toEqual([]);
+    });
+
+    it('new project: one button per kind, a kind without a budget disabled', async () => {
+        const picked = [];
+        renderView(<NewProjectButton kinds={['openstack', 'aiaas']} available={['aiaas']} onPick={k => picked.push(k)} />);
+        const cloud = await screen.findByRole('button', { name: /Cloud project|Cloud-Projekt/ });
+        const ai = screen.getByRole('button', { name: /AI project|KI-Projekt/ });
+        expect(cloud.disabled).toBe(true);
+        fireEvent.click(ai);
+        expect(picked).toEqual(['aiaas']);
     });
 
     it('the decision dialog shows a proposed change', async () => {

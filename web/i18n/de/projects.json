@@ -263,16 +263,15 @@
     },
     "myProjects": {
         "loadError": "Die Projekte konnten nicht geladen werden",
-        "intro": "Ein Projekt ist ein eigener Bereich in der DHBW-Cloud, mit den angefragten Ressourcen.",
         "shown": "Gezeigte Projekte: {{shown}}/{{total}}",
         "noneCanRequest": "Noch keine Projekte. Über „Neues Projekt“ geht es los — Budgets mit „Sofort“ legen es direkt an.",
         "none": "Noch keine Projekte, und derzeit nimmt kein Budget Anfragen an. Den Zugang zu einem Budget richtet die Lehrkraft oder die Administration ein.",
-        "heading": "Meine Projekte ({{count}})",
         "sortLabel": "Sortieren nach",
         "sort_name": "Name",
         "sort_created": "Neueste zuerst",
         "sort_expiry": "Laufzeitende",
-        "sort_status": "Status"
+        "sort_status": "Status",
+        "headingPlain": "Meine Projekte"
     },
     "offers": {
         "heading": "Budgets für neue Projekte",
@@ -350,7 +349,14 @@
         "inheritingBudget": "Dieses Budget dient nur der Gliederung und übernimmt das Limit von „{{name}}“. Ein Projekt hier wird direkt aus dem übergeordneten Budget versorgt — meist gehört es in ein Teilbudget darunter.",
         "inheritingBudgetAbove": "Dieses Budget dient nur der Gliederung und übernimmt das Limit des Budgets darüber. Ein Projekt hier wird direkt aus dem übergeordneten Budget versorgt — meist gehört es in ein Teilbudget darunter.",
         "ownerHint": "Wer für das Projekt verantwortlich ist. Eine Änderung wirkt sofort beim Speichern, ohne Antrag.",
-        "moveHint": "Aus welchem Budget das Projekt bezahlt wird. Verschieben wirkt sofort beim Speichern; das Ziel braucht freie Kapazität."
+        "moveHint": "Aus welchem Budget das Projekt bezahlt wird. Verschieben wirkt sofort beim Speichern; das Ziel braucht freie Kapazität.",
+        "accessAiaas": "Mitglieder",
+        "accessAiaasHint": "Wer das Projekt nutzt: seine Workspaces und das LLM-Kontingent. Das Kontingent ist ein gemeinsamer Topf, alle Mitglieder verbrauchen daraus.",
+        "accessBoth": "Zugang",
+        "accessBothHint": "Wer das Projekt nutzt: in OpenStack mit der gewählten Rolle, dazu seine Workspaces und das gemeinsame LLM-Kontingent.",
+        "adminsHintAiaas": "Verwalten das Projekt hier zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt freigeben. Workspaces und LLM-Kontingent nutzen sie mit.",
+        "adminsHintBoth": "Verwalten das Projekt hier zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt freigeben. Workspaces und LLM-Kontingent nutzen sie mit, Zugang in OpenStack entsteht dadurch nicht.",
+        "nameHintAiaas": "Ein kurzer, wiedererkennbarer Name — so erscheint das Projekt bei Workspaces und LLM."
     },
     "quotaInputs": {
         "filter": "Ressourcen filtern",
@@ -831,5 +837,22 @@
         "back": "Zurück",
         "skip": "Ohne Projekt zurück",
         "toProjects": "Zu den Projekten"
+    },
+    "kind": {
+        "label": "Art",
+        "all": "Alle",
+        "openstack": "Cloud",
+        "aiaas": "KI",
+        "openstackProject": "Cloud-Projekt",
+        "aiaasProject": "KI-Projekt",
+        "openstackHint": "Virtuelle Maschinen, Netze und Speicher in OpenStack.",
+        "aiaasHint": "Workspaces (CPU und, je nach Budget, GPU) und LLM-Tokens, gemeinsam für alle Mitglieder.",
+        "noBudget": "Kein Budget bietet gerade Ressourcen für diese Art an.",
+        "none": "Keine Projekte dieser Art.",
+        "filter_all": "Alle ({{count}})",
+        "filter_openstack": "Cloud ({{count}})",
+        "filter_aiaas": "KI ({{count}})",
+        "newTitle_openstack": "Neues Cloud-Projekt",
+        "newTitle_aiaas": "Neues KI-Projekt"
     }
 }

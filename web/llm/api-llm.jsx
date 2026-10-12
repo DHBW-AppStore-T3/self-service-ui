@@ -6,7 +6,7 @@ import { useClient } from '/providers/client.jsx';
 import {
     blockMachine, createAccessRule, createKey, deleteAccessRule, deleteFleetPackage,
     deleteKey, forgetMachine, getFleet, getFleetInference, getMe, getUsage, listAccessRules, listTiers,
-    searchPrincipals, unblockMachine, updateAccessRule,
+    searchPrincipals, setDefaultProject, unblockMachine, updateAccessRule,
 } from '@dhbw-cloud/llm-client';
 
 // useLlmApi is the one place that knows the transport of the LLM section.
@@ -27,7 +27,9 @@ export function useLlmApi() {
         return {
             getMe: () => call(getMe),
             getUsage: () => call(getUsage),
-            createKey: (name) => call(createKey, { body: { name }, headers: JSON_HEADERS }),
+            // Without a project the key goes to the default project.
+            createKey: (name, project) => call(createKey, { body: { name, ...(project ? { project } : {}) }, headers: JSON_HEADERS }),
+            setDefaultProject: (project) => call(setDefaultProject, { body: { project }, headers: JSON_HEADERS }),
             deleteKey: (id) => call(deleteKey, { path: { id } }),
 
             getFleet: () => call(getFleet),

@@ -98,7 +98,9 @@
         "onceText": "Dieser API Key wird nie wieder angezeigt — jetzt speichern.",
         "shellTitle": "Für die Shell",
         "shellHint": "Beide Zeilen zusammen — viele Werkzeuge lesen genau diese beiden Variablen.",
-        "close": "Schließen"
+        "close": "Schließen",
+        "project": "Projekt",
+        "noProject": "keinem Projekt (gesperrt)"
     },
     "usage": {
         "monthly": "Monatskontingent",
@@ -112,15 +114,21 @@
         "tpm": "{{n}} Tokens pro Minute",
         "allModels": "alle Modelle",
         "perKey": "Verbrauch je API Key",
-        "perKeyHint": "Jeder API Key hat ein eigenes Kurzfrist-Budget; das Monatskontingent gilt für alle gemeinsam.",
+        "perKeyHint": "Jeder API Key verbraucht aus dem Topf seines Projekts und hat dazu ein eigenes Kurzfrist-Budget.",
         "shortTerm": "Kurzfrist-Verbrauch",
         "period": "Zeitraum",
         "explainTitle": "Was hier angezeigt wird",
         "explain": {
             "units": "<1>Einheiten:</1> Verbrauch und Budgets sind Verrechnungseinheiten, keine Euro. Jedes Modell hat einen internen Preis je Token (Eingabe und Ausgabe getrennt); daraus ergibt sich der Verbrauch jeder Anfrage. So lassen sich lange und kurze Anfragen fair gegeneinander aufrechnen.",
-            "monthly": "<1>Monatskontingent:</1> alles, was über alle eigenen API Keys zusammen verbraucht wurde (einschließlich DHBW-Chat), seit der letzten Zurücksetzung. Ist es aufgebraucht, werden Anfragen bis zur Zurücksetzung abgelehnt.",
+            "monthly": "<1>Projekt-Kontingent:</1> Jedes Projekt hat einen gemeinsamen Topf für alle Mitglieder. Gezeigt wird, was alle zusammen seit der letzten Zurücksetzung verbraucht haben. Ist er aufgebraucht, werden Anfragen über Keys dieses Projekts bis zur Zurücksetzung abgelehnt.",
             "shortTerm": "<1>Kurzfrist-Verbrauch:</1> je API Key ein kleineres Budget für den angegebenen Zeitraum (z. B. 4 h). Es verhindert, dass eine fehlerhafte Schleife das ganze Monatskontingent auf einmal verbraucht, und steht nach der Zurücksetzung wieder voll zur Verfügung. 0.0000 heißt also: seit der letzten Zurücksetzung nichts verbraucht — nicht, dass der Key nie genutzt wurde."
-        }
+        },
+        "pool": "{{mtokens}} Mio. Tokens pro 30 Tage, gemeinsam für alle Mitglieder",
+        "default": "Standard",
+        "makeDefault": "Als Standard verwenden",
+        "defaultHint": "Der DHBW-Chat und neue API Keys ohne Projektangabe verbrauchen aus dem Standardprojekt.",
+        "tier": "Kontingentklasse",
+        "tierHint": "Bestimmt Grenzen und Modelle, unabhängig vom Projekt."
     },
     "fleet": {
         "state": {

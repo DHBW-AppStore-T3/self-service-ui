@@ -54,6 +54,7 @@ export function WorkspaceProjects() {
                             <Text size="sm" c="dimmed" mt={4}>{t('gpu.projects.intro')}</Text>
                         </div>
                         <Group gap="xs">
+                            <Button size="xs" variant="default" component="a" href="/projects/projects?kind=aiaas">{t('gpu.projects.manage')}</Button>
                             {isAdmin && (
                                 <SegmentedControl size="xs" value={scope} onChange={setScope}
                                     data={[{ value: 'mine', label: t('gpu.projects.mine') }, { value: 'all', label: t('gpu.projects.all') }]} />

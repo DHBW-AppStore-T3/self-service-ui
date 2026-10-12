@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Alert, Button, Container, Group, Modal, Paper, Stack, Table, Text, TextInput, Title } from '@mantine/core';
+import { Alert, Button, Container, Group, Modal, Paper, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core';
 import { Plus, Trash2 } from 'lucide-react';
 import { formatDateTime } from '/format-date.js';
 import { CodeBlock } from '/helper/codeblock.jsx';
@@ -27,12 +27,14 @@ export function LlmKeys() {
     const confirm = useConfirm();
     const { me } = useLlmMe();
     const [name, setName] = useState('');
+    // The project the next key draws from; null = the default project.
+    const [project, setProject] = useState(null);
     const [fresh, setFresh] = useState(null);
 
     const usage = useQuery({ queryKey: llmKeys.usage(), queryFn: () => api.getUsage() });
 
     const create = useApiMutation({
-        mutationFn: () => api.createKey(name.trim()),
+        mutationFn: () => api.createKey(name.trim(), project),
         invalidates: [llmKeys.usage()],
         onSuccess: (created) => { setFresh(created?.key ?? null); setName(''); },
     });
@@ -59,6 +61,11 @@ export function LlmKeys() {
 
     const u = usage.data ?? {};
     const keys = u.keys ?? [];
+    // Every key spends from one project's pool. The picker only where there is
+    // something to pick; its first choice is the default project.
+    const projects = u.projects ?? [];
+    const defaultProject = projects.find(p => p.default) ?? projects[0];
+    const chosenProject = project ?? defaultProject?.slug ?? null;
     const own = u.own_keys ?? keys.filter(k => !k.chat).length;
     const full = u.max_keys > 0 && own >= u.max_keys;
     const apiUrl = me?.api_url || '';
@@ -77,6 +84,11 @@ export function LlmKeys() {
                             </Text>
                         </div>
                         <Group gap="xs" wrap="nowrap">
+                            {projects.length > 1 && (
+                                <Select w={220} aria-label={t('llm.keys.project')} allowDeselect={false}
+                                    value={chosenProject} onChange={setProject}
+                                    data={projects.map(p => ({ value: p.slug, label: p.name || p.slug }))} />
+                            )}
                             <TextInput w={260} maxLength={40} value={name}
                                 placeholder={t('llm.keys.namePlaceholder')}
                                 onChange={e => setName(e.currentTarget.value)}
@@ -93,6 +105,7 @@ export function LlmKeys() {
                         <Table.Thead>
                             <Table.Tr>
                                 <Table.Th>{t('llm.keys.name')}</Table.Th>
+                                <Table.Th>{t('llm.keys.project')}</Table.Th>
                                 <Table.Th>{t('llm.keys.spend')}</Table.Th>
                                 <Table.Th>{t('llm.keys.reset')}</Table.Th>
                                 <Table.Th />
@@ -100,11 +113,12 @@ export function LlmKeys() {
                         </Table.Thead>
                         <Table.Tbody>
                             {keys.length === 0 && (
-                                <Table.Tr><Table.Td colSpan={4}><Text size="sm" c="dimmed">{t('llm.keys.none')}</Text></Table.Td></Table.Tr>
+                                <Table.Tr><Table.Td colSpan={5}><Text size="sm" c="dimmed">{t('llm.keys.none')}</Text></Table.Td></Table.Tr>
                             )}
                             {keys.map(k => (
                                 <Table.Tr key={k.id}>
                                     <Table.Td>{keyLabel(k, t)}</Table.Td>
+                                    <Table.Td>{k.project_name || <Text span size="sm" c="dimmed">{t('llm.keys.noProject')}</Text>}</Table.Td>
                                     <Table.Td>{units(k.spend, 4)} / {units(k.budget)}</Table.Td>
                                     <Table.Td>{k.reset_at ? formatDateTime(k.reset_at) : '—'}</Table.Td>
                                     <Table.Td align="right">

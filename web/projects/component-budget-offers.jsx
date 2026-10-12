@@ -1,11 +1,12 @@
-import { Clock, Inbox, Plus, Zap } from 'lucide-react';
+import { Clock, Inbox, Zap } from 'lucide-react';
 import { Badge, Button, Card, Group, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { FactRow, formatTerm, TokenBadgeList } from './component-common.jsx';
 import {
     autoApproveHeadroom, beyondAutoApproveRefused, COLOR, expiryTone, expiryValue, freeAmount, hasAutoApprove, headroomExhaustedBy,
-    isAvailability, resourceSummaryText, UNLIMITED_QUOTA, visibleResources,
+    budgetKinds, isAvailability, resourceSummaryText, UNLIMITED_QUOTA, visibleResources,
 } from './util-project.jsx';
+import { NewProjectButton } from './component-new-project-button.jsx';
 
 // What a budget still offers, as a quota map resourceSummaryText can print:
 // an uncapped amount (Infinity) becomes the ∞ it knows.
@@ -17,7 +18,10 @@ function printable(amounts) {
 // BudgetOfferCard is one budget the viewer may draw from, seen from the
 // requester's side: how much of it is theirs right now, whether taking it needs
 // anybody's approval, and the button that starts a project there.
-function BudgetOfferCard({ budget, resources, myProjects, onNewProject, onRequestBudget }) {
+//
+// kinds: the kinds of project the catalogue tells apart; the button offers
+// those of them this budget has resources for.
+function BudgetOfferCard({ budget, resources, kinds = [], myProjects, onNewProject, onRequestBudget }) {
     const { t } = useTranslation();
     const scope = visibleResources(resources, budget).filter(r => !isAvailability(r));
     const instant = hasAutoApprove(budget);
@@ -99,9 +103,8 @@ function BudgetOfferCard({ budget, resources, myProjects, onNewProject, onReques
             </Stack>
 
             <Group gap="xs" grow>
-                <Button size="xs" leftSection={<Plus size="14" />} onClick={() => onNewProject(budget)}>
-                    {t('projects.actions.newProject')}
-                </Button>
+                <NewProjectButton size="xs" kinds={kinds.length > 1 ? budgetKinds(budget, resources) : kinds}
+                    onPick={(k) => onNewProject(budget, k)} />
                 {takesBudgetRequests && onRequestBudget && (
                     <Button size="xs" variant="light" leftSection={<Inbox size="14" />} onClick={() => onRequestBudget(budget)}>
                         {t('projects.actions.requestBudget')}
@@ -115,7 +118,7 @@ function BudgetOfferCard({ budget, resources, myProjects, onNewProject, onReques
 // BudgetOffers lists the budgets the viewer may request from — the answer to
 // "where can I get resources, and will I have to wait?" on the page where
 // projects are made, instead of in a budget tree meant for their managers.
-export function BudgetOffers({ budgets, resources, myProjects, onNewProject, onRequestBudget }) {
+export function BudgetOffers({ budgets, resources, kinds = [], myProjects, onNewProject, onRequestBudget }) {
     const { t } = useTranslation();
     if (!budgets?.length) return null;
     return (
@@ -126,7 +129,7 @@ export function BudgetOffers({ budgets, resources, myProjects, onNewProject, onR
             </div>
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
                 {budgets.map(b => (
-                    <BudgetOfferCard key={b.id} budget={b} resources={resources} myProjects={myProjects}
+                    <BudgetOfferCard key={b.id} budget={b} resources={resources} kinds={kinds} myProjects={myProjects}
                         onNewProject={onNewProject} onRequestBudget={onRequestBudget} />
                 ))}
             </SimpleGrid>

@@ -263,16 +263,15 @@
     },
     "myProjects": {
         "loadError": "Could not load your projects",
-        "intro": "A project is your own space in the DHBW cloud with the resources you request.",
         "shown": "Projects shown: {{shown}}/{{total}}",
         "noneCanRequest": "You don't have any projects yet. Click “New project” to get started — budgets marked “Instant” create it right away.",
         "none": "You don't have any projects yet, and no budget currently accepts requests from you. Ask your lecturer or administrator to add you to a budget.",
-        "heading": "My projects ({{count}})",
         "sortLabel": "Sort by",
         "sort_name": "Name",
         "sort_created": "Newest first",
         "sort_expiry": "End of term",
-        "sort_status": "Status"
+        "sort_status": "Status",
+        "headingPlain": "My projects"
     },
     "offers": {
         "heading": "Budgets for new projects",
@@ -350,7 +349,14 @@
         "inheritingBudget": "This budget only structures the tree and uses the limit of “{{name}}”. A project here draws directly from the budget above — it usually belongs in a sub-budget below.",
         "inheritingBudgetAbove": "This budget only structures the tree and uses the limit of the budget above. A project here draws directly from the budget above — it usually belongs in a sub-budget below.",
         "ownerHint": "Who answers for the project. A change takes effect when saved, without a request.",
-        "moveHint": "The budget the project is paid from. Moving takes effect when saved; the target needs free capacity."
+        "moveHint": "The budget the project is paid from. Moving takes effect when saved; the target needs free capacity.",
+        "accessAiaas": "Members",
+        "accessAiaasHint": "Who uses the project: its workspaces and its LLM quota. The quota is one shared pool all members draw from.",
+        "accessBoth": "Access",
+        "accessBothHint": "Who uses the project: in OpenStack with the chosen role, plus its workspaces and the shared LLM quota.",
+        "adminsHintAiaas": "Administer the project here together with the owner: rename it, request changes, edit this list and release it. They use its workspaces and LLM quota too.",
+        "adminsHintBoth": "Administer the project here together with the owner: rename it, request changes, edit this list and release it. They use its workspaces and LLM quota too; this gives no access in OpenStack.",
+        "nameHintAiaas": "A short, recognizable name — this is how the project appears in workspaces and LLM."
     },
     "quotaInputs": {
         "filter": "Filter resources",
@@ -831,5 +837,22 @@
         "back": "Back",
         "skip": "Back without a project",
         "toProjects": "To the projects"
+    },
+    "kind": {
+        "label": "Kind",
+        "all": "All",
+        "openstack": "Cloud",
+        "aiaas": "AI",
+        "openstackProject": "Cloud project",
+        "aiaasProject": "AI project",
+        "openstackHint": "Virtual machines, networks and storage in OpenStack.",
+        "aiaasHint": "Workspaces (CPU and, depending on the budget, GPU) and LLM tokens, shared by all members.",
+        "noBudget": "No budget currently offers resources of this kind.",
+        "none": "No projects of this kind.",
+        "filter_all": "All ({{count}})",
+        "filter_openstack": "Cloud ({{count}})",
+        "filter_aiaas": "AI ({{count}})",
+        "newTitle_openstack": "New cloud project",
+        "newTitle_aiaas": "New AI project"
     }
 }

@@ -99,8 +99,8 @@
         "project": "Projekt: {{name}}"
     },
     "projects": {
-        "title": "Projekte",
-        "intro": "Workspaces startet man über ein Projekt: Es legt fest, wer mitmacht, welche Profile und GPU-Klassen zur Verfügung stehen und wie viel jede Person gleichzeitig nutzen darf. Beim Start in JupyterHub wird das Projekt gewählt.",
+        "title": "Projekt-Einstellungen",
+        "intro": "Was an einem KI-Projekt nur Workspaces betrifft: Profile, GPU-Klassen, Images und Grenzen pro Person. Beim Start in JupyterHub wird das Projekt gewählt. Mitglieder, Laufzeit und Kontingente werden unter „Projekte“ verwaltet.",
         "mine": "Meine",
         "all": "Alle",
         "edit": "Bearbeiten",
@@ -186,6 +186,7 @@
         },
         "managed": "Budgetbaum",
         "managedHint": "Dieses Projekt kommt aus dem Budgetbaum: Name, Mitglieder, Laufzeit, GPUs pro Klasse und die Budgets des Projekts werden dort unter „Projekte“ verwaltet. Hier lässt sich festlegen, wie es genutzt wird: Profile, Images, Grenzen und Anteile pro Person, kürzere Zeitfenster.",
-        "getOne": "Projekt anlegen"
+        "getOne": "Projekt anlegen",
+        "manage": "Projekte verwalten"
     }
 }

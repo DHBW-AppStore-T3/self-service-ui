@@ -15,6 +15,31 @@ export function authHeaders(user) {
 // providers/client.jsx seeds the same identity before React has mounted.
 export const DEV_DEFAULT_EMAIL = 'dennis.pfisterer@dhbw.de';
 
+// The people of the local APIs' mock data (openstack-management-api and
+// aiaas-management-api, internal/dev and the mock role provider), offered by the
+// dev switch in the header and on the dev sign-in screen.
+export const DEV_USERS = [
+    'cs-student@cs.com', 'student2@cs.com', 'faculty@cs.example', 'admin@cs.example',
+    'faculty@bio.example', 'root.admin@uni.example', DEV_DEFAULT_EMAIL,
+];
+
+// The dev identity survives a reload: kept in the browser, read before React
+// mounts (providers/client.jsx). Storage may be unavailable — then a reload
+// falls back to the default, as before.
+const DEV_USER_KEY = 'self-service.dev-user';
+function storedDevUser() {
+    try { return localStorage.getItem(DEV_USER_KEY) || null; } catch { return null; }
+}
+function storeDevUser(email) {
+    try { localStorage.setItem(DEV_USER_KEY, email); } catch { /* not kept, see above */ }
+}
+
+// initialDevUser: who a dev session starts as — ?dev_user, else the one picked
+// last, else the default.
+export function initialDevUser() {
+    return new URLSearchParams(window.location.search).get('dev_user') || storedDevUser() || DEV_DEFAULT_EMAIL;
+}
+
 const makeDummyUser = (email) => ({ profile: { email, name: email }, access_token: 'dummy-token' });
 
 export function AuthProvider({ children }) {
@@ -38,11 +63,13 @@ export function AuthProvider({ children }) {
                             urlParams.delete('dev_user');
                             const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
                             window.history.replaceState({}, document.title, newUrl);
+                            storeDevUser(emailParam);
                             setDevUser(emailParam);
                             setUser(makeDummyUser(emailParam));
                         } else {
-                            setUser(makeDummyUser(DEV_DEFAULT_EMAIL));
-                            setDevUser(DEV_DEFAULT_EMAIL);
+                            const email = initialDevUser();
+                            setUser(makeDummyUser(email));
+                            setDevUser(email);
                         }
                     }
                 } else {
@@ -83,9 +110,16 @@ export function AuthProvider({ children }) {
     // Dummy (dev) mode: login/logout toggle the local user (preview signed-out state).
     // BFF (prod) mode: the proxy owns the session — login goes through the proxy
     // sign-in, logout through the proxy sign-out (clears the cookie).
+    // Switching from one dev user to another reloads the page: everything
+    // cached so far (queries, the LLM and workspace access) was the other one's.
     const login = useDummyAuth
         ? (email) => {
-            const e = (typeof email === 'string' && email.trim()) ? email.trim() : (devUser || 'dennis.pfisterer@dhbw.de');
+            const e = (typeof email === 'string' && email.trim()) ? email.trim() : (devUser || DEV_DEFAULT_EMAIL);
+            storeDevUser(e);
+            if (user && e !== devUser) {
+                window.location.reload();
+                return;
+            }
             setDevUser(e);
             setUser(makeDummyUser(e));
         }

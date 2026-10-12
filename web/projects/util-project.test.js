@@ -4,7 +4,7 @@ import i18n from '/i18n/index.js';
 // The real English resources, so a renamed key fails here rather than showing
 // the key itself on the screen.
 const t = i18n.getFixedT('en');
-import { resourceUsageText, sortProjects, usageLevel, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, isRetired, lastEventAt, scheduledDeletion, autoApproveHeadroom, childrenById, expiryTone, freeAmount, groupResources, headroomExhaustedBy, isAvailability, isExpired, isProvisioning, limitDelta, nodeChanges, nodeTitle, normalizeObjectResponse, openstackProjectUrl, overageEntries, overageText, ownerEmail, quotaFits, requestType, resourceBarSegments, resourceSummaryText, statusLabel, usedAmount, visibleResources, defaultsWithin, projectActions, effectiveLimit, availabilityElsewhere, hasAllocations, roomIn, resourceLabel, pollWhileDeleting, DELETING_POLL_MS } from './util-project.jsx';
+import { resourceUsageText, sortProjects, usageLevel, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, isRetired, lastEventAt, scheduledDeletion, autoApproveHeadroom, childrenById, expiryTone, freeAmount, groupResources, headroomExhaustedBy, isAvailability, isExpired, isProvisioning, limitDelta, nodeChanges, nodeTitle, normalizeObjectResponse, openstackProjectUrl, overageEntries, overageText, ownerEmail, quotaFits, requestType, resourceBarSegments, resourceSummaryText, statusLabel, usedAmount, visibleResources, defaultsWithin, projectActions, effectiveLimit, availabilityElsewhere, hasAllocations, roomIn, resourceLabel, pollWhileDeleting, DELETING_POLL_MS, projectKinds, catalogKinds, resourcesOfKinds, budgetKinds } from './util-project.jsx';
 
 const RESOURCES = [
     { id: 'cpu', name: 'vCPUs' },
@@ -759,5 +759,28 @@ describe('pollWhileDeleting', () => {
         expect(pollWhileDeleting(page([{ id: 'a', flags: ['delete_requested'] }, { id: 'b' }]))).toBe(DELETING_POLL_MS);
         expect(pollWhileDeleting(page([{ id: 'b' }]))).toBe(false);
         expect(pollWhileDeleting({ state: {} })).toBe(false);
+    });
+});
+
+describe('project kinds', () => {
+    const RES = [
+        { id: 'cores', provider: 'openstack' },
+        { id: 'llm-mtokens', provider: 'aiaas' },
+        { id: 'legacy' },
+    ];
+    it('a project is of the kinds it holds or asks for', () => {
+        expect(projectKinds({ limit: { cores: 2 } }, RES)).toEqual(['openstack']);
+        expect(projectKinds({ limit: { 'llm-mtokens': -1 } }, RES)).toEqual(['aiaas']);
+        expect(projectKinds({ limit: { cores: 1 }, pending: { limit: { cores: 1, 'llm-mtokens': 5 } } }, RES)).toEqual(['openstack', 'aiaas']);
+        expect(projectKinds({ limit: {}, allocations: [{ limit: { 'llm-mtokens': 3 } }] }, RES)).toEqual(['aiaas']);
+        expect(projectKinds({ limit: { legacy: 4 } }, RES)).toEqual([]);
+    });
+    it('the catalogue, resources and budgets by kind', () => {
+        expect(catalogKinds(RES)).toEqual(['openstack', 'aiaas']);
+        expect(catalogKinds([{ id: 'cores', provider: 'openstack' }])).toEqual(['openstack']);
+        expect(resourcesOfKinds(RES, ['aiaas']).map(r => r.id)).toEqual(['llm-mtokens', 'legacy']);
+        expect(resourcesOfKinds(RES, [])).toHaveLength(3);
+        expect(budgetKinds({ available_resources: ['cores'] }, RES)).toEqual(['openstack']);
+        expect(budgetKinds({}, RES)).toEqual(['openstack', 'aiaas']);
     });
 });

@@ -19,7 +19,7 @@ import { LogIn } from 'lucide-react';
 
 import { DynDnsConfigProvider } from '/providers/dyndns-config.jsx';
 import { CloudConfigProvider } from '/providers/cloud-config.jsx';
-import { useAuth, AuthProvider } from '/providers/auth.jsx';
+import { useAuth, AuthProvider, DEV_USERS } from '/providers/auth.jsx';
 import { SessionProvider } from '/providers/session.jsx';
 import { ErrorModalProvider } from '/providers/error-modal.jsx';
 import { ConfirmProvider } from '/providers/confirm.jsx';
@@ -217,7 +217,7 @@ function Main() {
                                                 {/* One-click sign-in as common dev users. */}
                                                 <Stack gap={4} align="center" mt="xs">
                                                     <Text size="xs" c="dimmed">{t('app.quickSignIn')}</Text>
-                                                    {['dennis.pfisterer@dhbw.de', 'clemens.martin@dhbw.de'].map(e => (
+                                                    {DEV_USERS.map(e => (
                                                         <Anchor key={e} size="sm" onClick={() => login(e)} style={{ cursor: 'pointer' }}>{e}</Anchor>
                                                     ))}
                                                 </Stack>

@@ -5,8 +5,8 @@
     },
     "services": {
         "projects": {
-            "title": "Cloud-Projekte",
-            "lead": "Ein eigener Bereich in der DHBW-Cloud mit CPU, RAM und Speicher.",
+            "title": "Projekte",
+            "lead": "Cloud-Projekte mit virtuellen Maschinen und KI-Projekte mit Workspaces und LLM-Tokens.",
             "a": "Kleine Anfragen werden oft sofort genehmigt",
             "b": "Weitere Personen lassen sich zum gemeinsamen Arbeiten hinzufügen",
             "c": "Läuft bis zum gewählten Enddatum, verlängerbar",

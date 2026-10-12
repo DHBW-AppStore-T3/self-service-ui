@@ -1,7 +1,7 @@
 import { AlertTriangle, ExternalLink, Eye, Gift, Pencil, Rocket, Scale, Trash2, Users, X } from 'lucide-react';
 import { Alert, Anchor, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { CopyLinkButton, DeletingBadge, FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, PurgeProgress, TokenBadgeList } from './component-common.jsx';
-import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, scheduledDeletion, openstackSide } from './util-project.jsx';
+import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, scheduledDeletion, openstackSide, catalogKinds, projectKinds } from './util-project.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useTranslation } from 'react-i18next';
 import { useProjectConfig } from './projects.jsx';
@@ -28,6 +28,8 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
     const config = useProjectConfig();
 
     const imported = isImported(node);
+    // Cloud, AI or both — only where the catalogue has both to tell apart.
+    const kinds = catalogKinds(resources).length > 1 ? projectKinds(node, resources) : [];
     // Approved but not in OpenStack yet — the reconciler runs on an interval.
     const provisioning = isProvisioning(node, config?.provisioningEnabled, resources, config?.providers);
     const openstackUrl = openstackProjectUrl(config?.openstackDashboardUrl, node);
@@ -81,6 +83,9 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                 <Group justify="space-between" mb="xs">
                     <Group gap="xs">
                         <NodeStatusBadge status={node.status} provisioning={provisioning} />
+                        {kinds.map(k => (
+                            <Badge key={k} color={COLOR.identity} variant="light">{t(`projects.kind.${k}`)}</Badge>
+                        ))}
                         {deletionRequested(node) && <DeletingBadge size="sm" purge={openstackSide(node).purge} />}
                         {/* Who shared it says it all, so it stands on the badge rather
                             than behind a hover nobody finds. Not uppercased: an

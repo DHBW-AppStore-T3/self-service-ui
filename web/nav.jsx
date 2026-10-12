@@ -44,22 +44,6 @@ export function useNav() {
 
     const sections = [
         { id: 'home', label: t('nav.home'), href: '/', items: [] },
-        cloudProjectsEnabled && {
-            id: 'projects',
-            label: t('nav.cloudProjects'),
-            base: '/projects',
-            // A dot, not a count: the budget view can widen its scope, so a
-            // number up here would disagree with the number down there.
-            dot: pending > 0,
-            items: [
-                { label: t('nav.myProjects'), href: '/projects/projects' },
-                // Only for someone who manages a budget or may request one —
-                // for everybody else the page is a single "nothing here" box.
-                hasBudgets && { label: t('nav.myBudgets'), href: '/projects/budgets', dot: pending > 0 },
-                isRoot && { label: t('nav.rootAdmin'), href: '/projects/admin' },
-                { label: t('nav.apiDocumentation'), href: '/projects/api-doc' },
-            ].filter(Boolean),
-        },
         dnsZonesEnabled && {
             id: 'dyndns',
             label: t('nav.dnsZones'),
@@ -76,6 +60,22 @@ export function useNav() {
                 // events). Old /policy links redirect (see dyndns-routes).
                 hasPolicy && { label: t('nav.administration'), href: '/dyndns/administration', dot: adminEvents > 0 },
                 { label: t('nav.apiDocumentation'), href: '/dyndns/api-doc' },
+            ].filter(Boolean),
+        },
+        cloudProjectsEnabled && {
+            id: 'projects',
+            label: t('nav.projects'),
+            base: '/projects',
+            // A dot, not a count: the budget view can widen its scope, so a
+            // number up here would disagree with the number down there.
+            dot: pending > 0,
+            items: [
+                { label: t('nav.myProjects'), href: '/projects/projects' },
+                // Only for someone who manages a budget or may request one —
+                // for everybody else the page is a single "nothing here" box.
+                hasBudgets && { label: t('nav.myBudgets'), href: '/projects/budgets', dot: pending > 0 },
+                isRoot && { label: t('nav.rootAdmin'), href: '/projects/admin' },
+                { label: t('nav.apiDocumentation'), href: '/projects/api-doc' },
             ].filter(Boolean),
         },
         // For everybody the service answers: without LLM tokens the section

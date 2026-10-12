@@ -98,7 +98,9 @@
         "onceText": "This API key is never shown again — store it now.",
         "shellTitle": "For the shell",
         "shellHint": "Both lines together — many tools read exactly these two variables.",
-        "close": "Close"
+        "close": "Close",
+        "project": "Project",
+        "noProject": "no project (blocked)"
     },
     "usage": {
         "monthly": "Monthly quota",
@@ -112,15 +114,21 @@
         "tpm": "{{n}} tokens per minute",
         "allModels": "all models",
         "perKey": "Usage per API key",
-        "perKeyHint": "Each API key has its own short-term budget; the monthly quota is shared by all.",
+        "perKeyHint": "Every API key draws from its project’s pool and has a short-term budget of its own on top.",
         "shortTerm": "Short-term spend",
         "period": "Period",
         "explainTitle": "What is shown here",
         "explain": {
             "units": "<1>Units:</1> spend and budgets are accounting units, not euros. Every model has an internal price per token (input and output separately), which gives the cost of each request. That way long and short requests can be weighed fairly.",
-            "monthly": "<1>Monthly quota:</1> everything spent across all of the account's API keys (including the DHBW chat) since the last reset. Once it is used up, requests are refused until the reset.",
+            "monthly": "<1>Project quota:</1> every project has one pool shared by all its members. Shown is what all of them used together since the last reset. Once it is used up, requests with keys of this project are refused until the reset.",
             "shortTerm": "<1>Short-term spend:</1> a smaller budget per API key for the given period (e.g. 4 h). It keeps a runaway loop from using up the whole monthly quota at once and is fully available again after the reset. 0.0000 therefore means nothing spent since the last reset — not that the key was never used."
-        }
+        },
+        "pool": "{{mtokens}} M tokens per 30 days, shared by all members",
+        "default": "Default",
+        "makeDefault": "Use as default",
+        "defaultHint": "The DHBW chat and new API keys without a project draw from the default project.",
+        "tier": "Quota tier",
+        "tierHint": "Sets limits and models, independent of the project."
     },
     "fleet": {
         "state": {

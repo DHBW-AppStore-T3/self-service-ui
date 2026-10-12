@@ -173,6 +173,39 @@ export function holdsResourceOf(node, resources, provider, ownOnly = false) {
         && ((limit[r.id] ?? 0) > 0 || limit[r.id] === UNLIMITED_QUOTA));
 }
 
+// The kinds of project the UI tells apart, one per provider: a cloud project
+// (OpenStack, virtual machines) and an AI project (the AI service: workspaces
+// and LLM tokens). The tree knows no kinds — a project is of a kind when it
+// holds resources of that provider, so one from before the split may be both.
+export const PROJECT_KINDS = ['openstack', 'aiaas'];
+
+// catalogKinds: the kinds the catalogue offers anything of, in PROJECT_KINDS
+// order. One kind means there is nothing to tell apart.
+export function catalogKinds(resources) {
+    return PROJECT_KINDS.filter(k => (resources || []).some(r => r.provider === k));
+}
+
+// projectKinds: the kinds a project is — what it holds (allocations included)
+// or asks for in a waiting change. Empty for a project holding nothing.
+export function projectKinds(node, resources) {
+    const limits = [effectiveLimit(node, node?.limit), node?.pending?.limit].filter(Boolean);
+    return PROJECT_KINDS.filter(k => limits.some(limit => (resources || []).some(r => r.provider === k
+        && ((limit[r.id] ?? 0) > 0 || limit[r.id] === UNLIMITED_QUOTA))));
+}
+
+// resourcesOfKinds: the resources of these kinds; one without a provider
+// belongs to every kind. No kinds — no filter.
+export function resourcesOfKinds(resources, kinds) {
+    if (!kinds?.length) return resources || [];
+    return (resources || []).filter(r => !r.provider || kinds.includes(r.provider));
+}
+
+// budgetKinds: the kinds a budget offers resources of.
+export function budgetKinds(budget, resources) {
+    const offered = visibleResources(resources, budget);
+    return PROJECT_KINDS.filter(k => offered.some(r => r.provider === k));
+}
+
 // Returns Mantine badge color + variant for a node status.
 export function statusStyle(status, provisioning = false) {
     if (provisioning) return PROVISIONING_META;

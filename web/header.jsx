@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
-import { useAuth } from '/providers/auth.jsx';
+import { DEV_USERS, useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { Languages, LogOut, User } from "lucide-react";
 import { useTranslation } from 'react-i18next';
@@ -96,7 +96,7 @@ export function SubNavItem({ item, active, onClick, vertical = false }) {
 export function Header() {
     const { t } = useTranslation();
     const [opened, setOpened] = useState(false);
-    const { user, login, logout, useDummyAuth } = useAuth();
+    const { user, login, logout, useDummyAuth, dev_user: devUser } = useAuth();
     const confirm = useConfirm();
     const { sections, activeSection, activeItem, subNavItems } = useNav();
 
@@ -228,6 +228,16 @@ export function Header() {
                                 <Menu.Dropdown>
                                     <Menu.Label>{t('account.greeting', { name: user.profile.name })}</Menu.Label>
                                     <Menu.Divider />
+                                    {/* Dev builds only: become another of the mock people. */}
+                                    {useDummyAuth && (
+                                        <>
+                                            <Menu.Label>{t('account.devSwitch')}</Menu.Label>
+                                            {DEV_USERS.filter(e => e !== devUser).map(e => (
+                                                <Menu.Item key={e} onClick={() => login(e)}>{e}</Menu.Item>
+                                            ))}
+                                            <Menu.Divider />
+                                        </>
+                                    )}
                                     <Menu.Item color="red" onClick={confirmLogout}>{t('account.signOut')}</Menu.Item>
                                 </Menu.Dropdown>
                             </Menu>

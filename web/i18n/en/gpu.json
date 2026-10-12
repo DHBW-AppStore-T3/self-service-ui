@@ -99,8 +99,8 @@
         "project": "Project: {{name}}"
     },
     "projects": {
-        "title": "Projects",
-        "intro": "Workspaces are started through a project: it says who takes part, which profiles and GPU classes are available and how much each person may use at the same time. The project is chosen when starting in JupyterHub.",
+        "title": "Project settings",
+        "intro": "What about an AI project concerns workspaces only: profiles, GPU classes, images and limits per person. The project is picked when starting in JupyterHub. Members, end date and quotas are managed under “Projects”.",
         "mine": "Mine",
         "all": "All",
         "edit": "Edit",
@@ -186,6 +186,7 @@
         },
         "managed": "Budget tree",
         "managedHint": "This project comes from the budget tree: its name, members, end, GPUs per class and the project budgets are managed there, under “Projects”. Here you set how it is used: profiles, images, limits and shares per person, shorter windows.",
-        "getOne": "Get a project"
+        "getOne": "Get a project",
+        "manage": "Manage projects"
     }
 }

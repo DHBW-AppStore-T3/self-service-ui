@@ -26,17 +26,17 @@ export function Home() {
     const withLlm = !!llmMe;
 
     const services = [
-        cloudProjectsEnabled && {
-            key: 'projects',
-            icon: FolderKanban,
-            color: 'blue',
-            to: '/projects',
-        },
         dnsZonesEnabled && {
             key: 'dns',
             icon: Globe,
             color: 'teal',
             to: '/dyndns/zones',
+        },
+        cloudProjectsEnabled && {
+            key: 'projects',
+            icon: FolderKanban,
+            color: 'blue',
+            to: '/projects',
         },
         withLlm && {
             key: 'llm',

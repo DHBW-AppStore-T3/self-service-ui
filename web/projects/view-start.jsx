@@ -95,7 +95,7 @@ export function StartView() {
                     {result.failed.length > 0 && <Alert color="red" variant="light">{t('projects.start.failed', { list: result.failed.join(' · ') })}</Alert>}
                     <Group>
                         {back && <Button component="a" href={back}>{t('projects.start.back')}</Button>}
-                        <Button variant="default" component="a" href="/projects/projects">{t('projects.start.toProjects')}</Button>
+                        <Button variant="default" component="a" href={`/projects/projects?kind=${encodeURIComponent(provider)}`}>{t('projects.start.toProjects')}</Button>
                     </Group>
                 </Stack>
             ) : offers.length === 0 ? (

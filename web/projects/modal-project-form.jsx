@@ -18,7 +18,7 @@ import { useNodeMutation } from './use-node-mutation.jsx';
 import { PersonInput, personEmail } from './principal-search.jsx';
 import { AllocationSection, useAllocationDraft } from './component-allocation-section.jsx';
 import { withCurrentParent } from './component-budget-select.jsx';
-import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide, resourceLabel } from './util-project.jsx';
+import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide, resourceLabel, budgetKinds, catalogKinds, projectKinds, resourcesOfKinds } from './util-project.jsx';
 import { AttributesEditor, AttributesView, hasAttributes, useAttributesTab } from './component-node-attributes.jsx';
 import { nodeExtraTabs } from './modal-inspect.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
@@ -105,11 +105,17 @@ function OutcomeNote({ outcome, isChange, budget, hasPolicy, over = [] }) {
 // may move to. Allocations from budgets further up are part of the Resources
 // tab, for the managers who may grant them and the holders who may give one back.
 //
+// initialKind: the kind of a new project ('openstack', 'aiaas', see
+// PROJECT_KINDS) — the list's filter when it was opened from there. The kind
+// decides which budgets and resources the form offers; a project is of the
+// kind whose resources it holds, so changing one keeps to the kinds it is
+// (both for a project from before the split).
+//
 // adopt: `node` is an imported OpenStack project a root admin brings under
 // management — the same tabs as any project, prefilled from OpenStack, plus who
 // answers for it and which budget pays. Its members can be corrected before it
 // goes through approval, instead of the adoption failing on one of them.
-export function ProjectFormModal({ opened, onClose, onDone, resources, openstackRoles, node = null, myBudgets = [], eligibleBudgets = [], myProjects = [], initialBudgetId = null, asManager = false, moveTargets = [], adopt = false }) {
+export function ProjectFormModal({ opened, onClose, onDone, resources, openstackRoles, node = null, myBudgets = [], eligibleBudgets = [], myProjects = [], initialBudgetId = null, initialKind = null, asManager = false, moveTargets = [], adopt = false }) {
     const { t } = useTranslation();
     const api = useNodesApi();
     const isAdopt = adopt && !!node;
@@ -161,14 +167,30 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         const bound = latestEndOf(id)?.date;
         return bound && (!date || date > bound) ? bound : date;
     };
-    const offeredFor = (id) => {
+    // The kinds the form is about: a new project's one kind, an imported one is
+    // a cloud project, and a change keeps to what the project is (every kind
+    // while it holds nothing). No kinds in the catalogue — no filter.
+    const catalog = catalogKinds(resources);
+    const changeKinds = isChange ? projectKinds(node, resources) : [];
+    const kindsFor = (kind) => catalog.length < 2 ? []
+        : isAdopt ? ['openstack']
+        : isChange ? (changeKinds.length ? changeKinds : catalog)
+        : (kind ? [kind] : []);
+    const offersKind = (b, kind) => catalog.length < 2 || !kind || budgetKinds(b, resources).includes(kind);
+    const offeredFor = (id, kind) => {
         // A change request has no budget picker — the project stays where it
         // is, so the scope is its PARENT budget: that is what a request could
         // draw from. The leaf itself is the fallback when the parent is not in
         // view (never the whole catalogue: offering an availability the budget
         // was never delegated reads as a promise the approval cannot keep).
         const budget = budgetById(isChange ? node.parent_id : id) || (isChange ? node : null);
-        return budget ? visibleResources(resources, budget) : resources;
+        return resourcesOfKinds(budget ? visibleResources(resources, budget) : resources, kindsFor(kind));
+    };
+    // Only what the form offers goes into a new project: a cloud default left
+    // in an AI project's request would make it a cloud project as well.
+    const onlyOffered = (quota, id, kind) => {
+        const ids = new Set(offeredFor(id, kind).map(r => r.id));
+        return Object.fromEntries(Object.entries(quota || {}).filter(([rid]) => ids.has(rid)));
     };
 
     const headroomFor = (id) => managedIds.has(id)
@@ -185,21 +207,21 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     //
     // A pool is never pre-filled: its headroom is the whole budget, and a
     // form that opens asking for everything is a trap, not a convenience.
-    const usableHeadroomFor = (id) => {
+    const usableHeadroomFor = (id, kind) => {
         const h = headroomFor(id);
         if (!h || isPoolAutoApprove(budgetById(id))) return null;
-        const ok = offeredFor(id).every(r =>
+        const ok = offeredFor(id, kind).every(r =>
             isAvailability(r) || (h[r.id] ?? 0) >= (r.min ?? 0));
-        return ok ? h : null;
+        return ok ? onlyOffered(h, id, kind) : null;
     };
 
     // What an untouched form asks for under a budget: the most its auto-approve
     // grants on the spot, else the catalogue's defaults within what the budget
     // has room for (a pool's headroom is exactly that room).
-    const initialQuotaFor = (id) => {
+    const initialQuotaFor = (id, kind) => {
         const budget = budgetById(id);
-        return usableHeadroomFor(id)
-            ?? defaultsWithin(resources, headroomFor(id) ?? (budget ? roomIn(budget, resources) : null));
+        return usableHeadroomFor(id, kind)
+            ?? onlyOffered(defaultsWithin(resources, headroomFor(id) ?? (budget ? roomIn(budget, resources) : null)), id, kind);
     };
     // Set once the person types a number; from then on a budget switch no
     // longer replaces the defaults — overwriting typed values would be worse
@@ -217,7 +239,12 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     // A change request cannot take an end away — only move it — so a project
     // that has one keeps needing one.
     const openEndLocked = isChange && !!(node.pending?.termination_date || node.termination_date);
-    const initialParentId = isChange ? null : (initialBudgetId ?? myBudgets[0]?.id ?? requestable[0]?.id ?? null);
+    // A new project's kind: the one asked for, else the first the preselected
+    // budget offers; its budget: the one asked for, else the first offering it.
+    const initialKind_ = isChange || isAdopt || catalog.length < 2 ? null
+        : (initialKind ?? (budgetById(initialBudgetId) && budgetKinds(budgetById(initialBudgetId), resources)[0]) ?? catalog[0]);
+    const initialParentId = isChange ? null
+        : (initialBudgetId ?? [...myBudgets, ...requestable].find(b => offersKind(b, initialKind_))?.id ?? null);
     const form = useForm({
         initialValues: isAdopt
             ? {
@@ -243,6 +270,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 adminScope: node.admin_scope || [],
             }
             : {
+                kind: initialKind_,
                 parentId: initialParentId,
                 name: '',
                 reason: '',
@@ -250,7 +278,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 // it would grant, so the common case is one click — unless the
                 // allowance is (partly) used up: then the defaults stay, capped
                 // to what the budget can still give.
-                quota: initialQuotaFor(initialParentId),
+                quota: initialQuotaFor(initialParentId, initialKind_),
                 terminationDate: withinBudget(defaultEnd, initialParentId),
                 authorizedUsers: [],
                 adminScope: [],
@@ -273,11 +301,11 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     : t('projects.projectForm.endDateAfterBudget', { date: formatDate(latest.date) });
             })(),
             ...Object.fromEntries(
-                Object.entries(validateQuota(t, offeredFor(values.parentId), values.quota)).map(([id, msg]) => [`quota.${id}`, msg])),
+                Object.entries(validateQuota(t, offeredFor(values.parentId, values.kind), values.quota)).map(([id, msg]) => [`quota.${id}`, msg])),
         }),
     });
 
-    const { parentId, quota, terminationDate, authorizedUsers } = form.values;
+    const { kind, parentId, quota, terminationDate, authorizedUsers } = form.values;
     const selectedHeadroom = headroomFor(parentId);
     // The per-person notes below are about individual limits; a pool's
     // "headroom" is just the budget's free capacity, which the picker shows.
@@ -296,7 +324,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             budget: outcomeBudget, manages: managedIds.has(parentId), quota, resources, myProjects,
         });
 
-    const offered = offeredFor(parentId);
+    const offered = offeredFor(parentId, kind);
     // For a new project: what the chosen budget still has free per quantity,
     // shown under each field, and the quantities asking for more than that —
     // the refusal names them instead of leaving the person to guess. A change
@@ -314,9 +342,9 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         form.setFieldValue('parentId', id);
         form.clearFieldError('parentId');
         // An import keeps what OpenStack grants it; the budget only bounds it.
-        const headroom = isAdopt ? null : usableHeadroomFor(id);
+        const headroom = isAdopt ? null : usableHeadroomFor(id, form.values.kind);
         if (headroom) form.setFieldValue('quota', headroom);
-        else if (!isAdopt && !quotaTouched.current) form.setFieldValue('quota', initialQuotaFor(id));
+        else if (!isAdopt && !quotaTouched.current) form.setFieldValue('quota', initialQuotaFor(id, form.values.kind));
         // A budget that ends sooner pulls the date in with it.
         const date = withinBudget(form.values.terminationDate, id);
         if (date !== form.values.terminationDate) form.setFieldValue('terminationDate', date);
@@ -414,6 +442,14 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         if (bad) setActiveTab(bad);
     };
 
+    // What the members get depends on what the project is: a role in OpenStack,
+    // the workspaces and the LLM pool of the AI service, or both.
+    const memberKinds = kindsFor(kind);
+    const withAi = memberKinds.includes('aiaas');
+    const aiOnly = withAi && !memberKinds.includes('openstack');
+    const accessKey = aiOnly ? 'accessAiaas' : withAi ? 'accessBoth' : 'access';
+    const adminsHintKey = aiOnly ? 'adminsHintAiaas' : withAi ? 'adminsHintBoth' : 'adminsHint';
+
     const detailsTab = (
         <Stack>
             {isAdopt && (
@@ -439,12 +475,13 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     label={t('projects.projectForm.budget')}
                     description={t('projects.projectForm.budgetHint')}
                     placeholder={t('projects.projectForm.budgetPlaceholder')}
-                    emptyDescription={t('projects.projectForm.budgetNone')}
+                    emptyDescription={catalog.length > 1 && [...(myBudgets || []), ...(requestable || [])].length > 0
+                        ? t('projects.kind.noBudget') : t('projects.projectForm.budgetNone')}
                     groups={[
-                        { label: t('projects.projectForm.budgetsManaged'), budgets: myBudgets || [] },
+                        { label: t('projects.projectForm.budgetsManaged'), budgets: (myBudgets || []).filter(b => offersKind(b, isAdopt ? 'openstack' : kind)) },
                         {
                             label: isAdopt ? t('projects.adopt.budgetsOwnerCanRequest') : t('projects.projectForm.budgetsRequestable'),
-                            budgets: (requestable || []).filter(b => !managedIds.has(b.id)),
+                            budgets: (requestable || []).filter(b => !managedIds.has(b.id) && offersKind(b, isAdopt ? 'openstack' : kind)),
                         },
                     ]}
                     markInstant
@@ -475,7 +512,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
 
             <TextInput
                 label={t('projects.projectForm.name')}
-                description={t('projects.projectForm.nameHint')}
+                description={aiOnly ? t('projects.projectForm.nameHintAiaas') : t('projects.projectForm.nameHint')}
                 placeholder={t('projects.projectForm.namePlaceholder')}
                 required={!isAdopt}
                 disabled={isAdopt}
@@ -609,11 +646,12 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         <Stack gap="md">
             <Paper withBorder radius="md" p="md">
                 <MemberRoleEditor
-                    label={t('projects.projectForm.access')}
-                    description={t('projects.projectForm.accessHint')}
+                    label={t(`projects.projectForm.${accessKey}`)}
+                    description={t(`projects.projectForm.${accessKey}Hint`)}
                     members={authorizedUsers}
                     onChange={(members) => form.setFieldValue('authorizedUsers', members)}
                     roles={openstackRoles || []}
+                    withRoles={!aiOnly}
                     emptyMessage={t('projects.projectForm.membersEmpty')}
                 />
             </Paper>
@@ -623,7 +661,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             {!isAdopt && <Paper withBorder radius="md" p="md">
                 <TokenListEditor
                     label={t('projects.projectForm.admins')}
-                    description={t('projects.projectForm.adminsHint')}
+                    description={t(`projects.projectForm.${adminsHintKey}`)}
                     tokens={form.values.adminScope}
                     onChange={(tokens) => form.setFieldValue('adminScope', tokens)}
                     listAs="rows"
@@ -643,7 +681,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             title={isAdopt ? t('projects.adopt.title', { name: nodeTitle(node) })
                 : isChange
                 ? t('projects.inspect.titleProject', { name: nodeTitle(node) })
-                : t('projects.projectForm.titleNew')}
+                : kind ? t(`projects.kind.newTitle_${kind}`) : t('projects.projectForm.titleNew')}
             onSubmit={form.onSubmit(values => {
                 if (isAdopt) {
                     const problem = isEmail(t('projects.adopt.ownerRequired'))(ownerEmail);
