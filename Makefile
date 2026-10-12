@@ -9,7 +9,7 @@ DOCKER_PLATFORMS ?= linux/amd64,linux/arm64
 
 # --- Targets ---
 .DEFAULT_GOAL := docker-build
-.PHONY: all check clean docker-build multi-arch-build docker-login help dev helm-update bump version-check
+.PHONY: publish all check clean docker-build multi-arch-build docker-login help dev helm-update bump version-check
 
 # Alias for the primary build target
 all: docker-build
@@ -126,3 +126,15 @@ help:
 	@echo "  clean                    → Remove local build output (the 'dist' folder)."
 	@echo "  update-deps              → Update Go and npm dependencies."
 	@echo "  helm-update              → Update Helm chart"
+
+# make publish — release from this machine instead of waiting for CI, for test and stable versions alike: runs the checks, builds the image for the cluster (linux/amd64; the build stage runs natively and cross-compiles, see the Dockerfile), pushes it and the Helm chart to GHCR, and only then pushes the commits. CI then finds the version published and just verifies that it builds; tags and GitHub releases of stable versions stay with CI. Refuses a dirty tree and a version that is already published, so what is in the registry is always exactly one commit. Needs `docker login ghcr.io` and `helm registry login ghcr.io` with a token that may write packages.
+publish: version-check check
+	@test -z "$$(git status --porcelain)" || { echo "✗ uncommitted changes — commit first"; exit 1; }
+	@set -e; V=$$(jq -r .version package.json); I=ghcr.io/pfisterer/self-service-ui; \
+	if docker buildx imagetools inspect "$$I:$$V" >/dev/null 2>&1; then echo "✗ $$I:$$V is already published — bump the version first"; exit 1; fi; \
+	echo "🏗️  $$I:$$V (linux/amd64)"; \
+	docker buildx build --platform linux/amd64 --tag "$$I:$$V" --tag "$$I:latest" --push .; \
+	rm -rf tmp/chart && mkdir -p tmp/chart && helm package helm-chart/ --destination tmp/chart >/dev/null; \
+	helm push tmp/chart/*.tgz oci://ghcr.io/pfisterer/charts; \
+	git push; \
+	echo "✅ $$I:$$V and its chart are published, commits pushed — CI only verifies"
