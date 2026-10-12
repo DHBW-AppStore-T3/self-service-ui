@@ -36,7 +36,7 @@ export const NAV_BREAKPOINT = 'md';
 export function useNav() {
     const [currentPath] = useLocation();
     const { t } = useTranslation();
-    const { isRoot, pending, hasBudgets } = useCloudStatus();
+    const { isRoot, pending, hasBudgets, aiOffered } = useCloudStatus();
     const { hasPolicy, adminEvents, ownEvents } = useDnsPolicyStatus();
     const llm = useLlmMe();
 
@@ -60,8 +60,9 @@ export function useNav() {
                 { label: t('nav.apiDocumentation'), href: '/projects/api-doc' },
             ].filter(Boolean),
         },
-        // For everybody the service answers: without LLM tokens the section
-        // shows the way to a project, so the menu offers only that page.
+        // For whoever has LLM tokens through a project (or a role there); for
+        // somebody without, only the way to a project, and only when a budget
+        // in reach offers one — otherwise the section does not appear at all.
         // Its API keys are LiteLLM keys for the model endpoint — a different
         // thing from the API tokens below, which manage this platform.
         llmEnabled && llm.me && (llm.hasAccess ? {
@@ -76,8 +77,8 @@ export function useNav() {
                 llm.isAdmin && { label: t('nav.llmAccess'), href: '/llm/access' },
                 { label: t('nav.apiDocumentation'), href: '/llm/api-doc' },
             ].filter(Boolean),
-        } : { id: 'llm', label: t('nav.llm'), base: '/llm', items: [{ label: t('nav.llmOverview'), href: '/llm/overview' }] }),
-        // Workspaces (Jupyter now, Coder later; docs/plan-workspaces.md) from the same service: for members of a project, and admins, who manage the projects; for everybody else the way to a project.
+        } : aiOffered && { id: 'llm', label: t('nav.llm'), base: '/llm', items: [{ label: t('nav.llmOverview'), href: '/llm/overview' }] }),
+        // Workspaces (Jupyter now, Coder later; docs/plan-workspaces.md) from the same service: for members of a project, and admins, who manage the projects; for everybody else the way to a project, when a budget in reach offers one.
         llmEnabled && llm.me && (hasWorkspaces(llm.me, llm.isAdmin) ? {
             id: 'workspaces',
             label: t('nav.workspaces'),
@@ -88,7 +89,7 @@ export function useNav() {
                 { label: t('nav.gpuServers'), href: '/workspaces/servers' },
                 { label: t('nav.gpuUsage'), href: '/workspaces/usage' },
             ],
-        } : { id: 'workspaces', label: t('nav.workspaces'), base: '/workspaces', items: [{ label: t('nav.workspaceProjects'), href: '/workspaces/projects' }] }),
+        } : aiOffered && { id: 'workspaces', label: t('nav.workspaces'), base: '/workspaces', items: [{ label: t('nav.workspaceProjects'), href: '/workspaces/projects' }] }),
         // Last, and a category of its own with nothing under it: tokens belong
         // to the account rather than to one of the domains above — both APIs
         // issue their own, and a credential has to be findable in one place to

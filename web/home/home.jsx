@@ -4,6 +4,7 @@ import { Globe, ShieldCheck, ArrowRight, FolderKanban, Sparkles } from 'lucide-r
 import { Trans, useTranslation } from 'react-i18next';
 import { cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
+import { useCloudStatus } from '/projects/cloud-status.jsx';
 
 // First-run friendly landing page: what this portal offers, one card per
 // service, each with the one button that gets someone started there. Most
@@ -22,8 +23,10 @@ export function Home() {
     const { t } = useTranslation();
     const acmeServer = window.appconfig?.acmeServer || 'https://certificates.dhbw.cloud';
     const acmeHost = acmeServer.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    const { me: llmMe } = useLlmMe();
-    const withLlm = !!llmMe;
+    const { me: llmMe, hasAccess } = useLlmMe();
+    const { aiOffered } = useCloudStatus();
+    // Like the menu: with LLM tokens, or with a budget in reach to get some.
+    const withLlm = !!llmMe && (hasAccess || aiOffered);
 
     const services = [
         cloudProjectsEnabled && {
