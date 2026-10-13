@@ -763,6 +763,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     usersFrom={node.authorized_users}
                     usersTo={authorizedUsers}
                     label={t('projects.changes.proposed')}
+                    separated
                 />
             )}
 
@@ -777,17 +778,15 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     );
 }
 
-// ResourceSection is one part of a resources tab: a heading saying what it is about and how a change of it takes effect.
+// ResourceSection heads a tab's content: what it is about and how a change of it takes effect. No box — the tab already is one.
 function ResourceSection({ title, hint, children }) {
     return (
-        <Paper withBorder radius="md" p="md">
-            <Stack gap="sm">
-                <div>
-                    <Text fw={600}>{title}</Text>
-                    <Text size="sm" c="dimmed">{hint}</Text>
-                </div>
-                {children}
-            </Stack>
-        </Paper>
+        <Stack gap="sm">
+            <div>
+                <Text fw={600}>{title}</Text>
+                <Text size="sm" c="dimmed">{hint}</Text>
+            </div>
+            {children}
+        </Stack>
     );
 }

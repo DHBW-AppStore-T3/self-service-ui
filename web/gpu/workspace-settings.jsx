@@ -93,7 +93,7 @@ export function WorkspaceSettingsPanel({ draft }) {
         <Stack gap="sm">
             {status.length > 0 && <Stack gap={6}>{status.map((b, i) => <BudgetBar key={i} b={b} />)}</Stack>}
 
-            <MultiSelect label={t('gpu.projects.profiles')} value={p.profiles ?? []} onChange={v => set('profiles', v)}
+            <MultiSelect label={t('gpu.projects.profiles')} description={t('gpu.projects.profilesHint')} value={p.profiles ?? []} onChange={v => set('profiles', v)}
                 data={(catalog.data?.profiles ?? []).map(x => ({ value: x.slug, label: x.gpu_class ? `${x.name} · ${x.gpu_class}` : x.name }))} />
             <Checkbox label={t('gpu.projects.freeImagesLabel')} description={t('gpu.projects.freeImagesHint')}
                 checked={!!p.free_images} onChange={e => set('free_images', e.currentTarget.checked)} />

@@ -100,7 +100,7 @@
     },
     "projects": {
         "remove": "Entfernen",
-        "profiles": "Profile",
+        "profiles": "Server-Arten in JupyterHub",
         "freeImagesLabel": "Freie Images erlauben",
         "freeImagesHint": "Beliebiges Image, nur CPU, ohne Home und ohne Zugangsdaten.",
         "limits": "Grenzen pro Person (gleichzeitig)",
@@ -142,6 +142,7 @@
                 "total": "gesamt"
             },
             "fromTree": "aus dem Projekt"
-        }
+        },
+        "profilesHint": "Was Mitglieder beim Start eines Servers in JupyterHub wählen können. Die Liste gibt die Plattform vor; GPU-Arten zählen gegen die GPU-Kontingente des Projekts."
     }
 }

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Archive, Calendar, Check, CircleCheck, CircleHelp, CirclePlus, CircleX, Clock, CloudDownload, Info, Link2, LogOut, Trash2, User, Users } from 'lucide-react';
 import { useClipboard } from '@mantine/hooks';
 import { DatePickerInput } from '@mantine/dates';
-import { ActionIcon, Anchor, Badge, Box, Button, Checkbox, Group, NumberInput, Popover, Progress, Select, Stack, Table, Text, Tooltip } from '@mantine/core';
+import { ActionIcon, Anchor, Badge, Box, Button, Checkbox, Group, NumberInput, Popover, Progress, Select, Stack, Table, Text, Tooltip, Divider } from '@mantine/core';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -332,7 +332,8 @@ export function AvailabilityBadges({ resources }) {
 
 // NodeChangesDiff shows a before/after table for limit and termination date
 // plus added/removed authorized users. Renders nothing when nothing changed.
-export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateTo, usersFrom, usersTo, label }) {
+// separated: set off by a line from what is above it (a dialog's tabs), drawn only when there is a change to show.
+export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateTo, usersFrom, usersTo, label, separated = false }) {
     const { t } = useTranslation();
     const heading = label ?? t('projects.changes.proposed');
     const { hasLimitChange, hasDateChange, added, removed, roleChanged, hasUserChanges } =
@@ -347,6 +348,7 @@ export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateT
 
     return (
         <Box mt="md">
+            {separated && <Divider mb="md" />}
             <Text fw={600} size="sm" mb="xs">{heading}</Text>
 
             {(hasLimitChange || hasDateChange) && (

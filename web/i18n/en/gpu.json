@@ -100,7 +100,7 @@
     },
     "projects": {
         "remove": "Remove",
-        "profiles": "Profiles",
+        "profiles": "Server types in JupyterHub",
         "freeImagesLabel": "Allow free images",
         "freeImagesHint": "Any image, CPU only, without home and without credentials.",
         "limits": "Limits per person (at the same time)",
@@ -142,6 +142,7 @@
                 "total": "in total"
             },
             "fromTree": "from the project"
-        }
+        },
+        "profilesHint": "What members can choose when starting a server in JupyterHub. The platform sets the list; GPU types count against the project's GPU quotas."
     }
 }
