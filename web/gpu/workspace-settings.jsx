@@ -85,11 +85,11 @@ export function WorkspaceSettingsPanel({ draft }) {
 
     const images = p.images ?? [];
     const budgets = p.budgets ?? [];
-    const status = draft.project?.budget_status ?? [];
+    // The project's own quotas show their use under their fields already; here only the shares this part sets.
+    const status = (draft.project?.budget_status ?? []).filter(b => !b.tree);
     const setBudget = (i, patch) => set('budgets', budgets.map((x, j) => (j === i ? { ...x, ...patch } : x)));
     return (
         <Stack gap="sm">
-            <Text size="sm" c="dimmed">{t('gpu.projects.settingsIntro')}</Text>
             {status.length > 0 && <Stack gap={6}>{status.map((b, i) => <BudgetBar key={i} b={b} />)}</Stack>}
 
             <MultiSelect label={t('gpu.projects.profiles')} value={p.profiles ?? []} onChange={v => set('profiles', v)}

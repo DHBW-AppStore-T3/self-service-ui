@@ -142,7 +142,6 @@
                 "total": "gesamt"
             },
             "fromTree": "aus dem Projekt"
-        },
-        "settingsIntro": "Wie die Workspaces dieses Projekts genutzt werden: Profile, Images, Grenzen und Anteile pro Person. Änderungen hier gelten sofort, ohne Genehmigung."
+        }
     }
 }

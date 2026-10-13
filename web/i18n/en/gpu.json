@@ -142,7 +142,6 @@
                 "total": "in total"
             },
             "fromTree": "from the project"
-        },
-        "settingsIntro": "How the workspaces of this project are used: profiles, images, limits and shares per person. Changes here apply at once, without approval."
+        }
     }
 }

@@ -368,7 +368,9 @@
         "exceedsFree": "Mehr als die {{free}}, die in dem Budget noch frei sind — eine verwaltende Person müsste es erst erhöhen.",
         "freeShare": "{{free}} frei in dem Budget · davon nimmt das hier {{share}}%",
         "grantedOrNot": "Muss gewährt oder nicht gewährt sein",
-        "range": "Erlaubt ist ein Wert zwischen {{min}} und {{max}}"
+        "range": "Erlaubt ist ein Wert zwischen {{min}} und {{max}}",
+        "defaultValue": "Standard: {{value}}",
+        "takeAll": "alles übernehmen"
     },
     "reject": {
         "changeNote": "Nur die vorgeschlagene Änderung wird verworfen — das Projekt läuft mit seinen jetzigen Ressourcen weiter.",
@@ -847,5 +849,12 @@
         "filter_aiaas": "Lab/KI ({{count}})",
         "newTitle_openstack": "Neues Cloud-Projekt",
         "newTitle_aiaas": "Neues Lab/KI-Projekt"
+    },
+    "resourceSections": {
+        "quota": "Kontingente",
+        "quotaHintChange": "Was das Projekt aus seinem Budget erhält. Eine Erhöhung wird je nach Budget sofort gewährt oder beantragt und genehmigt.",
+        "quotaHintNew": "Was das Projekt aus dem gewählten Budget erhält. Je nach Budget wird es sofort gewährt oder beantragt und genehmigt.",
+        "workspaces": "Nutzung der Workspaces",
+        "workspacesHint": "Wie die Kontingente innerhalb des Projekts genutzt werden: Profile, Images, Grenzen und Anteile pro Person. Gilt sofort, ohne Genehmigung."
     }
 }

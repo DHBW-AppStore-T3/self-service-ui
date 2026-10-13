@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Checkbox, Grid, Group, NumberInput, Stack, Switch, Text, TextInput } from '@mantine/core';
+import { Anchor, Checkbox, Grid, Group, NumberInput, Stack, Switch, Text, TextInput } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { UNLIMITED_QUOTA, groupResources, isAvailability, resourceLabel } from './util-project.jsx';
 import { UsageMeter, grantUseText } from './component-project-resources.jsx';
@@ -135,6 +135,11 @@ function AvailabilityField({ resource, value, onChange, disabled, error, used })
     );
 }
 
+// A rate of another provider left unset takes the provider's default (the AI service's requests and tokens per minute): say which, rather than show an empty field that reads as nothing. An unset OpenStack quantity means 0, so it says nothing.
+function showsDefault(r) {
+    return !!r.provider && r.provider !== 'openstack' && r.kind !== 'window' && (r.default ?? 0) > 0;
+}
+
 function QuantityField({ resource: r, value: current, onChange, error, disabled, allowUnlimited, free, extra, used, total }) {
     const { t } = useTranslation();
     const isUnlimited = current === UNLIMITED_QUOTA;
@@ -147,12 +152,13 @@ function QuantityField({ resource: r, value: current, onChange, error, disabled,
                 max={r.max}
                 disabled={disabled || isUnlimited}
                 value={isUnlimited ? '' : current}
-                placeholder={isUnlimited ? t('projects.quotaInputs.noCap') : (extra ? '0' : undefined)}
+                placeholder={isUnlimited ? t('projects.quotaInputs.noCap') : extra ? '0' : (showsDefault(r) ? t('projects.quotaInputs.defaultValue', { value: r.default }) : undefined)}
                 onChange={v => onChange(r.id, v)}
                 error={error}
                 description={isUnlimited ? t('projects.quotaInputs.noCapHint') : (extra ? undefined : r.message)}
             />
-            <HeadroomShare free={free} value={isUnlimited ? UNLIMITED_QUOTA : current} />
+            <HeadroomShare free={free} value={isUnlimited ? UNLIMITED_QUOTA : current}
+                onTake={disabled ? undefined : () => onChange(r.id, typeof r.max === 'number' && r.max > 0 ? Math.min(free, r.max) : free)} />
             <UsageMeter used={used} limit={typeof total === 'number' ? total : undefined} window={r.window} />
             {allowUnlimited && (
                 <Checkbox
@@ -172,7 +178,8 @@ function QuantityField({ resource: r, value: current, onChange, error, disabled,
 // for this resource (no budget in hand, or it is uncapped — a share of infinity
 // says nothing). "No cap" wanting more than a finite free amount is the one
 // combination that must speak up even at value 0.
-function HeadroomShare({ free, value }) {
+// onTake, when set, offers to take all of it with one click — a choice, not a default: filled in from the start, the first request would claim the whole budget, and an approver would see every request at its maximum.
+function HeadroomShare({ free, value, onTake }) {
     const { t } = useTranslation();
     if (free === undefined || free === null || !Number.isFinite(free)) return null;
     const v = value === UNLIMITED_QUOTA ? Infinity : (typeof value === 'number' ? value : 0);
@@ -184,7 +191,12 @@ function HeadroomShare({ free, value }) {
         );
     }
     const share = free > 0 ? Math.round((v / free) * 100) : 0;
-    return <Text size="xs" c="dimmed">{t('projects.quotaInputs.freeShare', { free, share })}</Text>;
+    return (
+        <Text size="xs" c="dimmed">
+            {t('projects.quotaInputs.freeShare', { free, share })}
+            {onTake && v < free && free > 0 && <> · <Anchor component="button" type="button" size="xs" onClick={onTake}>{t('projects.quotaInputs.takeAll')}</Anchor></>}
+        </Text>
+    );
 }
 
 // Returns the default quota map for a set of resource definitions.

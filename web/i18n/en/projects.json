@@ -368,7 +368,9 @@
         "exceedsFree": "Exceeds the {{free}} still free in that budget — a manager would have to raise it first.",
         "freeShare": "{{free}} free in that budget · this takes {{share}}%",
         "grantedOrNot": "Must be granted or not granted",
-        "range": "Enter a value between {{min}} and {{max}}"
+        "range": "Enter a value between {{min}} and {{max}}",
+        "defaultValue": "Default: {{value}}",
+        "takeAll": "take all"
     },
     "reject": {
         "changeNote": "Only the proposed change is discarded — the project keeps running with its current resources.",
@@ -847,5 +849,12 @@
         "filter_aiaas": "Lab/AI ({{count}})",
         "newTitle_openstack": "New cloud project",
         "newTitle_aiaas": "New Lab/AI project"
+    },
+    "resourceSections": {
+        "quota": "Quotas",
+        "quotaHintChange": "What the project gets from its budget. Depending on the budget, an increase is granted at once or requested and approved.",
+        "quotaHintNew": "What the project gets from the chosen budget. Depending on the budget it is granted at once or requested and approved.",
+        "workspaces": "Use of the workspaces",
+        "workspacesHint": "How the quotas are used inside the project: profiles, images, limits and shares per person. Applies at once, without approval."
     }
 }
