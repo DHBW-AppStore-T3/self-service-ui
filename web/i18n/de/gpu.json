@@ -45,7 +45,8 @@
         "logEmpty": "Noch keine Ausgabe.",
         "gitUrlPlaceholder": "https://github.com/<besitzer>/<repo>",
         "project": "Projekt für den Start",
-        "projectHint": "Der Server läuft in diesem Projekt und zählt auf seine Grenzen."
+        "projectHint": "Der Server läuft in diesem Projekt und zählt auf seine Grenzen.",
+        "startServer": "Server starten"
     },
     "servers": {
         "title": "Laufende Server",

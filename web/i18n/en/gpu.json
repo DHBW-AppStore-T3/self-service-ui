@@ -45,7 +45,8 @@
         "logEmpty": "No output yet.",
         "gitUrlPlaceholder": "https://github.com/<owner>/<repo>",
         "project": "Project for starting",
-        "projectHint": "The server runs in this project and counts against its limits."
+        "projectHint": "The server runs in this project and counts against its limits.",
+        "startServer": "Start a server"
     },
     "servers": {
         "title": "Running servers",

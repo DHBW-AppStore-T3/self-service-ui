@@ -75,8 +75,8 @@ export function GpuEnvironments() {
                             <Text size="sm" c="dimmed" mt={4}>{t('gpu.envs.intro')}</Text>
                         </div>
                         {me?.jupyter_url && (
-                            <Button component="a" href={me.jupyter_url} target="_blank" rel="noreferrer" variant="light" rightSection={<ExternalLink size={14} />}>
-                                {t('gpu.envs.openHub')}
+                            <Button component="a" href={`${me.jupyter_url.replace(/\/$/, '')}/hub/spawn`} target="_blank" rel="noreferrer" variant="light" rightSection={<ExternalLink size={14} />}>
+                                {t('gpu.envs.startServer')}
                             </Button>
                         )}
                     </Group>
