@@ -90,7 +90,7 @@
         "noGpu": "no GPU",
         "empty": "No usage in this period.",
         "csvHint": "The grouping shown as CSV, with the measured values.",
-        "explain": "Billed is the reservation (requested cores and memory), like flavors in OpenStack. \"CPU used\" relates the measured use to it. Home GB-days: space used, measured once a day. Until projects exist, the project is the access rule that grants access.",
+        "explain": "What is charged is the reservation (requested cores and memory), as with flavors in OpenStack. “CPU used” relates the measured use to it. Home GB-days: space used, measured hourly, the day's largest value counts; a project's storage is listed as “Projektspeicher”.",
         "groupBy": {
             "project": "Project",
             "person": "Person",
@@ -145,5 +145,24 @@
             "fromTree": "from the project"
         },
         "profilesHint": "What members can choose when starting a server in JupyterHub. The platform sets the list; GPU types count against the project's GPU quotas."
+    },
+    "storage": {
+        "title": "Storage (admins)",
+        "hint": "Workspace storage on JuiceFS: one volume per project with storage, plus homes from before the projects. Measured hourly.",
+        "files": "Files (all directories)",
+        "metadata": "Metadata (Valkey, in RAM)",
+        "ofNode": "of the node's {{total}} GB RAM · peak {{peak}} GB",
+        "ofMax": "of {{total}} GB (maxmemory) · peak {{peak}} GB",
+        "asOf": "As of: {{when}}",
+        "never": "not measured yet",
+        "noReport": "No measurement since the AI service last restarted; the next comes on the hour.",
+        "dir": "Project / directory",
+        "used": "Used (GB)",
+        "quota": "Limit (GB)",
+        "share": "Usage",
+        "inodes": "Files",
+        "goneProject": "Project deleted – being removed",
+        "otherDir": "Home from before the projects",
+        "explain": "A project's limit is its workspace storage from the budget tree; a full volume refuses further writes. The metadata grow with the number of files (roughly 1 GB RAM per 2–3 million files); when RAM runs short, JuiceFS stops."
     }
 }

@@ -5,7 +5,7 @@ import { useNodesApi } from './api-nodes.jsx';
 import { formatError } from '/helper/api-error.js';
 import { ConfirmModal } from '/providers/confirm.jsx';
 import { useProjectConfig } from './projects.jsx';
-import { deletesOnRequest, nodeTitle } from './util-project.jsx';
+import { deletesOnRequest, nodeTitle, projectKinds } from './util-project.jsx';
 import { useNodeMutation } from './use-node-mutation.jsx';
 
 // RetireModal gives a project up (mode 'release') or deletes a released one for
@@ -37,9 +37,13 @@ export function RetireModal({ opened, onClose, onDone, node, mode = 'release' })
     const offerDelete = mode === 'release' && deletesOnRequest(retirement) && !immediately;
     const deleting = mode === 'delete' || deleteNow || immediately;
 
+    // A Lab/AI project has workspace storage instead of OpenStack volumes; one from before the split has both. A project holding nothing is told the cloud's story, as before.
+    const kinds = projectKinds(node, config?.resources);
+    const cloud = kinds.length === 0 || kinds.includes('openstack');
+    const lab = kinds.includes('aiaas');
     const consequences = deleting
-        ? [t('projects.retire.deleteWhat'), t('projects.retire.deleteAfter')]
-        : releaseConsequences(t, retirement);
+        ? [cloud && t('projects.retire.deleteWhat'), lab && t('projects.retire.deleteWorkspaces'), t('projects.retire.deleteAfter')].filter(Boolean)
+        : [...(cloud ? releaseConsequences(t, retirement) : []), lab && t('projects.retire.releaseWorkspaces')].filter(Boolean);
 
     return (
         <ConfirmModal

@@ -90,7 +90,7 @@
         "noGpu": "ohne GPU",
         "empty": "Keine Nutzung in diesem Zeitraum.",
         "csvHint": "Die angezeigte Gruppierung als CSV, mit den gemessenen Werten.",
-        "explain": "Abgerechnet wird die Reservierung (angefragte Kerne und Speicher), wie bei Flavors in OpenStack. „CPU genutzt“ setzt die gemessene Nutzung ins Verhältnis dazu. Home-GB-Tage: belegter Platz, einmal täglich gemessen. Projekt ist bis zur Einführung von Projekten die Zugriffsregel, die den Zugang gibt.",
+        "explain": "Abgerechnet wird die Reservierung (angefragte Kerne und Speicher), wie bei Flavors in OpenStack. „CPU genutzt“ setzt die gemessene Nutzung ins Verhältnis dazu. Home-GB-Tage: belegter Platz, stündlich gemessen, der größte Wert des Tages zählt; der Speicher eines Projekts steht unter „Projektspeicher“.",
         "groupBy": {
             "project": "Projekt",
             "person": "Person",
@@ -145,5 +145,24 @@
             "fromTree": "aus dem Projekt"
         },
         "profilesHint": "Was Mitglieder beim Start eines Servers in JupyterHub wählen können. Die Liste gibt die Plattform vor; GPU-Arten zählen gegen die GPU-Kontingente des Projekts."
+    },
+    "storage": {
+        "title": "Speicher (Admins)",
+        "hint": "Workspace-Speicher auf JuiceFS: ein Volume je Projekt mit Speicher, dazu Homes von vor den Projekten. Stündlich gemessen.",
+        "files": "Dateien (alle Verzeichnisse)",
+        "metadata": "Metadaten (Valkey, im RAM)",
+        "ofNode": "von {{total}} GB RAM des Knotens · Spitze {{peak}} GB",
+        "ofMax": "von {{total}} GB (maxmemory) · Spitze {{peak}} GB",
+        "asOf": "Stand: {{when}}",
+        "never": "noch nicht gemessen",
+        "noReport": "Noch keine Messung seit dem letzten Neustart des KI-Dienstes; die nächste kommt zur vollen Stunde.",
+        "dir": "Projekt / Verzeichnis",
+        "used": "Belegt (GB)",
+        "quota": "Grenze (GB)",
+        "share": "Auslastung",
+        "inodes": "Dateien",
+        "goneProject": "Projekt gelöscht – wird abgeräumt",
+        "otherDir": "Home von vor den Projekten",
+        "explain": "Die Grenze eines Projekts ist sein Workspace-Speicher aus dem Budgetbaum; volle Volumes lehnen weitere Schreibzugriffe ab. Die Metadaten wachsen mit der Zahl der Dateien (grob 1 GB RAM je 2–3 Mio. Dateien); wird der RAM knapp, steht JuiceFS still."
     }
 }

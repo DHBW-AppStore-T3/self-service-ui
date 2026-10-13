@@ -8,6 +8,7 @@ import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { PERIODS, percent, periodRange, toCSV } from '/projects/util-usage.js';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
+import { WorkspaceStorage } from '/gpu/storage.jsx';
 
 // What workspaces reserved, from the rows llm-management-api books every minute (docs/plan-workspaces.md, W1): the same units as the cloud projects' report — server hours, vCPU-h, RAM-GB-h, GPU-h, home GB-days — plus the measured CPU use against the reservation. Everyone sees their own; admins can switch to all.
 
@@ -158,6 +159,7 @@ export function GpuUsage() {
                                 )}
                 </Stack>
             </Paper>
+            {isAdmin && <Stack mt="md"><WorkspaceStorage /></Stack>}
         </Container>
     );
 }
