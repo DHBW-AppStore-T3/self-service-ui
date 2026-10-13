@@ -71,7 +71,7 @@
         "git-gpu": "Git-Umgebung (GPU)",
         "pytorch": "PyTorch (GPU)",
         "tensorflow": "TensorFlow (GPU)",
-        "cpu-gpukernel": "CPU + GPU-Kernel (Probe)"
+        "cpu-gpukernel": "CPU + GPU-Kernel"
     },
     "usage": {
         "title": "Nutzung",
@@ -104,6 +104,8 @@
         "profiles": "Server-Arten in JupyterHub",
         "freeImagesLabel": "Freie Images erlauben",
         "freeImagesHint": "Beliebiges Image, mit oder ohne GPU, mit Home-Verzeichnis und Projektordner. Es läuft ohne root-Rechte und muss jupyterhub-singleuser enthalten.",
+        "kernelImageLabel": "Kursimage für „CPU + GPU-Kernel“",
+        "kernelImageHint": "Notebook und GPU-Kernel laufen dann mit diesem Image statt mit dem Standard. Es muss von registry.gpu.services.dhbw.cloud/platform/notebook-base abgeleitet und öffentlich abrufbar sein; geprüft wird beim Speichern. Leer = Standard.",
         "limits": "Grenzen pro Person (gleichzeitig)",
         "limitsHint": "Gezählt wird, was eine Person in diesem Projekt gleichzeitig laufen hat. 0 heißt: keine Grenze – außer bei GPUs, dort heißt 0: keine GPU.",
         "images": "Hinterlegte Images",

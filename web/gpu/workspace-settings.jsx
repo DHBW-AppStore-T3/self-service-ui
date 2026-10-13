@@ -97,6 +97,8 @@ export function WorkspaceSettingsPanel({ draft }) {
                 data={(catalog.data?.profiles ?? []).map(x => ({ value: x.slug, label: x.gpu_class ? `${x.name} · ${x.gpu_class}` : x.name }))} />
             <Checkbox label={t('gpu.projects.freeImagesLabel')} description={t('gpu.projects.freeImagesHint')}
                 checked={!!p.free_images} onChange={e => set('free_images', e.currentTarget.checked)} />
+            <TextInput label={t('gpu.projects.kernelImageLabel')} description={t('gpu.projects.kernelImageHint')} placeholder="ghcr.io/…/kurs:2026"
+                value={p.kernel_image ?? ''} onChange={e => set('kernel_image', e.currentTarget.value.trim())} />
 
             <Text size="sm" fw={600}>{t('gpu.projects.limits')}</Text>
             <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
