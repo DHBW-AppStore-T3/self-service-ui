@@ -24,8 +24,7 @@
         "gpuEnvironments": "Umgebungen",
         "gpuServers": "Laufend",
         "gpuUsage": "Nutzung",
-        "workspaces": "Workspaces",
-        "workspaceProjects": "Projekt-Einstellungen"
+        "workspaces": "Workspaces"
     },
     "account": {
         "signIn": "Anmelden",

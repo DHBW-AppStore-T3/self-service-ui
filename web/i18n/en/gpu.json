@@ -99,36 +99,9 @@
         "project": "Project: {{name}}"
     },
     "projects": {
-        "title": "Project settings",
-        "intro": "What about a Lab/AI project concerns workspaces only: profiles, GPU classes, images and limits per person. The project is picked when starting in JupyterHub. Members, end date and quotas are managed under “Projects”.",
-        "mine": "Mine",
-        "all": "All",
-        "edit": "Edit",
-        "editTitle": "Edit project \"{{name}}\"",
-        "delete": "Delete",
-        "deleteTitle": "Delete project?",
-        "deleteConfirm": "Delete",
-        "deleteMessage": "\"{{name}}\" will be deleted. Running servers keep running; past usage stays with the project.",
-        "none": "No project. Workspaces come with projects in the self-service; for most people a personal project from a budget that is approved at once is enough.",
-        "roles": {
-            "member": "Member",
-            "manager": "Manager",
-            "admin": "Admin"
-        },
-        "freeImages": "free images",
-        "imagesCount_one": "1 stored image",
-        "imagesCount_other": "{{count}} stored images",
-        "membersCount_one": "1 member",
-        "membersCount_other": "{{count}} members",
-        "endsAt": "until {{date}}",
-        "slug": "Short name",
-        "name": "Name",
-        "description": "Description",
-        "members": "Members",
-        "addMember": "Add member",
+        "editTitle": "Workspace settings: {{name}}",
         "remove": "Remove",
         "profiles": "Profiles",
-        "gpuClasses": "GPU classes",
         "freeImagesLabel": "Allow free images",
         "freeImagesHint": "Any image, CPU only, without home and without credentials.",
         "limits": "Limits per person (at the same time)",
@@ -136,26 +109,13 @@
         "images": "Stored images",
         "imageName": "Name",
         "addImage": "Add image",
-        "endsAtLabel": "Runs until (empty: unlimited)",
         "cancel": "Cancel",
         "save": "Save",
         "limit": {
-            "perPerson": "Per person",
-            "servers_one": "1 server",
-            "servers_other": "{{count}} servers",
-            "cpu": "{{value}} cores",
-            "ram": "{{value}} GB",
-            "gpus_one": "1 GPU",
-            "gpus_other": "{{count}} GPUs",
-            "noGpu": "no GPU",
             "serversShort": "Servers",
             "cpuShort": "Cores",
             "ramShort": "RAM (GB)",
-            "gpusShort": "GPUs",
-            "project": "Project",
-            "projectGpusClass_one": "1 {{class}} GPU at once",
-            "projectGpusClass_other": "{{count}} {{class}} GPUs at once",
-            "projectGpusClassShort": "{{class}} GPUs in the project"
+            "gpusShort": "GPUs"
         },
         "budgets": "Budgets",
         "addBudget": "Add budget",
@@ -182,11 +142,9 @@
                 "30d": "in 30 days",
                 "total": "in total"
             },
-            "fromTree": "from the budget tree"
+            "fromTree": "from the project"
         },
-        "managed": "Budget tree",
-        "managedHint": "This project comes from the budget tree: its name, members, end, GPUs per class and the project budgets are managed there, under “Projects”. Here you set how it is used: profiles, images, limits and shares per person, shorter windows.",
-        "getOne": "Get a project",
-        "manage": "Manage projects"
+        "settings": "Workspace settings",
+        "settingsIntro": "How the workspaces of this project are used: profiles, images, limits and shares per person. Name, members, end and quotas are part of the project itself."
     }
 }

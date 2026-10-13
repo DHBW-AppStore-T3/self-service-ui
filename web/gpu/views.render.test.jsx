@@ -9,6 +9,8 @@ const ME = {
     email: 'dennis.pfisterer@dhbw.de', role: 'admin', tier: 'staff', jupyter_url: 'https://jupyter.example',
 };
 
+// The workspace settings ask the AI service only where this deployment has it.
+vi.mock('/features.js', async (importOriginal) => ({ ...(await importOriginal()), llmEnabled: true }));
 vi.mock('/llm/use-llm-me.jsx', () => ({
     useLlmMe: () => ({ query: { isPending: false, isError: false }, me: ME, hasAccess: true, isFleetAdmin: true, isAdmin: true }),
 }));
@@ -47,7 +49,7 @@ const USAGE = {
 };
 
 const PROJECTS = [
-    { slug: 'wwi23seb-ml', name: 'Machine Learning WWI23SEB', description: 'Übungen', role: 'manager', profiles: ['cpu', 'pytorch'], gpu_classes: ['l4-3q'],
+    { slug: 'wwi23seb-ml', tree_node: 'p_ml', name: 'Machine Learning WWI23SEB', description: 'Übungen', role: 'manager', profiles: ['cpu', 'pytorch'], gpu_classes: ['l4-3q'],
       members: [{ token: 'group:wwi23seb', role: 'member' }], images: [], free_images: false,
       limits: { servers_per_person: 2, cpu_per_person: 4, ram_gb_per_person: 16, gpus_per_person: 1 }, gpus_by_class: { "l4-3q": 4 },
       budgets: [{ unit: 'vcpu_hours', window: '30d', amount: 40, per_person: true }],
@@ -60,7 +62,7 @@ const CATALOG = { profiles: [{ slug: 'cpu', name: 'CPU' }, { slug: 'pytorch', na
 const { GpuEnvironments } = await import('/gpu/environments.jsx');
 const { GpuServers } = await import('/gpu/servers.jsx');
 const { GpuUsage, groupUsage } = await import('/gpu/usage.jsx');
-const { WorkspaceProjects } = await import('/gpu/projects.jsx');
+const { WorkspaceSettingsButton } = await import('/gpu/workspace-settings.jsx');
 
 let consoleErrors = [];
 beforeEach(() => {
@@ -101,13 +103,12 @@ describe('the GPU views render', () => {
         expectNoRenderFailure();
     });
 
-    it('Projects shows the projects and opens the editor', async () => {
-        renderView(<WorkspaceProjects />);
-        expect(await screen.findByText('Machine Learning WWI23SEB')).toBeTruthy();
-        expect(screen.getByText('Statistik')).toBeTruthy();
-        expect(screen.getByText(/34.5 (von|of) 40/)).toBeTruthy();
-        fireEvent.click(screen.getAllByLabelText(/Bearbeiten|Edit/)[0]);
-        expect(await screen.findByDisplayValue('group:wwi23seb')).toBeTruthy();
+    it('the workspace settings open from a project the caller manages, and only from such one', async () => {
+        renderView(<><WorkspaceSettingsButton nodeId="p_ml" /><WorkspaceSettingsButton nodeId="p_stat" /></>);
+        const buttons = await screen.findAllByRole('button', { name: /Workspace/ });
+        expect(buttons.length).toBe(1);
+        fireEvent.click(buttons[0]);
+        expect(await screen.findByText(/34.5 (von|of) 40/)).toBeTruthy();
         expectNoRenderFailure();
     });
 

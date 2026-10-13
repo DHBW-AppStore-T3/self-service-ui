@@ -99,36 +99,9 @@
         "project": "Projekt: {{name}}"
     },
     "projects": {
-        "title": "Projekt-Einstellungen",
-        "intro": "Was an einem Lab/KI-Projekt nur Workspaces betrifft: Profile, GPU-Klassen, Images und Grenzen pro Person. Beim Start in JupyterHub wird das Projekt gewählt. Mitglieder, Laufzeit und Kontingente werden unter „Projekte“ verwaltet.",
-        "mine": "Meine",
-        "all": "Alle",
-        "edit": "Bearbeiten",
-        "editTitle": "Projekt „{{name}}“ bearbeiten",
-        "delete": "Löschen",
-        "deleteTitle": "Projekt löschen?",
-        "deleteConfirm": "Löschen",
-        "deleteMessage": "„{{name}}“ wird gelöscht. Laufende Server laufen weiter, die bisherige Nutzung bleibt dem Projekt zugeordnet.",
-        "none": "Kein Projekt. Workspaces gibt es über Projekte im Self-Service; für die meisten reicht ein persönliches Projekt aus einem Budget, das sofort genehmigt wird.",
-        "roles": {
-            "member": "Mitglied",
-            "manager": "Verwaltung",
-            "admin": "Admin"
-        },
-        "freeImages": "freie Images",
-        "imagesCount_one": "1 hinterlegtes Image",
-        "imagesCount_other": "{{count}} hinterlegte Images",
-        "membersCount_one": "1 Mitglied",
-        "membersCount_other": "{{count}} Mitglieder",
-        "endsAt": "bis {{date}}",
-        "slug": "Kurzname",
-        "name": "Name",
-        "description": "Beschreibung",
-        "members": "Mitglieder",
-        "addMember": "Mitglied hinzufügen",
+        "editTitle": "Workspace-Einstellungen: {{name}}",
         "remove": "Entfernen",
         "profiles": "Profile",
-        "gpuClasses": "GPU-Klassen",
         "freeImagesLabel": "Freie Images erlauben",
         "freeImagesHint": "Beliebiges Image, nur CPU, ohne Home und ohne Zugangsdaten.",
         "limits": "Grenzen pro Person (gleichzeitig)",
@@ -136,26 +109,13 @@
         "images": "Hinterlegte Images",
         "imageName": "Name",
         "addImage": "Image hinzufügen",
-        "endsAtLabel": "Läuft bis (leer: unbegrenzt)",
         "cancel": "Abbrechen",
         "save": "Speichern",
         "limit": {
-            "perPerson": "Pro Person",
-            "servers_one": "1 Server",
-            "servers_other": "{{count}} Server",
-            "cpu": "{{value}} Kerne",
-            "ram": "{{value}} GB",
-            "gpus_one": "1 GPU",
-            "gpus_other": "{{count}} GPUs",
-            "noGpu": "keine GPU",
             "serversShort": "Server",
             "cpuShort": "Kerne",
             "ramShort": "RAM (GB)",
-            "gpusShort": "GPUs",
-            "project": "Projekt",
-            "projectGpusClass_one": "1 GPU {{class}} gleichzeitig",
-            "projectGpusClass_other": "{{count}} GPUs {{class}} gleichzeitig",
-            "projectGpusClassShort": "GPUs {{class}} im Projekt"
+            "gpusShort": "GPUs"
         },
         "budgets": "Budgets",
         "addBudget": "Budget hinzufügen",
@@ -182,11 +142,9 @@
                 "30d": "in 30 Tagen",
                 "total": "gesamt"
             },
-            "fromTree": "aus dem Budgetbaum"
+            "fromTree": "aus dem Projekt"
         },
-        "managed": "Budgetbaum",
-        "managedHint": "Dieses Projekt kommt aus dem Budgetbaum: Name, Mitglieder, Laufzeit, GPUs pro Klasse und die Budgets des Projekts werden dort unter „Projekte“ verwaltet. Hier lässt sich festlegen, wie es genutzt wird: Profile, Images, Grenzen und Anteile pro Person, kürzere Zeitfenster.",
-        "getOne": "Projekt anlegen",
-        "manage": "Projekte verwalten"
+        "settings": "Workspace-Einstellungen",
+        "settingsIntro": "Wie die Workspaces dieses Projekts genutzt werden: Profile, Images, Grenzen und Anteile pro Person. Name, Mitglieder, Laufzeit und Kontingente stehen im Projekt selbst."
     }
 }

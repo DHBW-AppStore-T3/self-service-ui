@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge, Button, Container, Group, Paper, Stack, Table, Text, Title } from '@mantine/core';
 import { ExternalLink, Square } from 'lucide-react';
 import { LoadError, Loading, useApiMutation } from '/helper/query-state.jsx';
+import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
@@ -13,6 +14,7 @@ export function GpuServers() {
     const { t } = useTranslation();
     const api = useGpuApi();
     const confirm = useConfirm();
+    const { me } = useLlmMe();
 
     const servers = useQuery({ queryKey: gpuKeys.servers(), queryFn: () => api.listServers(), refetchInterval: 10000 });
     const stop = useApiMutation({ mutationFn: (name) => api.stopServer(name), invalidates: [gpuKeys.servers()] });
@@ -34,8 +36,17 @@ export function GpuServers() {
         <Container size="lg" py="md">
             <Stack gap="lg">
                 <Paper p="lg" radius="md" withBorder>
-                    <Title order={3}>{t('gpu.servers.title')}</Title>
-                    <Text size="sm" c="dimmed" mt={4}>{t('gpu.servers.intro')}</Text>
+                    <Group justify="space-between" align="flex-start" wrap="wrap">
+                        <div style={{ maxWidth: 640 }}>
+                            <Title order={3}>{t('gpu.servers.title')}</Title>
+                            <Text size="sm" c="dimmed" mt={4}>{t('gpu.servers.intro')}</Text>
+                        </div>
+                        {me?.jupyter_url && (
+                            <Button size="xs" component="a" href={me.jupyter_url} target="_blank" rel="noreferrer" variant="light" rightSection={<ExternalLink size={14} />}>
+                                {t('gpu.envs.openHub')}
+                            </Button>
+                        )}
+                    </Group>
                     <Table striped highlightOnHover mt="md">
                         <Table.Thead>
                             <Table.Tr>

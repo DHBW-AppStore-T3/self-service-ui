@@ -83,12 +83,11 @@ export function useNav() {
             label: t('nav.workspaces'),
             base: '/workspaces',
             items: [
-                { label: t('nav.workspaceProjects'), href: '/workspaces/projects' },
                 { label: t('nav.gpuEnvironments'), href: '/workspaces/environments' },
                 { label: t('nav.gpuServers'), href: '/workspaces/servers' },
                 { label: t('nav.gpuUsage'), href: '/workspaces/usage' },
             ],
-        } : aiOffered && { id: 'workspaces', label: t('nav.workspaces'), base: '/workspaces', items: [{ label: t('nav.workspaceProjects'), href: '/workspaces/projects' }] }),
+        } : aiOffered && { id: 'workspaces', label: t('nav.workspaces'), base: '/workspaces', items: [{ label: t('nav.gpuServers'), href: '/workspaces/servers' }] }),
         // Last, and a category of its own with nothing under it: tokens belong
         // to the account rather than to one of the domains above — both APIs
         // issue their own, and a credential has to be findable in one place to

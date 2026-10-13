@@ -8,6 +8,7 @@ import { useProjectConfig } from './projects.jsx';
 import { formatDate } from '../format-date.js';
 import { BudgetPath } from './component-budget-path.jsx';
 import { ProjectResources } from './component-project-resources.jsx';
+import { WorkspaceSettingsButton } from '/gpu/workspace-settings.jsx';
 
 // ProjectCard renders one project leaf. It is purely presentational: every
 // button reports an action to the owning view via onAction(actionId, node),
@@ -272,6 +273,8 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         from, and the API has always allowed a manager of the
                         funding chain to release a leaf. Without the button they
                         had to ask the owner to hand back resources. */}
+                    {/* Lab/KI: how its workspaces are used, which only the AI service knows (draws nothing elsewhere). */}
+                    {!isManager && projectKinds(node, resources).includes('aiaas') && <WorkspaceSettingsButton nodeId={node.id} />}
                     {can.release && (
                         <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('release')}>
                             {t('projects.actions.release')}
