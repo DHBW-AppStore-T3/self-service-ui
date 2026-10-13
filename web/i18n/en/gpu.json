@@ -103,7 +103,7 @@
         "remove": "Remove",
         "profiles": "Server types in JupyterHub",
         "freeImagesLabel": "Allow free images",
-        "freeImagesHint": "Any image, CPU only, without home and without credentials.",
+        "freeImagesHint": "Any image, with or without a GPU, with home directory and project folder. It runs without root rights and must contain jupyterhub-singleuser.",
         "limits": "Limits per person (at the same time)",
         "limitsHint": "Counted is what one person runs in this project at the same time. 0 means no limit – except for GPUs, where 0 means no GPU.",
         "images": "Stored images",
