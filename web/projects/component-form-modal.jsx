@@ -69,6 +69,9 @@ const STICKY_TABS = {
     paddingInline: 'var(--mb-padding, var(--mantine-spacing-md))',
 };
 
+// DIALOG_SIZE is the width of the tabbed project and budget dialogs: wide enough for a quota grid, a member row with its role picker and the Lab/KI workspace settings side by side, capped by the viewport on small screens.
+export const DIALOG_SIZE = '72rem';
+
 // DIALOG_STYLES keeps a dialog's title on one line, cut with an ellipsis, so the
 // header has the height the sticky tabs expect.
 export const DIALOG_STYLES = {

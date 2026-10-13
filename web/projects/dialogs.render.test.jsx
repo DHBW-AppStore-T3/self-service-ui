@@ -101,6 +101,20 @@ describe('node dialogs', () => {
         expect(fatal()).toEqual([]);
     });
 
+    it('a project holding both kinds has one resources tab per kind', async () => {
+        const mixed = [
+            { id: 'cores', name: 'Cores', default: 4, min: 1, max: 64, provider: 'openstack' },
+            { id: 'llm-mtokens', name: 'LLM tokens', unit: 'M tokens', kind: 'window', window: '30d', default: 0, min: 0, max: 1000, provider: 'aiaas' },
+        ];
+        renderView(<ProjectFormModal opened onClose={() => {}} resources={mixed} openstackRoles={['member', 'reader']}
+            node={project({ limit: { cores: 2, 'llm-mtokens': 50 }, allocations: [] })} />);
+        expect(screen.getByRole('tab', { name: /^Cloud$/ })).toBeTruthy();
+        fireEvent.click(screen.getByRole('tab', { name: /Lab\/(AI|KI)/ }));
+        expect((await screen.findAllByText(/LLM tokens/)).length).toBeGreaterThan(0);
+        expect(screen.queryByRole('tab', { name: /^(Resources|Ressourcen)$/ })).toBeNull();
+        expect(fatal()).toEqual([]);
+    });
+
     it('new project: one button per kind, a kind without a budget disabled', async () => {
         const picked = [];
         renderView(<NewProjectButton kinds={['openstack', 'aiaas']} available={['aiaas']} onPick={k => picked.push(k)} />);

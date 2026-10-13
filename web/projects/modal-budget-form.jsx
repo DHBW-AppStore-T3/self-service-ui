@@ -6,7 +6,7 @@ import { useNodesApi } from './api-nodes.jsx';
 import { useForm } from '@mantine/form';
 import { MaxTermInput, TerminationDatePicker } from './component-common.jsx';
 import { formatDate } from '../format-date.js';
-import { FormModal, FormTabs, tabHasError as tabFlag, tabWithError } from './component-form-modal.jsx';
+import { DIALOG_SIZE, FormModal, FormTabs, tabHasError as tabFlag, tabWithError } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenListEditor } from './component-token-list-editor.jsx';
 import { formatError } from '/helper/api-error.js';
@@ -553,7 +553,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
             opened={opened}
             // Wider when it holds history and usage too, so the tabs fit on one line.
             // Every tabbed form is as wide: the tabs and member rows fit.
-            size="xl"
+            size={DIALOG_SIZE}
             onClose={onClose}
             title={title}
             onSubmit={form.onSubmit(values => {

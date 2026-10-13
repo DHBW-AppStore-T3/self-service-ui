@@ -9,7 +9,7 @@ import { formatError } from '/helper/api-error.js';
 import { isEmail, useForm } from '@mantine/form';
 import { formatTerm, NodeChangesDiff, TerminationDatePicker, TokenBadgeList } from './component-common.jsx';
 import { formatDate } from '../format-date.js';
-import { FormModal, FormTabs, tabHasError as tabFlag, tabWithError } from './component-form-modal.jsx';
+import { DIALOG_SIZE, FormModal, FormTabs, tabHasError as tabFlag, tabWithError } from './component-form-modal.jsx';
 import { QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { MemberRoleEditor, TokenListEditor } from './component-token-list-editor.jsx';
 import { BudgetSelect } from './component-budget-select.jsx';
@@ -19,7 +19,7 @@ import { PersonInput, personEmail } from './principal-search.jsx';
 import { AllocationSection, useAllocationDraft } from './component-allocation-section.jsx';
 import { WorkspaceSettingsPanel, useWorkspaceSettings } from '/gpu/workspace-settings.jsx';
 import { withCurrentParent } from './component-budget-select.jsx';
-import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide, resourceLabel, budgetKinds, catalogKinds, projectKinds, resourcesOfKinds } from './util-project.jsx';
+import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide, resourceLabel, budgetKinds, catalogKinds, projectKinds, resourcesOfKinds, PROJECT_KINDS } from './util-project.jsx';
 import { AttributesEditor, AttributesView, hasAttributes, useAttributesTab } from './component-node-attributes.jsx';
 import { nodeExtraTabs } from './modal-inspect.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
@@ -30,7 +30,6 @@ const TAB_DETAILS = 'details';
 const TAB_RESOURCES = 'resources';
 const TAB_MEMBERS = 'members';
 const TAB_ATTRIBUTES = 'attributes';
-const TAB_WORKSPACES = 'workspaces';
 
 // OutcomeNote says, while the form is being filled in, what pressing the button
 // will do — the one thing a requester cannot otherwise tell before it happened.
@@ -372,9 +371,19 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             || values.reason.trim() !== (node.reason || '').trim();
     };
 
+    // One resources tab per provider where the catalogue has several, so everything about the cloud side and everything about the Lab/KI side sits together; a resource without a provider is OpenStack's. The first tab also carries what concerns the whole project (shares from other budgets).
+    const kindOfResource = (r) => r?.provider || 'openstack';
+    const resourceTabKinds = (() => {
+        const ks = catalog.length < 2 ? [] : PROJECT_KINDS.filter(k => offered.some(r => kindOfResource(r) === k));
+        return ks.length > 1 ? ks : [ks[0] ?? null];
+    })();
+    const resourceTabValue = (kind) => (kind && resourceTabKinds.length > 1 ? `${TAB_RESOURCES}-${kind}` : TAB_RESOURCES);
+    const firstResourceTab = resourceTabValue(resourceTabKinds[0]);
+    const resourceById = Object.fromEntries((resources || []).map(r => [r.id, r]));
     const fieldsByTab = {
         [TAB_DETAILS]: (k) => ['name', 'reason', 'parentId', 'terminationDate'].includes(k),
-        [TAB_RESOURCES]: (k) => k.startsWith('quota.'),
+        ...Object.fromEntries(resourceTabKinds.map(kind => [resourceTabValue(kind),
+            (k) => k.startsWith('quota.') && (!kind || kindOfResource(resourceById[k.slice(6)]) === kind)])),
     };
     const tabHasError = (tab) => tabFlag(fieldsByTab, tab, form.errors);
 
@@ -588,9 +597,9 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             .map(r => ({ ...r, used: inUse[r.id], requested: total[r.id] ?? 0 }));
     }, [node, inUseNow, resources, quota]);
 
-    const resourcesTab = (
+    const resourcesTab = (kind, first) => (
         <Stack>
-            {isChange && hasAllocations(node) && (
+            {first && isChange && hasAllocations(node) && (
                 <Alert color={COLOR.info} variant="light" p="xs" icon={<Gift size="16" />}>
                     <Text size="xs">
                         {t('projects.allocation.ownShareOnly', {
@@ -599,7 +608,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     </Text>
                 </Alert>
             )}
-            {overcommitted.length > 0 && (
+            {first && overcommitted.length > 0 && (
                 <Alert color={COLOR.negative} variant="light" title={t('projects.projectForm.belowInUseTitle')}>
                     <Stack gap="4">
                         <Text size="sm">
@@ -629,7 +638,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 </Alert>
             )}
             <QuotaInputs
-                resources={offered}
+                resources={kind ? offered.filter(r => kindOfResource(r) === kind) : offered}
                 value={quota}
                 headroom={newRoom}
                 usage={inUseNow ? { inUse: inUseNow, grantUse: openstackSide(node).grant_use, total: effectiveLimit(node, quota) } : null}
@@ -640,7 +649,14 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     form.clearFieldError(`quota.${id}`);
                 }}
             />
-            {isChange && <AllocationSection node={node} resources={resources} draft={alloc} />}
+            {first && isChange && <AllocationSection node={node} resources={resources} draft={alloc} />}
+            {/* The Lab/KI side's other half: how its workspaces are used, known only to the AI service and saved at once. */}
+            {(kind === 'aiaas' || !kind) && workspaces.available && (
+                <Paper withBorder radius="md" p="md">
+                    <Text fw={600} mb="xs">{t('projects.fact.workspaces')}</Text>
+                    <WorkspaceSettingsPanel draft={workspaces} />
+                </Paper>
+            )}
         </Stack>
     );
 
@@ -681,7 +697,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             opened={opened}
             // Every tabbed form is as wide: narrower, a member's row breaks
             // around its role picker and the tabs wrap.
-            size="xl"
+            size={DIALOG_SIZE}
             onClose={onClose}
             title={isAdopt ? t('projects.adopt.title', { name: nodeTitle(node) })
                 : isChange
@@ -696,7 +712,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     setNewOwnerError(t('projects.transferOwner.newOwnerRequired'));
                     return setActiveTab(TAB_DETAILS);
                 }
-                if (isChange && !alloc.validate()) return setActiveTab(TAB_RESOURCES);
+                if (isChange && !alloc.validate()) return setActiveTab(firstResourceTab);
                 if (withAttributes && !attrs.validate()) return setActiveTab(TAB_ATTRIBUTES);
                 save.mutate(values);
             }, handleInvalid)}
@@ -714,14 +730,18 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 onChange={setActiveTab}
                 tabs={[
                     { value: TAB_DETAILS, label: t('projects.actions.details'), hasError: tabHasError(TAB_DETAILS) || !!newOwnerError, content: detailsTab },
-                    { value: TAB_RESOURCES, label: t('projects.fact.resources'), hasError: tabHasError(TAB_RESOURCES) || !!alloc.error, content: resourcesTab },
+                    ...resourceTabKinds.map((kind, i) => ({
+                        value: resourceTabValue(kind),
+                        label: resourceTabKinds.length > 1 ? t(`projects.kind.${kind}`) : t('projects.fact.resources'),
+                        hasError: tabHasError(resourceTabValue(kind)) || (i === 0 && !!alloc.error),
+                        content: resourcesTab(kind, i === 0),
+                    })),
                     { value: TAB_MEMBERS, label: t('projects.fact.members'), content: membersTab },
                     // Set by the budget's managers; its owner and admins see them.
                     ...(withAttributes ? [{ value: TAB_ATTRIBUTES, label: t('projects.attributes.tab'), hasError: !!attrs.error,
                         content: <AttributesEditor node={node} groups={attrs.groups} onChange={attrs.onChange} /> }]
                         : isChange && hasAttributes(node) ? [{ value: TAB_ATTRIBUTES, label: t('projects.attributes.tab'),
                             content: <AttributesView node={node} /> }] : []),
-                    ...(workspaces.available ? [{ value: TAB_WORKSPACES, label: t('projects.fact.workspaces'), content: <WorkspaceSettingsPanel draft={workspaces} /> }] : []),
                     ...(isChange ? nodeExtraTabs(t, node, resources, activeTab) : []),
                 ]}
             />
