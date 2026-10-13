@@ -197,6 +197,8 @@
         "inUse": "In use",
         "admins": "Admins",
         "archivedOn": "Archived on",
+        "labDeletion": "Lab/AI files deleted on",
+        "labDeletionHint": "Workspaces with home directories and “gemeinsam”. Extending the project moves the day.",
         "deletion": "Deletion",
         "workspaces": "Workspaces"
     },
@@ -603,6 +605,8 @@
         "chargeUntilGone": "Until then it keeps holding its budget.",
         "deleteWhat": "Everything in the OpenStack project is deleted within the next minutes: machines, volumes, snapshots, images, networks and all data on them.",
         "deleteWorkspaces": "Lab/AI: running servers are ended and the workspace storage is deleted — every member's home directory in this project and the folder “gemeinsam”. Only admins can restore it for another 7 days.",
+        "releaseWorkspacesGrace_one": "Lab/AI: from now on nobody can start a server in this project. The workspace storage (home directories and “gemeinsam”) is kept for {{count}} more day, then it is deleted.",
+        "releaseWorkspacesGrace_other": "Lab/AI: from now on nobody can start a server in this project. The workspace storage (home directories and “gemeinsam”) is kept for {{count}} more days, then it is deleted.",
         "releaseWorkspaces": "Lab/AI: from now on nobody can start a server in this project. The workspace storage (home directories and “gemeinsam”) is kept until the project is deleted for good.",
         "deleteAfter": "Then the project disappears from the list. What it used stays in the usage statistics.",
         "irreversible": "This cannot be undone.",

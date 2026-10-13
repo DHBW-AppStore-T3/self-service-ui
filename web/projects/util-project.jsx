@@ -133,6 +133,24 @@ export function scheduledDeletion(node, retirement) {
     return d.toISOString();
 }
 
+// labDeletion is the day a project's Lab/AI part — workspaces, homes, shared
+// folder — is deleted by itself: the day after its end (termination date, or
+// release if earlier) plus the grace days, as openstack-management-api's AI
+// service sync counts them. null without Lab/AI resources, without an end, or
+// with the deletion switched off (aiaasDeleteGraceDays 0).
+export function labDeletion(node, resources, retirement) {
+    const grace = retirement?.aiaasDeleteGraceDays || 0;
+    if (!grace || !projectKinds(node, resources).includes('aiaas')) return null;
+    const days = [];
+    if (node.termination_date) days.push(node.termination_date.slice(0, 10));
+    const released = isRetired(node) ? lastEventAt(node, 'released') : null;
+    if (released) days.push(released.slice(0, 10));
+    if (!days.length) return null;
+    const d = new Date(`${days.sort()[0]}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + 1 + grace);
+    return d.toISOString();
+}
+
 // A leaf that is approved but has no OpenStack project yet. The reconciler runs
 // on an interval, so "granted" and "usable" are minutes apart — and calling that
 // window "Active" sends people looking for a project that is not there.

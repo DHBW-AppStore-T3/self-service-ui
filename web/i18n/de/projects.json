@@ -197,6 +197,8 @@
         "inUse": "In Benutzung",
         "admins": "Admins",
         "archivedOn": "Archiviert am",
+        "labDeletion": "Lab/KI-Dateien gelöscht am",
+        "labDeletionHint": "Workspaces mit Home-Verzeichnissen und „gemeinsam“. Verlängern verschiebt den Tag.",
         "deletion": "Löschung",
         "workspaces": "Workspaces"
     },
@@ -603,6 +605,8 @@
         "chargeUntilGone": "Bis dahin belegt es weiter sein Budget.",
         "deleteWhat": "Alles im OpenStack-Projekt wird in den nächsten Minuten gelöscht: Maschinen, Volumes, Snapshots, Images, Netze und alle Daten darauf.",
         "deleteWorkspaces": "Lab/KI: Laufende Server werden beendet, und der Workspace-Speicher wird gelöscht – die Home-Verzeichnisse aller Mitglieder in diesem Projekt und der Ordner „gemeinsam“. Nur Admins können ihn noch 7 Tage lang wiederherstellen.",
+        "releaseWorkspacesGrace_one": "Lab/KI: Ab sofort startet niemand mehr einen Server in diesem Projekt. Der Workspace-Speicher (Home-Verzeichnisse und „gemeinsam“) bleibt noch {{count}} Tag erhalten, dann wird er gelöscht.",
+        "releaseWorkspacesGrace_other": "Lab/KI: Ab sofort startet niemand mehr einen Server in diesem Projekt. Der Workspace-Speicher (Home-Verzeichnisse und „gemeinsam“) bleibt noch {{count}} Tage erhalten, dann wird er gelöscht.",
         "releaseWorkspaces": "Lab/KI: Ab sofort startet niemand mehr einen Server in diesem Projekt. Der Workspace-Speicher (Home-Verzeichnisse und „gemeinsam“) bleibt erhalten, bis das Projekt endgültig gelöscht wird.",
         "deleteAfter": "Danach verschwindet das Projekt aus der Liste. Was es verbraucht hat, bleibt in der Verbrauchsstatistik.",
         "irreversible": "Das lässt sich nicht rückgängig machen.",

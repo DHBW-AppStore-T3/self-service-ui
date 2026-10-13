@@ -1,7 +1,7 @@
 import { AlertTriangle, ExternalLink, Eye, Gift, Pencil, Rocket, Scale, Trash2, Users, X } from 'lucide-react';
 import { Alert, Anchor, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { CopyLinkButton, DeletingBadge, FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, PurgeProgress, TokenBadgeList } from './component-common.jsx';
-import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, scheduledDeletion, openstackSide, catalogKinds, projectKinds } from './util-project.jsx';
+import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, scheduledDeletion, labDeletion, openstackSide, catalogKinds, projectKinds } from './util-project.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useTranslation } from 'react-i18next';
 import { useProjectConfig } from './projects.jsx';
@@ -41,6 +41,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
     // Given up: when it was put away, and when it goes by itself.
     const archivedAt = node.status === 'archived' ? lastEventAt(node, 'archived') : null;
     const deletionAt = deletionRequested(node) ? null : scheduledDeletion(node, config?.retirement);
+    const labDeletionAt = deletionRequested(node) ? null : labDeletion(node, resources, config?.retirement);
 
     const createdDate = node.created_at ? formatDate(node.created_at) : '';
     const owner = ownerEmail(node);
@@ -211,6 +212,14 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                     )}
                     {deletionAt && (
                         <FactRow label={t('projects.fact.deletion')}>{formatDate(deletionAt)}</FactRow>
+                    )}
+                    {/* The Lab/AI part goes by itself after the end: from then on the date is the message. */}
+                    {labDeletionAt && (
+                        <FactRow label={t('projects.fact.labDeletion')} hint={t('projects.fact.labDeletionHint')}>
+                            <Text size="xs" c={expiryTone(labDeletionAt) === 'gray' ? undefined : `${expiryTone(labDeletionAt)}.7`}>
+                                {formatDate(labDeletionAt)}
+                            </Text>
+                        </FactRow>
                     )}
 
                     {memberTokens.length > 0 && (

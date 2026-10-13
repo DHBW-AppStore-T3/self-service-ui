@@ -43,7 +43,7 @@ export function RetireModal({ opened, onClose, onDone, node, mode = 'release' })
     const lab = kinds.includes('aiaas');
     const consequences = deleting
         ? [cloud && t('projects.retire.deleteWhat'), lab && t('projects.retire.deleteWorkspaces'), t('projects.retire.deleteAfter')].filter(Boolean)
-        : [...(cloud ? releaseConsequences(t, retirement) : []), lab && t('projects.retire.releaseWorkspaces')].filter(Boolean);
+        : [...(cloud ? releaseConsequences(t, retirement) : []), lab && (retirement.aiaasDeleteGraceDays ? t('projects.retire.releaseWorkspacesGrace', { count: retirement.aiaasDeleteGraceDays }) : t('projects.retire.releaseWorkspaces'))].filter(Boolean);
 
     return (
         <ConfirmModal
