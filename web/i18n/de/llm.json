@@ -108,13 +108,9 @@
         "poolUsed": "{{spend}} von {{budget}} verbraucht, gemeinsam mit allen Mitgliedern"
     },
     "usage": {
-        "monthly": "Monatskontingent",
-        "allKeys": "Über alle API Keys zusammen",
         "of": "von {{budget}}",
         "resetAt": "Zurücksetzung: {{date}}",
         "live": "Die Werte kommen live vom Gateway.",
-        "limits": "Grenzen und Modelle",
-        "inForce": "Aktuell in Kraft",
         "rpm": "{{n}} Anfragen pro Minute",
         "tpm": "{{n}} Tokens pro Minute",
         "allModels": "alle Modelle",
@@ -132,8 +128,7 @@
         "default": "Standard",
         "makeDefault": "Als Standard verwenden",
         "defaultHint": "Der DHBW-Chat und neue API Keys ohne Projektangabe verbrauchen aus dem Standardprojekt.",
-        "tier": "Kontingentklasse",
-        "tierHint": "Bestimmt Grenzen und Modelle, unabhängig vom Projekt."
+        "perProjectHint": "Topf, Anfragen und Tokens pro Minute und Modelle gelten je Projekt, für alle Mitglieder zusammen; festgelegt werden sie im Budget-Baum."
     },
     "fleet": {
         "state": {
@@ -329,35 +324,6 @@
                 "terminating": "Verdrängt oder ersetzt; gibt die GPU innerhalb einer Minute frei."
             }
         }
-    },
-    "access": {
-        "title": "Zugriffsregeln",
-        "hint": "Rollen und Kontingentklassen. Die Rolle Nutzung ist der Normalfall; Flotten- und Dienst-Administration geben Zugriff auf die Verwaltung. Die Kontingentklasse legt Ratenlimits und Modelle fest; ohne Regel gilt die Standardklasse. Zugang zum LLM, zum Chat und zu Workspaces gibt es nur über Projekte mit Budget, nicht über eine Regel. Personen und Gruppen kommen aus dem role-provider.",
-        "add": "Regel hinzufügen",
-        "token": "Token",
-        "role": "Rolle",
-        "tier": "Kontingentklasse",
-        "comment": "Kommentar",
-        "changed": "geändert",
-        "fromConfig": "aus der Konfiguration",
-        "bootstrapTip": "Admins aus der Konfiguration. Sie stellen sicher, dass immer jemand diese Liste pflegen kann, und lassen sich hier nicht ändern.",
-        "edit": "bearbeiten",
-        "delete": "löschen",
-        "deleteTitle": "Regel löschen?",
-        "deleteConfirm": "Löschen",
-        "deleteMessage": "Die Regel für {{token}} wird gelöscht. Wer nur über sie Zugang hatte, verliert ihn binnen weniger Minuten.",
-        "howTitle": "Wie die Regeln wirken",
-        "how": {
-            "none": "<1>Keine Regel, kein Zugang.</1> Das gilt für API Keys und den DHBW-Chat gleichermaßen.",
-            "highest": "<1>Mehrere Regeln:</1> es gilt die höchste Rolle; bei gleicher Rolle geht eine Personenregel (<2>user:</2>) einer Gruppenregel (<2>group:</2>) vor.",
-            "roles": "<1>Rollen:</1> „Nutzung“ darf Keys anlegen und den Chat verwenden, „Flottenverwaltung“ zusätzlich die Geräteflotte betreuen, „Administration“ zusätzlich diese Regeln pflegen."
-        },
-        "addTitle": "Regel hinzufügen",
-        "editTitle": "Regel bearbeiten",
-        "commentPlaceholder": "z. B. Kurs WWI23SEB",
-        "cancel": "Abbrechen",
-        "save": "Speichern",
-        "tokenInvalid": "Bitte ein Token der Form user:<E-Mail> oder group:<Kennung> angeben."
     },
     "roles": {
         "user": "Nutzung",

@@ -5,14 +5,12 @@ import { formatDateTime } from '/format-date.js';
 import { LoadError, Loading, useApiMutation } from '/helper/query-state.jsx';
 import { useLlmApi } from '/llm/api-llm.jsx';
 import { llmKeys } from '/llm/query-keys.js';
-import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { barColour, percent, units } from '/llm/format.js';
 import { keyLabel } from '/llm/keys.jsx';
 
 export function LlmUsage() {
     const { t, i18n } = useTranslation();
     const api = useLlmApi();
-    const { me } = useLlmMe();
     const usage = useQuery({ queryKey: llmKeys.usage(), queryFn: () => api.getUsage() });
     const setDefault = useApiMutation({
         mutationFn: (slug) => api.setDefaultProject(slug),
@@ -55,6 +53,16 @@ export function LlmUsage() {
                                 <Text size="sm" c="dimmed" mt="xs">
                                     {t('llm.usage.resetAt', { date: pr.reset_at ? formatDateTime(pr.reset_at) : '—' })}
                                 </Text>
+                                {/* Rate limits and models are the project's too, for all its members together — set in the budget tree like the pool. */}
+                                <Divider my="sm" />
+                                <Text size="sm">
+                                    {[pr.rpm > 0 && t('llm.usage.rpm', { n: num(pr.rpm) }), pr.tpm > 0 && t('llm.usage.tpm', { n: num(pr.tpm) })].filter(Boolean).join(' · ')}
+                                </Text>
+                                <Group gap={6} mt={6}>
+                                    {(pr.models ?? []).map(m => (
+                                        <Badge key={m} variant="light" color="gray" style={{ textTransform: 'none' }}>{m}</Badge>
+                                    ))}
+                                </Group>
                                 {!pr.default && projects.length > 1 && (
                                     <Button size="xs" variant="subtle" mt="xs" px={0}
                                         loading={setDefault.isPending && setDefault.variables === pr.slug}
@@ -66,29 +74,7 @@ export function LlmUsage() {
                         );
                     })}
                 </SimpleGrid>
-                <Text size="xs" c="dimmed" mt={-8}>{t('llm.usage.live')} {t('llm.usage.defaultHint')}</Text>
-
-                <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">
-                    <Paper p="lg" radius="md" withBorder>
-                        <Text fw={600}>{t('llm.usage.tier')}</Text>
-                        <Text size="xs" c="dimmed">{t('llm.usage.tierHint')}</Text>
-                        {me?.tier && <Badge variant="light" mt="sm">{me.tier}</Badge>}
-                    </Paper>
-                    <Paper p="lg" radius="md" withBorder>
-                        <Text fw={600}>{t('llm.usage.limits')}</Text>
-                        <Text size="xs" c="dimmed">{t('llm.usage.inForce')}</Text>
-                        <Stack gap={6} mt="sm">
-                            {u.rpm > 0 && <Text size="sm">{t('llm.usage.rpm', { n: num(u.rpm) })}</Text>}
-                            {u.tpm > 0 && <Text size="sm">{t('llm.usage.tpm', { n: num(u.tpm) })}</Text>}
-                        </Stack>
-                        <Divider my="sm" />
-                        <Group gap={6}>
-                            {(u.models?.length ? u.models : [t('llm.usage.allModels')]).map(m => (
-                                <Badge key={m} variant="light" color="gray" style={{ textTransform: 'none' }}>{m}</Badge>
-                            ))}
-                        </Group>
-                    </Paper>
-                </SimpleGrid>
+                <Text size="xs" c="dimmed" mt={-8}>{t('llm.usage.perProjectHint')} {t('llm.usage.defaultHint')} {t('llm.usage.live')}</Text>
 
                 <Paper p="lg" radius="md" withBorder>
                     <Text fw={600}>{t('llm.usage.perKey')}</Text>

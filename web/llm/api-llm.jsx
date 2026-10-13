@@ -4,9 +4,9 @@ import { useClient } from '/providers/client.jsx';
 // Named imports for the same reason as in dyndns/api-zones.jsx: an operation
 // missing from the client fails the build, not the browser.
 import {
-    blockMachine, createAccessRule, createKey, deleteAccessRule, deleteFleetPackage,
-    deleteKey, forgetMachine, getFleet, getFleetInference, getMe, getUsage, listAccessRules, listTiers,
-    searchPrincipals, setDefaultProject, unblockMachine, updateAccessRule,
+    blockMachine, createKey, deleteFleetPackage,
+    deleteKey, forgetMachine, getFleet, getFleetInference, getMe, getUsage,
+    setDefaultProject, unblockMachine,
 } from '@dhbw-cloud/llm-client';
 
 // useLlmApi is the one place that knows the transport of the LLM section.
@@ -38,21 +38,6 @@ export function useLlmApi() {
             unblockMachine: (serial) => call(unblockMachine, { path: { serial } }),
             forgetMachine: (serial) => call(forgetMachine, { path: { serial } }),
             deletePackage: () => call(deleteFleetPackage),
-
-            listAccessRules: async () => (await call(listAccessRules)) ?? [],
-            createAccessRule: (rule) => call(createAccessRule, { body: rule, headers: JSON_HEADERS }),
-            updateAccessRule: (id, rule) => call(updateAccessRule, { path: { id }, body: rule, headers: JSON_HEADERS }),
-            deleteAccessRule: (id) => call(deleteAccessRule, { path: { id } }),
-            listTiers: async () => (await call(listTiers)) ?? [],
-            // Same shape as the projects facade's searchPrincipalDetails, for
-            // the shared PrincipalTokenAutocomplete: groups first, then people.
-            searchPrincipalDetails: async (q, limit = 10) => {
-                const data = await call(searchPrincipals, { query: { q, limit } });
-                return [
-                    ...(data?.groups ?? []).filter(g => g?.token),
-                    ...(data?.users ?? []).map(email => ({ token: `user:${email}`, description: null })),
-                ];
-            },
         };
     }, [client]);
 }

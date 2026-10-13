@@ -54,16 +54,10 @@ const POOL = {
     ],
 };
 
-const RULES = [
-    { token: 'user:dennis.pfisterer@dhbw.de', role: 'admin', tier: 'staff', bootstrap: true },
-    { id: 7, token: 'group:wwi23seb', role: 'user', tier: 'student', comment: 'Kurs', updated_by: 'a@dhbw.de', updated_at: '2026-10-07T09:00:00Z' },
-];
-
 const { LlmOverview } = await import('/llm/overview.jsx');
 const { LlmKeys } = await import('/llm/keys.jsx');
 const { LlmUsage } = await import('/llm/usage.jsx');
 const { LlmFleet } = await import('/llm/fleet.jsx');
-const { LlmAccessRules } = await import('/llm/access-rules.jsx');
 
 let consoleErrors = [];
 beforeEach(() => {
@@ -71,9 +65,6 @@ beforeEach(() => {
         getUsage: async () => USAGE,
         getFleet: async () => FLEET,
         getFleetInference: async () => POOL,
-        listAccessRules: async () => RULES,
-        listTiers: async () => ['staff', 'student'],
-        searchPrincipalDetails: async () => [],
     };
     consoleErrors = [];
     vi.spyOn(console, 'error').mockImplementation((...args) => { consoleErrors.push(args.join(' ')); });
@@ -129,12 +120,6 @@ describe('the LLM views render', () => {
         expect(await screen.findByText(/dhbw-llm-agent\.sh/)).toBeTruthy();
         // The firewall rule names the endpoint the machines actually dial.
         expect(screen.getByText(/wg4\.example/)).toBeTruthy();
-        expectNoRenderFailure();
-    });
-
-    it('Access rules lists the rules', async () => {
-        renderView(<LlmAccessRules />);
-        expect(await screen.findByText('group:wwi23seb')).toBeTruthy();
         expectNoRenderFailure();
     });
 });

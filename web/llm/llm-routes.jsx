@@ -10,7 +10,6 @@ import { LlmUsage } from '/llm/usage.jsx';
 import { NoProject } from '/projects/no-project.jsx';
 
 const LlmFleet = lazy(() => import('/llm/fleet.jsx').then(m => ({ default: m.LlmFleet })));
-const LlmAccessRules = lazy(() => import('/llm/access-rules.jsx').then(m => ({ default: m.LlmAccessRules })));
 const LlmApiSwagger = lazy(() => import('/swagger/swagger.jsx').then(m => ({ default: m.LlmApiSwagger })));
 
 // The section exists in every deployment with an llmBaseUrl, but who may use
@@ -20,7 +19,7 @@ const LlmApiSwagger = lazy(() => import('/swagger/swagger.jsx').then(m => ({ def
 // without the role ends at "no access" rather than at a page of 403s.
 export function LlmManagement() {
     const { t } = useTranslation();
-    const { query, hasAccess, isFleetAdmin, isAdmin } = useLlmMe();
+    const { query, hasAccess, isFleetAdmin } = useLlmMe();
 
     if (query.isPending) return <Container size="lg" py="md"><Loading /></Container>;
     if (query.isError) return <Container size="lg" py="md"><LoadError query={query} /></Container>;
@@ -35,7 +34,6 @@ export function LlmManagement() {
                 <Route path="/keys" component={LlmKeys} />
                 <Route path="/usage" component={LlmUsage} />
                 {isFleetAdmin && <Route path="/fleet/:page?" component={LlmFleet} />}
-                {isAdmin && <Route path="/access" component={LlmAccessRules} />}
                 <Route path="/api-doc" component={LlmApiSwagger} />
                 <Route path="/"><Redirect to="/overview" replace /></Route>
                 <Route>

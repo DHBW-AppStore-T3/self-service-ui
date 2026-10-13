@@ -108,13 +108,9 @@
         "poolUsed": "{{spend}} of {{budget}} used, shared by all members"
     },
     "usage": {
-        "monthly": "Monthly quota",
-        "allKeys": "Across all API keys",
         "of": "of {{budget}}",
         "resetAt": "Reset: {{date}}",
         "live": "Values come live from the gateway.",
-        "limits": "Limits and models",
-        "inForce": "Currently in force",
         "rpm": "{{n}} requests per minute",
         "tpm": "{{n}} tokens per minute",
         "allModels": "all models",
@@ -132,8 +128,7 @@
         "default": "Default",
         "makeDefault": "Use as default",
         "defaultHint": "The DHBW chat and new API keys without a project draw from the default project.",
-        "tier": "Quota tier",
-        "tierHint": "Sets limits and models, independent of the project."
+        "perProjectHint": "Pool, requests and tokens per minute and models apply per project, to all members together; they are set in the budget tree."
     },
     "fleet": {
         "state": {
@@ -329,35 +324,6 @@
                 "terminating": "Evicted or replaced; frees the GPU within a minute."
             }
         }
-    },
-    "access": {
-        "title": "Access rules",
-        "hint": "Roles and quota classes. The role Usage is the normal case; fleet and service administration give access to the management pages. The quota class sets rate limits and models; without a rule the default class applies. Access to the LLM, the chat and workspaces comes only from projects with a budget, not from a rule. People and groups come from the role-provider.",
-        "add": "Add rule",
-        "token": "Token",
-        "role": "Role",
-        "tier": "Quota tier",
-        "comment": "Comment",
-        "changed": "changed",
-        "fromConfig": "from the configuration",
-        "bootstrapTip": "Admins from the configuration. They make sure someone can always maintain this list and cannot be changed here.",
-        "edit": "edit",
-        "delete": "delete",
-        "deleteTitle": "Delete rule?",
-        "deleteConfirm": "Delete",
-        "deleteMessage": "The rule for {{token}} is deleted. Anyone who had access only through it loses it within a few minutes.",
-        "howTitle": "How the rules work",
-        "how": {
-            "none": "<1>No rule, no access.</1> That applies to API keys and the DHBW chat alike.",
-            "highest": "<1>Several rules:</1> the highest role wins; for equal roles a person rule (<2>user:</2>) beats a group rule (<2>group:</2>).",
-            "roles": "<1>Roles:</1> “Use” may create keys and use the chat, “Fleet management” may also look after the device fleet, “Administration” may also maintain these rules."
-        },
-        "addTitle": "Add rule",
-        "editTitle": "Edit rule",
-        "commentPlaceholder": "e.g. course WWI23SEB",
-        "cancel": "Cancel",
-        "save": "Save",
-        "tokenInvalid": "Please enter a token of the form user:<email> or group:<id>."
     },
     "roles": {
         "user": "Use",
