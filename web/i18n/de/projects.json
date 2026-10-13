@@ -195,7 +195,8 @@
         "inUse": "In Benutzung",
         "admins": "Admins",
         "archivedOn": "Archiviert am",
-        "deletion": "Löschung"
+        "deletion": "Löschung",
+        "workspaces": "Workspaces"
     },
     "forms": {
         "add": "Hinzufügen",

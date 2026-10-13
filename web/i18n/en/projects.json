@@ -195,7 +195,8 @@
         "inUse": "In use",
         "admins": "Admins",
         "archivedOn": "Archived on",
-        "deletion": "Deletion"
+        "deletion": "Deletion",
+        "workspaces": "Workspaces"
     },
     "forms": {
         "add": "Add",

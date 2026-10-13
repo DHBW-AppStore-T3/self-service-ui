@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { cleanup, screen } from '@testing-library/react';
 import { renderView } from '/test/render-harness.jsx';
 
 // Does each GPU view render at all, with data in it? Same question as llm/views.render.test.jsx.
@@ -62,7 +62,12 @@ const CATALOG = { profiles: [{ slug: 'cpu', name: 'CPU' }, { slug: 'pytorch', na
 const { GpuEnvironments } = await import('/gpu/environments.jsx');
 const { GpuServers } = await import('/gpu/servers.jsx');
 const { GpuUsage, groupUsage } = await import('/gpu/usage.jsx');
-const { WorkspaceSettingsButton } = await import('/gpu/workspace-settings.jsx');
+const { WorkspaceSettingsPanel, useWorkspaceSettings } = await import('/gpu/workspace-settings.jsx');
+
+function SettingsTab({ nodeId }) {
+    const draft = useWorkspaceSettings(nodeId, true);
+    return draft.available ? <WorkspaceSettingsPanel draft={draft} /> : <span>none</span>;
+}
 
 let consoleErrors = [];
 beforeEach(() => {
@@ -103,13 +108,15 @@ describe('the GPU views render', () => {
         expectNoRenderFailure();
     });
 
-    it('the workspace settings open from a project the caller manages, and only from such one', async () => {
-        renderView(<><WorkspaceSettingsButton nodeId="p_ml" /><WorkspaceSettingsButton nodeId="p_stat" /></>);
-        const buttons = await screen.findAllByRole('button', { name: /Workspace/ });
-        expect(buttons.length).toBe(1);
-        fireEvent.click(buttons[0]);
+    it('the workspace settings tab shows a project the AI service knows, with what is used of it', async () => {
+        renderView(<SettingsTab nodeId="p_ml" />);
         expect(await screen.findByText(/34.5 (von|of) 40/)).toBeTruthy();
         expectNoRenderFailure();
+    });
+
+    it('the workspace settings tab stays away for a project the AI service does not know', async () => {
+        renderView(<SettingsTab nodeId="p_unknown" />);
+        expect(await screen.findByText('none')).toBeTruthy();
     });
 
     it('Usage shows the units per profile', async () => {

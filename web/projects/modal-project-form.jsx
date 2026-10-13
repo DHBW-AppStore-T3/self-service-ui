@@ -17,6 +17,7 @@ import { ReasonField, reasonError } from './component-reason-field.jsx';
 import { useNodeMutation } from './use-node-mutation.jsx';
 import { PersonInput, personEmail } from './principal-search.jsx';
 import { AllocationSection, useAllocationDraft } from './component-allocation-section.jsx';
+import { WorkspaceSettingsPanel, useWorkspaceSettings } from '/gpu/workspace-settings.jsx';
 import { withCurrentParent } from './component-budget-select.jsx';
 import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide, resourceLabel, budgetKinds, catalogKinds, projectKinds, resourcesOfKinds } from './util-project.jsx';
 import { AttributesEditor, AttributesView, hasAttributes, useAttributesTab } from './component-node-attributes.jsx';
@@ -29,6 +30,7 @@ const TAB_DETAILS = 'details';
 const TAB_RESOURCES = 'resources';
 const TAB_MEMBERS = 'members';
 const TAB_ATTRIBUTES = 'attributes';
+const TAB_WORKSPACES = 'workspaces';
 
 // OutcomeNote says, while the form is being filled in, what pressing the button
 // will do — the one thing a requester cannot otherwise tell before it happened.
@@ -145,6 +147,8 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     const ownerChanged = restructure && personEmail(newOwner).toLowerCase() !== (nodeOwnerEmail(node) || '').toLowerCase();
     const parentChanged = restructure && newParent && newParent !== node.parent_id;
     const alloc = useAllocationDraft({ node: isChange ? node : null, resources, manager: isChange && asManager, opened });
+    // Lab/KI: how the project's workspaces are used — the AI service's part, in its own tab, saved with the rest and at once.
+    const workspaces = useWorkspaceSettings(isChange && opened ? node?.id : null, isChange && opened);
     const attrs = useAttributesTab(node);
 
     const [activeTab, setActiveTab] = useState(TAB_DETAILS);
@@ -403,6 +407,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 });
             }
             let result;
+            if (workspaces.changed) await workspaces.save();
             // A rename and the admins take effect immediately and on their own —
             // neither costs anything, and dragging them through the approval
             // cycle would park the project in change_pending until a manager
@@ -716,6 +721,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                         content: <AttributesEditor node={node} groups={attrs.groups} onChange={attrs.onChange} /> }]
                         : isChange && hasAttributes(node) ? [{ value: TAB_ATTRIBUTES, label: t('projects.attributes.tab'),
                             content: <AttributesView node={node} /> }] : []),
+                    ...(workspaces.available ? [{ value: TAB_WORKSPACES, label: t('projects.fact.workspaces'), content: <WorkspaceSettingsPanel draft={workspaces} /> }] : []),
                     ...(isChange ? nodeExtraTabs(t, node, resources, activeTab) : []),
                 ]}
             />

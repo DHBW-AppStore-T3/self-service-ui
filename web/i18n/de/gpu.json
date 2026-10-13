@@ -99,7 +99,6 @@
         "project": "Projekt: {{name}}"
     },
     "projects": {
-        "editTitle": "Workspace-Einstellungen: {{name}}",
         "remove": "Entfernen",
         "profiles": "Profile",
         "freeImagesLabel": "Freie Images erlauben",
@@ -144,7 +143,6 @@
             },
             "fromTree": "aus dem Projekt"
         },
-        "settings": "Workspace-Einstellungen",
-        "settingsIntro": "Wie die Workspaces dieses Projekts genutzt werden: Profile, Images, Grenzen und Anteile pro Person. Name, Mitglieder, Laufzeit und Kontingente stehen im Projekt selbst."
+        "settingsIntro": "Wie die Workspaces dieses Projekts genutzt werden: Profile, Images, Grenzen und Anteile pro Person. Änderungen hier gelten sofort, ohne Genehmigung."
     }
 }
