@@ -10,7 +10,7 @@ import { DIALOG_SIZE, FormModal, FormTabs, tabHasError as tabFlag, tabWithError 
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenListEditor } from './component-token-list-editor.jsx';
 import { formatError } from '/helper/api-error.js';
-import { COLOR, freeAmount, isAvailability, isPoolAutoApprove, UNLIMITED_QUOTA, visibleResources } from './util-project.jsx';
+import { COLOR, catalogKinds, freeAmount, isAvailability, isPoolAutoApprove, PROJECT_KINDS, UNLIMITED_QUOTA, visibleResources } from './util-project.jsx';
 import { BudgetSelect, withCurrentParent } from './component-budget-select.jsx';
 import { ReasonField, reasonError } from './component-reason-field.jsx';
 import { useNodeMutation } from './use-node-mutation.jsx';
@@ -164,6 +164,15 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     // The budget whose limit one that inherits passes on, by name where known.
     const inheritedFrom = isEdit ? node?.parent_name : parent?.name;
     const offered = visibleResources(resources, scopeFor(form.values.parentId));
+    // One resources tab per provider where the budget offers several (Cloud, Lab/KI), as in the project dialog; a resource without a provider is OpenStack's.
+    const kindOfResource = (r) => r?.provider || 'openstack';
+    const resourceKinds = (() => {
+        const ks = catalogKinds(resources).length < 2 ? [] : PROJECT_KINDS.filter(k => offered.some(r => kindOfResource(r) === k));
+        return ks.length > 1 ? ks : [null];
+    })();
+    const resourceTabValue = (kind) => (kind ? `${TAB_RESOURCES}-${kind}` : TAB_RESOURCES);
+    const ofKind = (kind) => (kind ? offered.filter(r => kindOfResource(r) === kind) : offered);
+    const resourceById = Object.fromEntries((resources || []).map(r => [r.id, r]));
 
     // The budget the new one would draw from: the picked one when requesting,
     // the parent when a manager carves out a sub-budget directly. Editing shows
@@ -199,7 +208,8 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     // Which tab to flag: a field the user cannot see must not fail silently.
     const fieldsByTab = {
         [TAB_DETAILS]: (k) => ['name', 'reason', 'parentId', 'terminationDate', 'maxTermDays'].includes(k),
-        [TAB_RESOURCES]: (k) => k.startsWith('quota.'),
+        ...Object.fromEntries(resourceKinds.map(kind => [resourceTabValue(kind),
+            (k) => k.startsWith('quota.') && (!kind || kindOfResource(resourceById[k.slice(6)]) === kind)])),
         [TAB_ACCESS]: (k) => k === 'adminScope' || k === 'eligibleRequesters',
         [TAB_AUTO_APPROVE]: (k) => k.startsWith('autoApproveQuota.'),
     };
@@ -382,9 +392,9 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
 
     // Passing on the whole limit above is for managers only — a requester
     // asks for an amount.
-    const resourcesTab = (
+    const resourcesTab = (kind, first) => (
         <Stack>
-            {!isRequest && (
+            {first && !isRequest && (
                 <Switch
                     label={t('projects.budgetForm.inheritsLimit')}
                     description={t('projects.budgetForm.inheritsLimitHint')}
@@ -407,9 +417,9 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                     </Text>
                     <QuotaInputs
                         emptyIsZero
-                        resources={offered}
+                        resources={ofKind(kind)}
                         value={quota}
-                        errors={Object.fromEntries(offered.map(r => [r.id, form.errors[`quota.${r.id}`]]))}
+                        errors={Object.fromEntries(ofKind(kind).map(r => [r.id, form.errors[`quota.${r.id}`]]))}
                         allowUnlimited
                         headroom={headroom}
                         onChange={(id, v) => { form.setFieldValue(`quota.${id}`, v); form.clearFieldError(`quota.${id}`); }}
@@ -528,19 +538,23 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                             disabled={!autoApproveEnabled || !hasRequesters}
                             {...form.getInputProps('autoApproveIndividual', { type: 'checkbox' })}
                         />
-                        {autoApproveIndividual && (
-                            <QuotaInputs
-                                emptyIsZero
-                                resources={offered}
-                                value={autoApproveQuota}
-                                disabled={!autoApproveEnabled || !hasRequesters}
-                                errors={Object.fromEntries(offered.map(r => [r.id, form.errors[`autoApproveQuota.${r.id}`]]))}
-                                onChange={(id, v) => {
-                                    form.setFieldValue(`autoApproveQuota.${id}`, v);
-                                    form.clearFieldError(`autoApproveQuota.${id}`);
-                                }}
-                            />
-                        )}
+                        {/* Split by provider like the resources tabs, each part under its name. */}
+                        {autoApproveIndividual && resourceKinds.map(kind => (
+                            <Stack key={kind ?? 'all'} gap="xs">
+                                {kind && <Text fw={600} size="sm">{t(`projects.kind.${kind}`)}</Text>}
+                                <QuotaInputs
+                                    emptyIsZero
+                                    resources={ofKind(kind)}
+                                    value={autoApproveQuota}
+                                    disabled={!autoApproveEnabled || !hasRequesters}
+                                    errors={Object.fromEntries(ofKind(kind).map(r => [r.id, form.errors[`autoApproveQuota.${r.id}`]]))}
+                                    onChange={(id, v) => {
+                                        form.setFieldValue(`autoApproveQuota.${id}`, v);
+                                        form.clearFieldError(`autoApproveQuota.${id}`);
+                                    }}
+                                />
+                            </Stack>
+                        ))}
                     </Stack>
                 </Box>
                 <Text size="xs" c="dimmed">
@@ -573,7 +587,12 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 onChange={setActiveTab}
                 tabs={[
                     { value: TAB_DETAILS, label: t('projects.actions.details'), hasError: tabHasError(TAB_DETAILS), content: detailsTab },
-                    { value: TAB_RESOURCES, label: t('projects.fact.resources'), hasError: tabHasError(TAB_RESOURCES), content: resourcesTab },
+                    ...resourceKinds.map((kind, i) => ({
+                        value: resourceTabValue(kind),
+                        label: kind ? t(`projects.kind.${kind}`) : t('projects.fact.resources'),
+                        hasError: tabHasError(resourceTabValue(kind)),
+                        content: resourcesTab(kind, i === 0),
+                    })),
                     { value: TAB_ACCESS, label: t('projects.budgetForm.tabAccess'), hasError: tabHasError(TAB_ACCESS), content: accessTab },
                     { value: TAB_AUTO_APPROVE, label: t('projects.budgetForm.tabAutoApprove'), hasError: tabHasError(TAB_AUTO_APPROVE), content: autoApproveTab },
                     ...(isEdit ? [{ value: TAB_ATTRIBUTES, label: t('projects.attributes.tab'), hasError: !!attrs.error,
