@@ -41,14 +41,14 @@ function OutcomeNote({ outcome, isChange, budget, hasPolicy, over = [] }) {
     // so it does not have to be spliced into the sentence as well.
     if (outcome === 'blocked') {
         return (
-            <Text size="sm" c={COLOR.negative} mt="sm">
+            <Text size="sm" c={COLOR.negative}>
                 {t('projects.projectForm.outcomeBlocked')}
             </Text>
         );
     }
     if (outcome === 'refused') {
         return (
-            <Text size="sm" c={COLOR.negative} mt="sm">
+            <Text size="sm" c={COLOR.negative}>
                 {t('projects.projectForm.outcomeRefused')}
                 {over.length > 0 && ` ${t('projects.projectForm.outcomeRefusedWhich', { list: over.map(r => t('projects.projectForm.overItem', { name: resourceLabel(t, r), asked: r.asked, free: r.free })).join(', ') })}`}
             </Text>
@@ -61,7 +61,7 @@ function OutcomeNote({ outcome, isChange, budget, hasPolicy, over = [] }) {
                 ? t('projects.projectForm.outcomeInstantChange')
                 : t('projects.projectForm.outcomeInstant');
         return (
-            <Group gap={6} wrap="nowrap" mt="sm">
+            <Group gap={6} wrap="nowrap">
                 <Zap size="14" color="var(--mantine-color-green-7)" style={{ flexShrink: 0 }} />
                 <Text size="sm" c="green.8">{text}</Text>
             </Group>
@@ -75,7 +75,7 @@ function OutcomeNote({ outcome, isChange, budget, hasPolicy, over = [] }) {
             ? t('projects.projectForm.outcomeWaitingChange')
             : t('projects.projectForm.outcomeWaiting'));
     return (
-        <Stack gap={4} mt="sm">
+        <Stack gap={4}>
             <Group gap={6} wrap="nowrap">
                 <Clock size="14" color="var(--mantine-color-orange-7)" style={{ flexShrink: 0 }} />
                 <Text size="sm" c="orange.8">{waiting}</Text>
@@ -717,6 +717,14 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             submitDisabled={outcome === 'blocked'}
             submitError={attrs.error || (save.error && formatError(save.error))}
             submitColor={isAdopt ? COLOR.outside : undefined}
+            // What the button will do, beside it.
+            note={<OutcomeNote
+                over={over}
+                outcome={outcome}
+                isChange={isChange}
+                budget={outcomeBudget}
+                hasPolicy={!!outcomeBudget?.auto_approve && !managedIds.has(outcomeBudget?.id)}
+            />}
             submitLabel={isAdopt ? t('projects.actions.adopt') : isChange
                 ? (node?.status === 'pending' ? t('projects.projectForm.submitUpdateRequest')
                     : outcome === 'instant' ? t('projects.forms.saveChanges') : t('projects.projectForm.submitChangeRequest'))
@@ -766,14 +774,6 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     separated
                 />
             )}
-
-            <OutcomeNote
-                over={over}
-                outcome={outcome}
-                isChange={isChange}
-                budget={outcomeBudget}
-                hasPolicy={!!outcomeBudget?.auto_approve && !managedIds.has(outcomeBudget?.id)}
-            />
         </FormModal>
     );
 }

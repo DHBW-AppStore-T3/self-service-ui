@@ -81,7 +81,8 @@ export const DIALOG_STYLES = {
 // DialogFooter is a dialog's button row, kept in view: it sticks to the bottom
 // of the scrolling dialog, so Save and Cancel never have to be scrolled to.
 // It spans the dialog's width over the content that scrolls behind it.
-export function DialogFooter({ children, error }) {
+// note: what pressing the button will do (e.g. "takes effect right away"), on the left of the same row, so it is read right where the decision is made.
+export function DialogFooter({ children, error, note = null }) {
     return (
         <div style={{
             position: 'sticky',
@@ -93,7 +94,10 @@ export function DialogFooter({ children, error }) {
             zIndex: 2,
         }}>
             {error && <Text c="red" size="sm" mb="xs">{error}</Text>}
-            <Group justify="flex-end">{children}</Group>
+            <Group justify="space-between" wrap="nowrap" align="center" gap="md">
+                <div style={{ flex: 1, minWidth: 0 }}>{note}</div>
+                <Group gap="sm" wrap="nowrap" style={{ flexShrink: 0 }}>{children}</Group>
+            </Group>
         </div>
     );
 }
@@ -113,6 +117,7 @@ export function FormModal({
     opened, onClose, title, size = 'lg',
     onSubmit, submitting, submitError, submitLabel, submitColor, submitDisabled = false,
     secondary = null,
+    note = null,
     children,
 }) {
     const { t } = useTranslation();
@@ -128,7 +133,7 @@ export function FormModal({
                 <Stack>
                     {children}
 
-                    <DialogFooter error={submitError}>
+                    <DialogFooter error={submitError} note={note}>
                         <Button variant="default" type="button" onClick={onClose}>{t('projects.actions.cancel')}</Button>
                         {/* A second way to finish, e.g. reject next to approve:
                             { label, color, onClick, loading, disabled }. */}
