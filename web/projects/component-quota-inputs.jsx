@@ -153,7 +153,8 @@ function QuantityField({ resource: r, value: current, onChange, error, disabled,
                 disabled={disabled || isUnlimited}
                 value={isUnlimited ? '' : current}
                 placeholder={isUnlimited ? t('projects.quotaInputs.noCap') : extra ? '0' : (showsDefault(r) ? t('projects.quotaInputs.defaultValue', { value: r.default }) : undefined)}
-                onChange={v => onChange(r.id, v)}
+                // Emptied, a field with a default goes back to it: absent from the limit, not an empty string.
+                onChange={v => onChange(r.id, v === '' && showsDefault(r) ? undefined : v)}
                 error={error}
                 description={isUnlimited ? t('projects.quotaInputs.noCapHint') : (extra ? undefined : r.message)}
             />
@@ -229,8 +230,11 @@ export function validateQuota(t, resources, quota, { allowUnlimited = false } = 
             return;
         }
         if (allowUnlimited && v === UNLIMITED_QUOTA) return;
+        // Left empty, a rate of another provider is its default (showsDefault) — a valid answer, not a missing one.
+        if ((v === null || v === undefined || v === '') && showsDefault(r)) return;
         if (v === null || v === undefined || v === '' || v < (allowUnlimited ? 0 : r.min) || v > r.max) {
-            errors[r.id] = r.message || t('projects.quotaInputs.range', { min: r.min, max: r.max });
+            // The range, not the field's description: the description repeated under the field read as the error.
+            errors[r.id] = t('projects.quotaInputs.range', { min: r.min, max: r.max });
         }
     });
     return errors;

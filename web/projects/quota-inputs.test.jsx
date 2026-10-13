@@ -145,3 +145,18 @@ describe('QuotaInputs headroom', () => {
         expect(screen.queryByText(/Exceeds/)).toBeNull();
     });
 });
+
+describe('validateQuota and rates with a default', () => {
+    const t = (k) => k;
+    const rpm = { id: 'llm-rpm', name: 'LLM requests per minute', provider: 'aiaas', default: 60, min: 0, max: 100000 };
+    const cores = { id: 'cores', name: 'Cores', default: 4, min: 0, max: 64 };
+
+    it('accepts an empty rate of another provider: it means the default', () => {
+        expect(validateQuota(t, [rpm], {})).toEqual({});
+        expect(validateQuota(t, [rpm], { 'llm-rpm': '' })).toEqual({});
+    });
+
+    it('still wants a number for an OpenStack quantity', () => {
+        expect(Object.keys(validateQuota(t, [cores], {}))).toEqual(['cores']);
+    });
+});
