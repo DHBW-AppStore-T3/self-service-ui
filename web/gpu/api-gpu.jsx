@@ -30,7 +30,8 @@ export function useGpuApi() {
             environmentLog: async (id) => (await call(getGpuEnvironmentLog, { path: { id } }))?.log ?? '',
             startEnvironment: (id, gpu, project) => call(startGpuEnvironment, { path: { id }, body: { gpu, project }, headers: JSON_HEADERS }),
             listServers: async () => (await call(listGpuServers)) ?? [],
-            stopServer: (name) => call(stopGpuServer, { path: { name } }),
+            // The default server has no name; the API calls it "-".
+            stopServer: (name) => call(stopGpuServer, { path: { name: name || '-' } }),
             // Workspace usage (W1): own rows for everyone with access, all rows for admins. period = { from, to }.
             myWorkspaceUsage: (period) => call(getMyWorkspaceUsage, { query: period }),
             workspaceUsage: (period, project) => call(getWorkspaceUsage, { query: project ? { ...period, project } : period }),
