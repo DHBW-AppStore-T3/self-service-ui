@@ -104,8 +104,8 @@
         "unnamed": "(ohne Namen)",
         "shortTerm": "Kurzfrist-Budget des Keys",
         "per": "pro {{window}}",
-        "poolPer": "Topf pro {{window}}",
-        "poolUsed": "{{spend}} von {{budget}} verbraucht, gemeinsam mit allen Mitgliedern"
+        "poolsHint": "Jeder Key verbraucht aus dem Topf seines Projekts; die Spalte zeigt nur sein eigenes Kurzfrist-Budget.",
+        "toUsage": "Töpfe und Grenzen unter Nutzung"
     },
     "usage": {
         "of": "von {{budget}}",

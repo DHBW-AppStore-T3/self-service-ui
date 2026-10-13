@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Alert, Button, Container, Group, Modal, Paper, Progress, Select, SimpleGrid, Stack, Table, Text, TextInput, Title } from '@mantine/core';
+import { Alert, Anchor, Button, Container, Group, Modal, Paper, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core';
 import { Plus, Trash2 } from 'lucide-react';
 import { formatDateTime } from '/format-date.js';
 import { CodeBlock } from '/helper/codeblock.jsx';
@@ -11,7 +12,7 @@ import { useConfirm } from '/providers/confirm.jsx';
 import { useLlmApi } from '/llm/api-llm.jsx';
 import { llmKeys } from '/llm/query-keys.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
-import { barColour, percent, units } from '/llm/format.js';
+import { units } from '/llm/format.js';
 import { VscodeSetup } from '/llm/vscode-setup.jsx';
 
 // Names that contain at least one letter or digit, as the API requires.
@@ -100,27 +101,9 @@ export function LlmKeys() {
                         </Group>
                     </Group>
                     {full && <Text size="xs" c="orange" mt="xs">{t('llm.keys.full')}</Text>}
-
-                    {/* What actually caps the keys: the pool of their project,
-                        shared with its members. The column below is only each
-                        key's own short-term budget on top of it. */}
-                    {projects.length > 0 && (
-                        <SimpleGrid cols={{ base: 1, sm: Math.min(projects.length, 3) }} spacing="sm" mt="md">
-                            {projects.map(p => {
-                                const pp = percent(p.spend, p.budget);
-                                return (
-                                    <Paper key={p.slug} p="sm" radius="md" withBorder>
-                                        <Group justify="space-between" wrap="nowrap">
-                                            <Text size="sm" fw={600} truncate>{p.name || p.slug}</Text>
-                                            <Text size="xs" c="dimmed">{t('llm.keys.poolPer', { window: p.budget_duration || '—' })}</Text>
-                                        </Group>
-                                        <Text size="sm">{t('llm.keys.poolUsed', { spend: units(p.spend), budget: units(p.budget) })}</Text>
-                                        {p.budget > 0 && <Progress value={pp} color={barColour(pp)} size="sm" mt={4} />}
-                                    </Paper>
-                                );
-                            })}
-                        </SimpleGrid>
-                    )}
+                    <Text size="xs" c="dimmed" mt="xs">
+                        {t('llm.keys.poolsHint')} <Anchor component={Link} to="/usage" size="xs">{t('llm.keys.toUsage')}</Anchor>
+                    </Text>
 
                     <Table striped highlightOnHover mt="md">
                         <Table.Thead>

@@ -104,8 +104,8 @@
         "unnamed": "(unnamed)",
         "shortTerm": "Key’s short-term budget",
         "per": "per {{window}}",
-        "poolPer": "pool per {{window}}",
-        "poolUsed": "{{spend}} of {{budget}} used, shared by all members"
+        "poolsHint": "Every key draws from its project’s pool; the column shows only its own short-term budget.",
+        "toUsage": "Pools and limits under Usage"
     },
     "usage": {
         "of": "of {{budget}}",
