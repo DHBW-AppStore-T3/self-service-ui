@@ -67,7 +67,10 @@ export function GpuUsage() {
     });
     const report = query.data;
     const rows = useMemo(() => groupUsage(report?.entries, by), [report, by]);
-    const label = (r) => r.name || (by === 'gpu_class' ? t('gpu.usage.noGpu') : '—');
+    // Projects by name; for admins all of them (others get their own). A project that is gone keeps its slug.
+    const allProjects = useQuery({ queryKey: gpuKeys.projects(true), queryFn: () => api.listProjects(true), staleTime: 5 * 60 * 1000 });
+    const names = useMemo(() => new Map((allProjects.data ?? []).map(p => [p.slug, p.name || p.slug])), [allProjects.data]);
+    const label = (r) => (by === 'project' && r.name ? names.get(r.name) ?? r.name : r.name) || (by === 'gpu_class' ? t('gpu.usage.noGpu') : '—');
 
     const columns = [
         { label: t(`gpu.usage.groupBy.${by}`), value: label },

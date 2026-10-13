@@ -139,13 +139,16 @@ export function GpuHours({ project }) {
     const inPeriod = (iso) => period.days.includes(dayKey(new Date(iso)));
     const hours = useMemo(() => (query.data?.hours ?? []).filter(h => inPeriod(h.hour)), [query.data, period]); // eslint-disable-line react-hooks/exhaustive-deps
     const rows = useMemo(() => (query.data?.people ?? []).filter(p => inPeriod(p.hour)), [query.data, period]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Names instead of slugs; all projects for admins (the API answers others with their own). A project that is gone keeps its slug.
+    const projects = useQuery({ queryKey: gpuKeys.projects(true), queryFn: () => api.listProjects(true), staleTime: 5 * 60 * 1000 });
+    const names = useMemo(() => new Map((projects.data ?? []).map(p => [p.slug, p.name || p.slug])), [projects.data]);
     const classes = [...new Set(hours.map(h => h.gpu_class))].sort();
     const people = peopleOf(rows);
 
     const download = () => {
         const cols = [
             { label: 'hour', value: r => r.hour }, { label: 'gpu_class', value: r => r.gpu_class },
-            { label: 'project', value: r => r.project ?? '' }, { label: 'person', value: r => r.person ?? '' }, { label: 'profile', value: r => r.profile ?? '' },
+            { label: 'project', value: r => r.project ?? '' }, { label: 'project_name', value: r => (r.project ? names.get(r.project) ?? '' : '') }, { label: 'person', value: r => r.person ?? '' }, { label: 'profile', value: r => r.profile ?? '' },
             { label: 'capacity', value: r => r.capacity ?? '' }, { label: 'workspace_hours', value: r => r.workspace_hours ?? r.gpu_hours },
             { label: 'inference_hours', value: r => r.inference_hours ?? '' }, { label: 'wait_hours', value: r => r.wait_hours }, { label: 'max_waiting', value: r => r.max_waiting ?? '' },
         ];
@@ -210,7 +213,7 @@ export function GpuHours({ project }) {
                                                 {people.map(p => (
                                                     <Table.Tr key={`${p.person}|${p.project}`}>
                                                         <Table.Td>{p.person}</Table.Td>
-                                                        <Table.Td>{p.project || '—'}</Table.Td>
+                                                        <Table.Td>{p.project ? (names.get(p.project) ?? p.project) : '—'}</Table.Td>
                                                         <Table.Td ta="right">{num(p.gpu_hours, 2)}</Table.Td>
                                                         <Table.Td ta="right">{p.hours}</Table.Td>
                                                         <Table.Td ta="right">{num(p.wait_hours, 2)}</Table.Td>
