@@ -7,4 +7,5 @@ export const gpuKeys = {
     projects: (all) => ['gpu', 'projects', all ? 'all' : 'mine'],
     catalog: () => ['gpu', 'catalog'],
     storage: () => ['gpu', 'storage'],
+    gpuHours: (scope, period) => ['gpu', 'gpu-hours', scope, period.from, period.to],
 };

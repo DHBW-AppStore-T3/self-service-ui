@@ -5,7 +5,7 @@ import { useClient } from '/providers/client.jsx';
 // URL as the LLM section), under /v1/gpu. Named imports, as in llm/api-llm.jsx:
 // an operation missing from the client fails the build, not the browser.
 import {
-    createGpuEnvironment, deleteGpuEnvironment, deleteWorkspaceProject, getGpuEnvironmentLog, getMyWorkspaceUsage, getWorkspaceCatalog, getWorkspaceStorage, getWorkspaceUsage,
+    createGpuEnvironment, deleteGpuEnvironment, deleteWorkspaceProject, getGpuEnvironmentLog, getMyWorkspaceUsage, getGpuHours, getWorkspaceCatalog, getWorkspaceStorage, getWorkspaceUsage,
     listGpuEnvironments, listGpuServers, listWorkspaceProjects, updateWorkspaceProject,
     rebuildGpuEnvironment, startGpuEnvironment, stopGpuServer,
 } from '@dhbw-cloud/llm-client';
@@ -42,6 +42,8 @@ export function useGpuApi() {
             deleteProject: (slug) => call(deleteWorkspaceProject, { path: { slug } }),
             // Admins: how full the workspace storage and its metadata are.
             storage: () => call(getWorkspaceStorage),
+            // GPU use per hour; period = { from, to }, project for a project's managers.
+            gpuHours: (period, project) => call(getGpuHours, { query: project ? { ...period, project } : period }),
         };
     }, [client]);
 }

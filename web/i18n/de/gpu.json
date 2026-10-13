@@ -164,5 +164,34 @@
         "goneProject": "Projekt gelöscht – wird abgeräumt",
         "otherDir": "Home von vor den Projekten",
         "explain": "Die Grenze eines Projekts ist sein Workspace-Speicher aus dem Budgetbaum; volle Volumes lehnen weitere Schreibzugriffe ab. Die Metadaten wachsen mit der Zahl der Dateien (grob 1 GB RAM je 2–3 Mio. Dateien); wird der RAM knapp, steht JuiceFS still."
+    },
+    "gpuHours": {
+        "title": "GPU-Auslastung je Stunde",
+        "hint": "Wie voll die GPUs waren, je Stunde in Ortszeit: Farbe = Anteil, den Workspaces belegt hatten; rot umrandet = jemand hat gewartet. Jede Minute erfasst, 365 Tage aufbewahrt.",
+        "hintProject": "Wer im Projekt wann eine GPU belegt oder auf eine gewartet hat, im gewählten Zeitraum.",
+        "period": {
+            "7": "7 Tage",
+            "30": "30 Tage",
+            "90": "90 Tage"
+        },
+        "class": "GPU-Klasse {{name}}",
+        "used": "Belegt durch Workspaces",
+        "inference": "Lückenfüller (vLLM)",
+        "peak": "Spitzenstunde",
+        "maxWaiting": "Höchstens wartend",
+        "waited": "Wartezeit gesamt",
+        "cell": "{{day}}, {{hour}}–{{hour}}:59 Uhr: Workspaces {{share}}, Lückenfüller {{inference}}, wartend im Mittel {{avg}}, höchstens {{max}}",
+        "cellNone": "{{day}}, {{hour}} Uhr: keine Messung",
+        "legendIdle": "frei",
+        "legendInference": "nur Lückenfüller",
+        "legendUsed": "belegt (je dunkler, desto voller)",
+        "legendWaiting": "jemand hat gewartet",
+        "person": "Person",
+        "project": "Projekt",
+        "gpuHours": "GPU-h",
+        "hours": "Stunden mit GPU",
+        "waitHours": "Wartezeit (h)",
+        "empty": "Keine GPU-Nutzung in diesem Zeitraum.",
+        "explain": "Gezählt wird, wie lange eine GPU zugeteilt war, nicht wie viel darauf gerechnet wurde. Der Lückenfüller (vLLM) nutzt eine GPU, solange kein Workspace sie braucht, und weicht sofort. Wartezeit: Zeit in der Warteschlange von Kueue, bis eine GPU frei wurde."
     }
 }
