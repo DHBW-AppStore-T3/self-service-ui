@@ -30,6 +30,7 @@ const TAB_DETAILS = 'details';
 const TAB_RESOURCES = 'resources';
 const TAB_MEMBERS = 'members';
 const TAB_ATTRIBUTES = 'attributes';
+const TAB_WORKSPACES = 'workspaces';
 
 // OutcomeNote says, while the form is being filled in, what pressing the button
 // will do — the one thing a requester cannot otherwise tell before it happened.
@@ -637,7 +638,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     </Stack>
                 </Alert>
             )}
-            {/* Two parts, each in a box of the same make: what the project gets from its budget (and what a change of it needs), and — Lab/KI only — how the project uses that inside, which the AI service applies at once. */}
+            {/* What the project gets from its budget, and what a change of it needs. How a Lab/KI project uses that inside is a tab of its own (TAB_WORKSPACES), applied at once. */}
             <ResourceSection title={t('projects.resourceSections.quota')} hint={t(isChange ? 'projects.resourceSections.quotaHintChange' : 'projects.resourceSections.quotaHintNew')}>
                 <QuotaInputs
                     resources={kind ? offered.filter(r => kindOfResource(r) === kind) : offered}
@@ -653,11 +654,6 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 />
                 {first && isChange && <AllocationSection node={node} resources={resources} draft={alloc} />}
             </ResourceSection>
-            {(kind === 'aiaas' || !kind) && workspaces.available && (
-                <ResourceSection title={t('projects.resourceSections.workspaces')} hint={t('projects.resourceSections.workspacesHint')}>
-                    <WorkspaceSettingsPanel draft={workspaces} />
-                </ResourceSection>
-            )}
         </Stack>
     );
 
@@ -737,6 +733,15 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                         hasError: tabHasError(resourceTabValue(kind)) || (i === 0 && !!alloc.error),
                         content: resourcesTab(kind, i === 0),
                     })),
+                    // Lab/KI: how the quotas are used inside the project — the AI service's part, saved with the rest but at once.
+                    ...(workspaces.available ? [{
+                        value: TAB_WORKSPACES, label: t('projects.resourceSections.workspaces'),
+                        content: (
+                            <ResourceSection title={t('projects.resourceSections.workspaces')} hint={t('projects.resourceSections.workspacesHint')}>
+                                <WorkspaceSettingsPanel draft={workspaces} />
+                            </ResourceSection>
+                        ),
+                    }] : []),
                     { value: TAB_MEMBERS, label: t('projects.fact.members'), content: membersTab },
                     // Set by the budget's managers; its owner and admins see them.
                     ...(withAttributes ? [{ value: TAB_ATTRIBUTES, label: t('projects.attributes.tab'), hasError: !!attrs.error,

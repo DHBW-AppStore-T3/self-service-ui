@@ -854,7 +854,7 @@
         "quota": "Kontingente",
         "quotaHintChange": "Was das Projekt aus seinem Budget erhält. Eine Erhöhung wird je nach Budget sofort gewährt oder beantragt und genehmigt.",
         "quotaHintNew": "Was das Projekt aus dem gewählten Budget erhält. Je nach Budget wird es sofort gewährt oder beantragt und genehmigt.",
-        "workspaces": "Nutzung der Workspaces",
+        "workspaces": "Workspace-Nutzung",
         "workspacesHint": "Wie die Kontingente innerhalb des Projekts genutzt werden: Profile, Images, Grenzen und Anteile pro Person. Gilt sofort, ohne Genehmigung."
     }
 }
