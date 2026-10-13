@@ -6,7 +6,7 @@
     "services": {
         "projects": {
             "title": "Projekte",
-            "lead": "Cloud-Projekte mit virtuellen Maschinen und KI-Projekte mit Workspaces und LLM-Tokens.",
+            "lead": "Cloud-Projekte mit virtuellen Maschinen und Lab/KI-Projekte mit Workspaces und LLM-Tokens.",
             "a": "Kleine Anfragen werden oft sofort genehmigt",
             "b": "Weitere Personen lassen sich zum gemeinsamen Arbeiten hinzufügen",
             "c": "Läuft bis zum gewählten Enddatum, verlängerbar",

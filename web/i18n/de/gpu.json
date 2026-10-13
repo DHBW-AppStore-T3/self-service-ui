@@ -100,7 +100,7 @@
     },
     "projects": {
         "title": "Projekt-Einstellungen",
-        "intro": "Was an einem KI-Projekt nur Workspaces betrifft: Profile, GPU-Klassen, Images und Grenzen pro Person. Beim Start in JupyterHub wird das Projekt gewählt. Mitglieder, Laufzeit und Kontingente werden unter „Projekte“ verwaltet.",
+        "intro": "Was an einem Lab/KI-Projekt nur Workspaces betrifft: Profile, GPU-Klassen, Images und Grenzen pro Person. Beim Start in JupyterHub wird das Projekt gewählt. Mitglieder, Laufzeit und Kontingente werden unter „Projekte“ verwaltet.",
         "mine": "Meine",
         "all": "Alle",
         "edit": "Bearbeiten",

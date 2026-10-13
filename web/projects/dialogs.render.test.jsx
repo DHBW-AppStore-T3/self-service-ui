@@ -80,7 +80,7 @@ describe('node dialogs', () => {
         renderView(<ProjectFormModal opened onClose={() => {}} resources={mixed} openstackRoles={['member', 'reader']}
             myBudgets={[cloudOnly, both]} initialKind="aiaas" />);
 
-        expect(await screen.findByText(/New AI project|Neues KI-Projekt/)).toBeTruthy();
+        expect(await screen.findByText(/New Lab\/AI project|Neues Lab\/KI-Projekt/)).toBeTruthy();
         fireEvent.click(screen.getByRole('tab', { name: /Resources|Ressourcen/ }));
         expect(await screen.findByText(/LLM tokens \(M tokens/)).toBeTruthy();
         expect(screen.queryByText(/^Cores/)).toBeNull();
@@ -105,7 +105,7 @@ describe('node dialogs', () => {
         const picked = [];
         renderView(<NewProjectButton kinds={['openstack', 'aiaas']} available={['aiaas']} onPick={k => picked.push(k)} />);
         const cloud = await screen.findByRole('button', { name: /Cloud project|Cloud-Projekt/ });
-        const ai = screen.getByRole('button', { name: /AI project|KI-Projekt/ });
+        const ai = screen.getByRole('button', { name: /Lab\/AI project|Lab\/KI-Projekt/ });
         expect(cloud.disabled).toBe(true);
         fireEvent.click(ai);
         expect(picked).toEqual(['aiaas']);

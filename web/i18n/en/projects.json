@@ -834,17 +834,17 @@
         "label": "Kind",
         "all": "All",
         "openstack": "Cloud",
-        "aiaas": "AI",
+        "aiaas": "Lab/AI",
         "openstackProject": "Cloud project",
-        "aiaasProject": "AI project",
+        "aiaasProject": "Lab/AI project",
         "openstackHint": "Virtual machines, networks and storage in OpenStack.",
         "aiaasHint": "Workspaces (CPU and, depending on the budget, GPU) and LLM tokens, shared by all members.",
         "noBudget": "No budget currently offers resources of this kind.",
         "none": "No projects of this kind.",
         "filter_all": "All ({{count}})",
         "filter_openstack": "Cloud ({{count}})",
-        "filter_aiaas": "AI ({{count}})",
+        "filter_aiaas": "Lab/AI ({{count}})",
         "newTitle_openstack": "New cloud project",
-        "newTitle_aiaas": "New AI project"
+        "newTitle_aiaas": "New Lab/AI project"
     }
 }

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 // NewProjectButton starts a new project of one kind, picked here before the
 // dialog opens, so the dialog is about one kind from its title on: one button
-// per kind ("+ Cloud project", "+ AI project"). A kind no budget in reach
+// per kind ("+ Cloud project", "+ Lab/AI project"). A kind no budget in reach
 // offers stays visible but disabled, with the reason on hover — first-time
 // users should see that it exists. onPick(kind) gets the kind ('openstack',
 // 'aiaas', see PROJECT_KINDS), or null when the catalogue has no kinds to tell

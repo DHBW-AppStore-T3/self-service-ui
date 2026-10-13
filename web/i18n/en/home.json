@@ -6,7 +6,7 @@
     "services": {
         "projects": {
             "title": "Projects",
-            "lead": "Cloud projects with virtual machines and AI projects with workspaces and LLM tokens.",
+            "lead": "Cloud projects with virtual machines and Lab/AI projects with workspaces and LLM tokens.",
             "a": "Small requests are often approved instantly",
             "b": "Add others to work on it together",
             "c": "Runs until the end date you choose, and can be extended",

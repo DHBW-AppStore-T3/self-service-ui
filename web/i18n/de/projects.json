@@ -834,17 +834,17 @@
         "label": "Art",
         "all": "Alle",
         "openstack": "Cloud",
-        "aiaas": "KI",
+        "aiaas": "Lab/KI",
         "openstackProject": "Cloud-Projekt",
-        "aiaasProject": "KI-Projekt",
+        "aiaasProject": "Lab/KI-Projekt",
         "openstackHint": "Virtuelle Maschinen, Netze und Speicher in OpenStack.",
         "aiaasHint": "Workspaces (CPU und, je nach Budget, GPU) und LLM-Tokens, gemeinsam für alle Mitglieder.",
         "noBudget": "Kein Budget bietet gerade Ressourcen für diese Art an.",
         "none": "Keine Projekte dieser Art.",
         "filter_all": "Alle ({{count}})",
         "filter_openstack": "Cloud ({{count}})",
-        "filter_aiaas": "KI ({{count}})",
+        "filter_aiaas": "Lab/KI ({{count}})",
         "newTitle_openstack": "Neues Cloud-Projekt",
-        "newTitle_aiaas": "Neues KI-Projekt"
+        "newTitle_aiaas": "Neues Lab/KI-Projekt"
     }
 }

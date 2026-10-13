@@ -100,7 +100,7 @@
     },
     "projects": {
         "title": "Project settings",
-        "intro": "What about an AI project concerns workspaces only: profiles, GPU classes, images and limits per person. The project is picked when starting in JupyterHub. Members, end date and quotas are managed under “Projects”.",
+        "intro": "What about a Lab/AI project concerns workspaces only: profiles, GPU classes, images and limits per person. The project is picked when starting in JupyterHub. Members, end date and quotas are managed under “Projects”.",
         "mine": "Mine",
         "all": "All",
         "edit": "Edit",
