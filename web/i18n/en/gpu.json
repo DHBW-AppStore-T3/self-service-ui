@@ -104,7 +104,7 @@
         "freeImagesLabel": "Allow free images",
         "freeImagesHint": "Any image, CPU only, without home and without credentials.",
         "limits": "Limits per person (at the same time)",
-        "limitsHint": "0 means no limit. Except GPUs per person: 0 means no GPU. “… GPUs in the project” limits the whole project per GPU class.",
+        "limitsHint": "Counted is what one person runs in this project at the same time. 0 means no limit – except for GPUs, where 0 means no GPU.",
         "images": "Stored images",
         "imageName": "Name",
         "addImage": "Add image",
