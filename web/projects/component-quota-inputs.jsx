@@ -32,7 +32,8 @@ const SEARCH_THRESHOLD = 12;
 // `usage` is what an existing project uses in OpenStack, for a line under each
 // field: { inUse, grantUse, total } — measuredUse(node), openstackSide(node).grant_use, and
 // what the project would hold in all (the entered values plus allocations).
-export function QuotaInputs({ resources, value, onChange, errors = {}, disabled = false, allowUnlimited = false, headroom = null, extra = false, usage = null }) {
+// providerDefaults: the values are a PROJECT's, where a rate of another provider left empty takes that provider's default (showsDefault). In a budget an empty field is no default, so budget dialogs leave this off.
+export function QuotaInputs({ resources, value, onChange, errors = {}, disabled = false, allowUnlimited = false, headroom = null, extra = false, usage = null, providerDefaults = false, emptyIsZero = false }) {
     const { t } = useTranslation();
     const [query, setQuery] = useState('');
 
@@ -76,7 +77,7 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
                             <Grid.Col key={r.id} span={{ base: 12, sm: isAvailability(r) ? 6 : 4 }}>
                                 {isAvailability(r)
                                     ? <AvailabilityField resource={r} value={value?.[r.id]} onChange={onChange} disabled={disabled} error={errors[r.id]} used={usage?.grantUse?.[r.id]} />
-                                    : <QuantityField
+                                    : <QuantityField providerDefaults={providerDefaults} emptyIsZero={emptyIsZero}
                                         resource={r}
                                         value={value?.[r.id]}
                                         onChange={onChange}
@@ -140,7 +141,7 @@ function showsDefault(r) {
     return !!r.provider && r.provider !== 'openstack' && r.kind !== 'window' && (r.default ?? 0) > 0;
 }
 
-function QuantityField({ resource: r, value: current, onChange, error, disabled, allowUnlimited, free, extra, used, total }) {
+function QuantityField({ providerDefaults, emptyIsZero, resource: r, value: current, onChange, error, disabled, allowUnlimited, free, extra, used, total }) {
     const { t } = useTranslation();
     const isUnlimited = current === UNLIMITED_QUOTA;
     return (
@@ -152,9 +153,9 @@ function QuantityField({ resource: r, value: current, onChange, error, disabled,
                 max={r.max}
                 disabled={disabled || isUnlimited}
                 value={isUnlimited ? '' : current}
-                placeholder={isUnlimited ? t('projects.quotaInputs.noCap') : extra ? '0' : (showsDefault(r) ? t('projects.quotaInputs.defaultValue', { value: r.default }) : undefined)}
+                placeholder={isUnlimited ? t('projects.quotaInputs.noCap') : (extra || emptyIsZero) ? '0' : (providerDefaults && showsDefault(r) ? t('projects.quotaInputs.defaultValue', { value: r.default }) : undefined)}
                 // Emptied, a field with a default goes back to it: absent from the limit, not an empty string.
-                onChange={v => onChange(r.id, v === '' && showsDefault(r) ? undefined : v)}
+                onChange={v => onChange(r.id, v === '' && (emptyIsZero || (providerDefaults && showsDefault(r))) ? undefined : v)}
                 error={error}
                 description={isUnlimited ? t('projects.quotaInputs.noCapHint') : (extra ? undefined : r.message)}
             />
@@ -215,7 +216,8 @@ export function defaultQuota(resources) {
 // Takes `t` as its first argument: a validator runs outside a component (inside
 // useForm), so it cannot reach for the hook and is handed the translator like
 // every other plain function here.
-export function validateQuota(t, resources, quota, { allowUnlimited = false } = {}) {
+// emptyIsZero: a budget's limit, where a quantity it does not carry is 0 — not offered; left empty, it stays absent rather than blocking the save (a resource added to the catalogue later is missing from every older budget).
+export function validateQuota(t, resources, quota, { allowUnlimited = false, providerDefaults = false, emptyIsZero = false } = {}) {
     const errors = {};
     (resources || []).forEach(r => {
         const v = quota?.[r.id];
@@ -231,7 +233,7 @@ export function validateQuota(t, resources, quota, { allowUnlimited = false } = 
         }
         if (allowUnlimited && v === UNLIMITED_QUOTA) return;
         // Left empty, a rate of another provider is its default (showsDefault) — a valid answer, not a missing one.
-        if ((v === null || v === undefined || v === '') && showsDefault(r)) return;
+        if ((v === null || v === undefined || v === '') && (emptyIsZero || (providerDefaults && showsDefault(r)))) return;
         if (v === null || v === undefined || v === '' || v < (allowUnlimited ? 0 : r.min) || v > r.max) {
             // The range, not the field's description: the description repeated under the field read as the error.
             errors[r.id] = t('projects.quotaInputs.range', { min: r.min, max: r.max });

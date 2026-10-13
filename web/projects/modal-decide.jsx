@@ -43,7 +43,7 @@ export function DecisionModal({ opened, onClose, onDone, resources, node }) {
         initialValues: { adjust: false, quota: { ...requested }, reason: '' },
         validate: (values) => (values.adjust
             ? Object.fromEntries(
-                Object.entries(validateQuota(t, resources, values.quota)).map(([id, msg]) => [`quota.${id}`, msg]))
+                Object.entries(validateQuota(t, resources, values.quota, { providerDefaults: true })).map(([id, msg]) => [`quota.${id}`, msg]))
             : {}),
     });
 
@@ -152,6 +152,7 @@ export function DecisionModal({ opened, onClose, onDone, resources, node }) {
             />
             {adjust && (
                 <QuotaInputs
+                    providerDefaults
                     resources={resources}
                     value={quota}
                     errors={Object.fromEntries((resources || []).map(r => [r.id, form.errors[`quota.${r.id}`]]))}

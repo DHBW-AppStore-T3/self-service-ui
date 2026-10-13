@@ -305,7 +305,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     : t('projects.projectForm.endDateAfterBudget', { date: formatDate(latest.date) });
             })(),
             ...Object.fromEntries(
-                Object.entries(validateQuota(t, offeredFor(values.parentId, values.kind), values.quota)).map(([id, msg]) => [`quota.${id}`, msg])),
+                Object.entries(validateQuota(t, offeredFor(values.parentId, values.kind), values.quota, { providerDefaults: true })).map(([id, msg]) => [`quota.${id}`, msg])),
         }),
     });
 
@@ -641,6 +641,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             {/* What the project gets from its budget, and what a change of it needs. How a Lab/KI project uses that inside is a tab of its own (TAB_WORKSPACES), applied at once. */}
             <ResourceSection title={t('projects.resourceSections.quota')} hint={t(isChange ? 'projects.resourceSections.quotaHintChange' : 'projects.resourceSections.quotaHintNew')}>
                 <QuotaInputs
+                    providerDefaults
                     resources={kind ? offered.filter(r => kindOfResource(r) === kind) : offered}
                     value={quota}
                     headroom={newRoom}

@@ -150,11 +150,11 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 ? t('projects.budgetForm.adminScopeRequired')
                 : null,
             ...(values.inheritsLimit ? {} : Object.fromEntries(
-                Object.entries(validateQuota(t, visibleResources(resources, scopeFor(values.parentId)), values.quota, { allowUnlimited: true }))
+                Object.entries(validateQuota(t, visibleResources(resources, scopeFor(values.parentId)), values.quota, { allowUnlimited: true, emptyIsZero: true }))
                     .map(([id, msg]) => [`quota.${id}`, msg]))),
             ...(values.autoApproveEnabled && values.autoApproveIndividual
                 ? Object.fromEntries(
-                    Object.entries(validateQuota(t, visibleResources(resources, scopeFor(values.parentId)), values.autoApproveQuota))
+                    Object.entries(validateQuota(t, visibleResources(resources, scopeFor(values.parentId)), values.autoApproveQuota, { emptyIsZero: true }))
                         .map(([id, msg]) => [`autoApproveQuota.${id}`, msg]))
                 : {}),
         }),
@@ -406,6 +406,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                         {t('projects.budgetForm.resourceCapHint')}
                     </Text>
                     <QuotaInputs
+                        emptyIsZero
                         resources={offered}
                         value={quota}
                         errors={Object.fromEntries(offered.map(r => [r.id, form.errors[`quota.${r.id}`]]))}
@@ -529,6 +530,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                         />
                         {autoApproveIndividual && (
                             <QuotaInputs
+                                emptyIsZero
                                 resources={offered}
                                 value={autoApproveQuota}
                                 disabled={!autoApproveEnabled || !hasRequesters}

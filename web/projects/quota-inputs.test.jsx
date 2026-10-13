@@ -152,8 +152,16 @@ describe('validateQuota and rates with a default', () => {
     const cores = { id: 'cores', name: 'Cores', default: 4, min: 0, max: 64 };
 
     it('accepts an empty rate of another provider: it means the default', () => {
-        expect(validateQuota(t, [rpm], {})).toEqual({});
-        expect(validateQuota(t, [rpm], { 'llm-rpm': '' })).toEqual({});
+        expect(validateQuota(t, [rpm], {}, { providerDefaults: true })).toEqual({});
+        expect(validateQuota(t, [rpm], { 'llm-rpm': '' }, { providerDefaults: true })).toEqual({});
+    });
+
+    it('wants a number in a budget, where empty is no default', () => {
+        expect(Object.keys(validateQuota(t, [rpm], {}))).toEqual(['llm-rpm']);
+    });
+
+    it('lets a budget leave a quantity empty: not offered', () => {
+        expect(validateQuota(t, [rpm, cores], {}, { allowUnlimited: true, emptyIsZero: true })).toEqual({});
     });
 
     it('still wants a number for an OpenStack quantity', () => {
