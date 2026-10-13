@@ -116,9 +116,9 @@
             "ramShort": "RAM (GB)",
             "gpusShort": "GPUs"
         },
-        "budgets": "Budgets",
-        "addBudget": "Budget hinzufügen",
-        "budgetsHint": "Fenster in Kalendertagen: „heute“, 7 bzw. 30 Tage einschließlich heute, „gesamt“ seit Anlegen des Projekts. Ist ein Budget aufgebraucht, startet kein Server mehr, und laufende Server werden innerhalb von 5 Minuten beendet (das Home bleibt).",
+        "budgets": "Zusätzliche Verbrauchsgrenzen",
+        "addBudget": "Grenze hinzufügen",
+        "budgetsHint": "Engere Grenzen innerhalb der Projektkontingente, zum Beispiel höchstens 40 vCPU-Stunden pro Person in 7 Tagen, damit niemand das Kontingent allein aufbraucht. Fenster in Kalendertagen: „heute“, 7 bzw. 30 Tage einschließlich heute, „gesamt“ seit Anlegen des Projekts. Ist eine Grenze erreicht, startet kein Server mehr, und laufende Server werden innerhalb von 5 Minuten beendet (das Home bleibt).",
         "budget": {
             "line": "{{amount}} {{unit}} {{window}} {{who}}",
             "used": "{{used}} von {{amount}}",

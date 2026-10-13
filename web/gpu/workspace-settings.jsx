@@ -85,6 +85,7 @@ export function WorkspaceSettingsPanel({ draft }) {
 
     const images = p.images ?? [];
     const budgets = p.budgets ?? [];
+    const firstOwn = budgets.findIndex(b => !b.tree);
     // The project's own quotas show their use under their fields already; here only the shares this part sets.
     const status = (draft.project?.budget_status ?? []).filter(b => !b.tree);
     const setBudget = (i, patch) => set('budgets', budgets.map((x, j) => (j === i ? { ...x, ...patch } : x)));
@@ -107,25 +108,24 @@ export function WorkspaceSettingsPanel({ draft }) {
             <Text size="xs" c="dimmed">{t('gpu.projects.limitsHint')}</Text>
 
             <Text size="sm" fw={600}>{t('gpu.projects.budgets')}</Text>
-            {budgets.map((b, i) => (
+            {/* The project's own quotas arrive here as budgets too (tree); they are edited in the quotas tab, so only the limits set here are listed — the others are kept and sent back as they are. */}
+            {budgets.map((b, i) => (b.tree ? null : (
                 <Group key={i} gap="xs" wrap="nowrap" align="flex-end">
-                    <NumberInput w={110} min={0} disabled={b.tree} label={i === 0 ? t('gpu.projects.budget.amount') : undefined} value={b.amount}
+                    <NumberInput w={110} min={0} label={i === firstOwn ? t('gpu.projects.budget.amount') : undefined} value={b.amount}
                         onChange={v => setBudget(i, { amount: Number(v) || 0 })} />
-                    <Select w={170} allowDeselect={false} disabled={b.tree} label={i === 0 ? t('gpu.projects.budget.unit') : undefined} value={b.unit}
+                    <Select w={170} allowDeselect={false} label={i === firstOwn ? t('gpu.projects.budget.unit') : undefined} value={b.unit}
                         data={UNITS.map(u => ({ value: u, label: t(`gpu.projects.budget.units.${u}`) }))} onChange={v => setBudget(i, { unit: v })} />
                     {b.unit === 'gpu_hours' && (
-                        <Select w={110} disabled={b.tree} clearable label={i === 0 ? t('gpu.projects.budget.class') : undefined} value={b.gpu_class || null}
+                        <Select w={110} clearable label={i === firstOwn ? t('gpu.projects.budget.class') : undefined} value={b.gpu_class || null}
                             placeholder={t('gpu.projects.budget.allClasses')} data={catalog.data?.gpuClasses ?? []} onChange={v => setBudget(i, { gpu_class: v || '' })} />
                     )}
-                    <Select w={130} allowDeselect={false} disabled={b.tree} label={i === 0 ? t('gpu.projects.budget.window') : undefined} value={b.window}
+                    <Select w={130} allowDeselect={false} label={i === firstOwn ? t('gpu.projects.budget.window') : undefined} value={b.window}
                         data={WINDOWS.map(w => ({ value: w, label: t(`gpu.projects.budget.windows.${w}`) }))} onChange={v => setBudget(i, { window: v })} />
-                    {b.tree
-                        ? <Badge size="sm" variant="light" color="blue" mb={8} style={{ textTransform: 'none' }}>{t('gpu.projects.budget.fromTree')}</Badge>
-                        : <Checkbox label={t('gpu.projects.budget.perPerson')} checked={!!b.per_person} mb={8}
-                            onChange={e => setBudget(i, { per_person: e.currentTarget.checked })} />}
-                    {!b.tree && <ActionIcon variant="subtle" color="red" mb={4} aria-label={t('gpu.projects.remove')} onClick={() => set('budgets', budgets.filter((_, j) => j !== i))}><X size={16} /></ActionIcon>}
+                    <Checkbox label={t('gpu.projects.budget.perPerson')} checked={!!b.per_person} mb={8}
+                        onChange={e => setBudget(i, { per_person: e.currentTarget.checked })} />
+                    <ActionIcon variant="subtle" color="red" mb={4} aria-label={t('gpu.projects.remove')} onClick={() => set('budgets', budgets.filter((_, j) => j !== i))}><X size={16} /></ActionIcon>
                 </Group>
-            ))}
+            )))}
             <Button size="xs" variant="subtle" leftSection={<Plus size={14} />} w="fit-content"
                 onClick={() => set('budgets', [...budgets, { unit: 'vcpu_hours', window: '30d', amount: 40, per_person: true }])}>{t('gpu.projects.addBudget')}</Button>
             <Text size="xs" c="dimmed">{t('gpu.projects.budgetsHint')}</Text>

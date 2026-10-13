@@ -135,7 +135,9 @@
         "endDate": "End date",
         "added": "Added:",
         "removed": "Removed:",
-        "rolesChanged": "Roles changed:"
+        "rolesChanged": "Roles changed:",
+        "granted": "on",
+        "notGranted": "off"
     },
     "endDate": {
         "label": "End date",

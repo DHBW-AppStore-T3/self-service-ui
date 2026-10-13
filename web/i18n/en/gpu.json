@@ -116,9 +116,9 @@
             "ramShort": "RAM (GB)",
             "gpusShort": "GPUs"
         },
-        "budgets": "Budgets",
-        "addBudget": "Add budget",
-        "budgetsHint": "Windows in calendar days: \"today\", 7 or 30 days including today, \"total\" since the project was created. When a budget is used up no server starts, and running servers are ended within 5 minutes (the home stays).",
+        "budgets": "Additional usage limits",
+        "addBudget": "Add a limit",
+        "budgetsHint": "Tighter limits within the project quotas, e.g. at most 40 vCPU hours per person in 7 days, so nobody uses up the quota alone. Windows in calendar days: “today”, 7 or 30 days including today, “total” since the project was created. Once a limit is reached, no server starts and running servers end within 5 minutes (the home stays).",
         "budget": {
             "line": "{{amount}} {{unit}} {{window}} {{who}}",
             "used": "{{used}} of {{amount}}",

@@ -360,14 +360,16 @@ export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateT
                         </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                        {hasLimitChange && resources.map(r => {
-                            const d = diff(r.id);
+                        {/* Only what moves: a row per unchanged resource buried the one change among zeros of the other provider. An availability reads granted or not, not 0 and 1. */}
+                        {hasLimitChange && resources.map(r => ({ r, d: diff(r.id) })).filter(({ d }) => d.d !== 0).map(({ r, d }) => {
+                            const onOff = (v) => t(v ? 'projects.changes.granted' : 'projects.changes.notGranted');
+                            const availability = isAvailability(r);
                             return (
                                 <Table.Tr key={r.id}>
                                     <Table.Td>{resourceLabel(t, r)}</Table.Td>
-                                    <Table.Td>{d.before}</Table.Td>
-                                    <Table.Td>{d.after}</Table.Td>
-                                    <Table.Td c={d.color}>{d.d > 0 ? '+' : ''}{d.d}</Table.Td>
+                                    <Table.Td>{availability ? onOff(d.before) : d.before}</Table.Td>
+                                    <Table.Td>{availability ? onOff(d.after) : d.after}</Table.Td>
+                                    <Table.Td c={d.color}>{availability ? '' : `${d.d > 0 ? '+' : ''}${d.d}`}</Table.Td>
                                 </Table.Tr>
                             );
                         })}

@@ -135,7 +135,9 @@
         "endDate": "Enddatum",
         "added": "Hinzugefügt:",
         "removed": "Entfernt:",
-        "rolesChanged": "Rollen geändert:"
+        "rolesChanged": "Rollen geändert:",
+        "granted": "an",
+        "notGranted": "aus"
     },
     "endDate": {
         "label": "Enddatum",
