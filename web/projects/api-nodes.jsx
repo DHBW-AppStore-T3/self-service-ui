@@ -6,12 +6,12 @@ import { cloudProjectsEnabled } from '/features.js';
 // only wrong at runtime, while a missing named export fails the build — which
 // is the whole point of depending on the client by version (see d6).
 import {
-    addCatalogEntry, approveNode, clearRoleSwitch, createNode, createToken, deleteNode,
-    deleteToken, getAdminReconcileStatus, getCatalogEntry, getConfig, getNode, getNodeUsage, getRoleSwitch, getUsageReport,
+    addCatalogEntry, approveNode, createNode, createToken, deleteNode,
+    deleteToken, getActAs, getAdminReconcileStatus, getCatalogEntry, getConfig, getNode, getNodeUsage, getUsageReport,
     listAllocationSources, listCatalog, listEligibleBudgets, listEligibleBudgetsForOwner, listMyBudgets,
     listMyNodes, listNodeChildren, listNodesToManage, listTokens, promoteNode,
     rejectNode, releaseNode, removeCatalogEntry, reparentNode, restoreCatalogEntry, requestNodeChange, requestNodeDeletion, searchNodes,
-    removeNodeExternalGroup, searchPrincipals, setNodeAllocation, setNodeAttributes, setRoleSwitch, transferNodeOwner,
+    removeNodeExternalGroup, searchPrincipals, setNodeAllocation, setNodeAttributes, transferNodeOwner,
     triggerAdminReconcile, updateCatalogEntry, updateNode, withdrawCatalogEntry,
 } from '@dhbw-cloud/os-mgt-client';
 import { normalizeObjectResponse } from './util-project.jsx';
@@ -184,8 +184,8 @@ export function useNodesApi() {
                 unwrapObject(await getNodeUsage({ client, path: { id }, query: period })),
 
             // ── Root-admin surface ───────────────────────────────────────
-            // Role-switch eligibility doubles as "is a root admin".
-            getRoleSwitch: async () => unwrapObject(await getRoleSwitch({ client })),
+            // Whether the signed-in person may act on behalf of others (a root admin) and for whom this request acted.
+            getActAs: async () => unwrapObject(await getActAs({ client })),
             // Only the COUNT is wanted, so ask for one row: the listing reports
             // how many matches it was cut from, which makes the badge exact
             // without fetching a single row it would ever show.
@@ -217,13 +217,9 @@ export function useNodesApi() {
             withdrawCatalogEntry: async (id) => unwrapObject(await withdrawCatalogEntry({ client, path: { id } })),
             restoreCatalogEntry: async (id) => unwrapObject(await restoreCatalogEntry({ client, path: { id } })),
             removeCatalogEntry: async (id) => unwrapVoid(await removeCatalogEntry({ client, path: { id } })),
-            clearRoleSwitch: async () => unwrapObject(await clearRoleSwitch({ client })),
-            setRoleSwitch: async (body) =>
-                unwrapObject(await setRoleSwitch({ client, body, headers: JSON_HEADERS })),
-            // Impersonation candidates come from the same principal search that
-            // fills every token field — there is no separate "assumable
-            // identities" list, because it would expose the same addresses
-            // behind a second door.
+            // The people to act on behalf of come from the same principal search
+            // that fills every token field — there is no separate list, because
+            // it would expose the same addresses behind a second door.
             searchIdentities: async (q, limit) => {
                 const data = unwrapObject(await searchPrincipals({ client, query: { q, limit } }));
                 return (data?.users || []).map(email => ({ email, label: email }));

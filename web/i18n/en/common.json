@@ -32,8 +32,7 @@
         "signOut": "Sign out",
         "greeting": "Hello, {{name}}!",
         "signOutTitle": "Sign out?",
-        "signOutMessage": "This ends your DHBW Cloud session and takes you back to the sign-in page. Your bwIDM single sign-on session stays active, so signing in again may not ask for a password. To end that session as well, close your browser.",
-        "devSwitch": "Switch locally to (mock data)"
+        "signOutMessage": "This ends your DHBW Cloud session and takes you back to the sign-in page. Your bwIDM single sign-on session stays active, so signing in again may not ask for a password. To end that session as well, close your browser."
     },
     "footer": {
         "copyright": "© Dennis Pfisterer, DHBW"
@@ -115,11 +114,27 @@
         "signInTitle": "Sign in required",
         "signInMessage": "Please sign in to access and manage your DNS zones and cloud resources.",
         "logIn": "Log in",
-        "devLoginLabel": "Dev login — sign in as any user",
-        "quickSignIn": "Quick sign-in:",
         "signInOutage": {
             "title": "Signing in is currently unavailable",
             "message": "The university's sign-in service is not responding. If you are signed in, you can keep working. A new sign-in will only work again once the service is back — nothing needs to be done on your side."
+        }
+    },
+    "actAs": {
+        "button": "Act on behalf",
+        "title": "Act on behalf of a person",
+        "explain": "Every service (cloud, DNS, AI) then shows and does what this person sees and does. The project history also names you. Applies to this tab only.",
+        "searchPlaceholder": "Search a person, or type any email…",
+        "noMatch": "No match — a full email address works anyway.",
+        "moreMatches": "More matches — keep typing.",
+        "start": "Switch",
+        "stop": "Back to myself",
+        "actingAs": "On behalf of {{name}}",
+        "bannerExplain": "Everything on these pages happens in this person's name and with their rights. Chat and JupyterHub still open with your own sign-in.",
+        "refused": "Not in effect at: {{services}} (no admin rights there).",
+        "service": {
+            "cloud": "Cloud projects",
+            "dns": "DNS",
+            "llm": "AI service"
         }
     }
 }

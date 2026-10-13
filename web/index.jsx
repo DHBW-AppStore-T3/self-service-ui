@@ -4,7 +4,7 @@ import '@mantine/dropzone/styles.css';
 import './app.css';
 
 import { createRoot } from 'react-dom/client';
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense } from 'react';
 import { Redirect, Router, Route, Switch, useLocation } from 'wouter';
 
 import { apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled, llmEnabled } from '/features.js';
@@ -14,12 +14,14 @@ import '/i18n/index.js';
 import { useTranslation } from 'react-i18next';
 import { DatesProvider } from '@mantine/dates';
 import { MantineProvider, AppShell, v8CssVariablesResolver } from '@mantine/core';
-import { Container, Paper, Box, Center, Stack, Title, Text, Button, ThemeIcon, TextInput, Anchor, Group } from '@mantine/core';
+import { Container, Paper, Box, Center, Stack, Title, Text, Button, ThemeIcon } from '@mantine/core';
 import { LogIn } from 'lucide-react';
 
 import { DynDnsConfigProvider } from '/providers/dyndns-config.jsx';
 import { CloudConfigProvider } from '/providers/cloud-config.jsx';
-import { useAuth, AuthProvider, DEV_USERS } from '/providers/auth.jsx';
+import { useAuth, AuthProvider } from '/providers/auth.jsx';
+import { ActAsProvider } from '/providers/act-as.jsx';
+import { ActAsBanner } from '/act-as-controls.jsx';
 import { SessionProvider } from '/providers/session.jsx';
 import { ErrorModalProvider } from '/providers/error-modal.jsx';
 import { ConfirmProvider } from '/providers/confirm.jsx';
@@ -29,7 +31,6 @@ import { Header } from '/header.jsx';
 import { HEADER_HEIGHT, NAV_BREAKPOINT, SUBNAV_HEIGHT, useNav } from '/nav.jsx';
 import { Footer } from '/footer.jsx';
 import { CloudStatusProvider } from './projects/cloud-status.jsx';
-import { RoleSwitchProvider } from './projects/component-group-role-switcher.jsx';
 import { Home } from '/home/home.jsx';
 import { Delayed } from '/helper/delayed.jsx';
 import { ErrorBoundary } from '/helper/error-boundary.jsx';
@@ -164,9 +165,7 @@ function AppRoutes() {
 
 function Main() {
     const { t } = useTranslation();
-    const { user, login, useDummyAuth, dev_user } = useAuth()
-    // Dev-only: the email to sign in as (dummy auth lets you be ANY user).
-    const [devEmail, setDevEmail] = useState(dev_user || 'dennis.pfisterer@dhbw.de')
+    const { user, login } = useAuth()
     const footer = <Footer title={<b>dhbwCloud Self Service</b>} version={__APP_VERSION__} />
 
     // Router and clients wrap the WHOLE shell, not just the routes: the header
@@ -176,11 +175,9 @@ function Main() {
         <Router>
         <ClientProvider>
         <CloudStatusProvider>
-        {/* Above the header, because the role switch is offered IN the header —
-            at the right end of the Cloud Projects nav bar. It stays scoped to
-            that section (only that API knows about impersonation); this is just
-            where the state has to live so the bar can render it. */}
-        <RoleSwitchProvider>
+        {/* Above the header, which offers acting on behalf of somebody, and the
+            banner below it, which says so on every page. */}
+        <ActAsProvider>
         <Shell footer={footer}>
                     {/* Above the sign-in prompt as well: that is where a person
                         lands who is about to try a login that cannot work. */}
@@ -200,33 +197,9 @@ function Main() {
                                         <Text c="dimmed" size="lg">
                                             {t('app.signInMessage')}
                                         </Text>
-                                        {useDummyAuth ? (
-                                            // Dev/dummy auth: sign in as any user by typing an email.
-                                            <Stack gap="sm" w="100%" maw={320}>
-                                                <TextInput
-                                                    label={t('app.devLoginLabel')}
-                                                    placeholder="user@dhbw.de"
-                                                    value={devEmail}
-                                                    onChange={(e) => setDevEmail(e.currentTarget.value)}
-                                                    onKeyDown={(e) => { if (e.key === 'Enter') login(devEmail); }}
-                                                    data-autofocus
-                                                />
-                                                <Button size="lg" onClick={() => login(devEmail)} disabled={!devEmail.trim()} leftSection={<LogIn size={20} />}>
-                                                    {t('app.logIn')}
-                                                </Button>
-                                                {/* One-click sign-in as common dev users. */}
-                                                <Stack gap={4} align="center" mt="xs">
-                                                    <Text size="xs" c="dimmed">{t('app.quickSignIn')}</Text>
-                                                    {DEV_USERS.map(e => (
-                                                        <Anchor key={e} size="sm" onClick={() => login(e)} style={{ cursor: 'pointer' }}>{e}</Anchor>
-                                                    ))}
-                                                </Stack>
-                                            </Stack>
-                                        ) : (
-                                            <Button size="lg" onClick={login} leftSection={<LogIn size={20} />}>
-                                                {t('app.logIn')}
-                                            </Button>
-                                        )}
+                                        <Button size="lg" onClick={login} leftSection={<LogIn size={20} />}>
+                                            {t('app.logIn')}
+                                        </Button>
                                     </Stack>
                                 </Paper>
                             </Center>
@@ -235,7 +208,7 @@ function Main() {
                         <AppRoutes />
                     )}
         </Shell>
-        </RoleSwitchProvider>
+        </ActAsProvider>
         </CloudStatusProvider>
         </ClientProvider>
         </Router>
@@ -267,7 +240,10 @@ function Shell({ children, footer }) {
                 its size between tabs (Manage 1223px vs others 1320px). Wrapping
                 restores normal block sizing (always max-width). */}
             <AppShell.Main style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
-                <Box style={{ flexGrow: 1 }}>{children}</Box>
+                <Box style={{ flexGrow: 1 }}>
+                    <ActAsBanner />
+                    {children}
+                </Box>
                 {footer}
             </AppShell.Main>
         </AppShell>

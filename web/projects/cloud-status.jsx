@@ -38,11 +38,9 @@ export function CloudStatusProvider({ children }) {
         queryKey: projectKeys.rootStatus(),
         queryFn: async () => {
             const [role, pending, myBudgets, config, mine, eligible] = await Promise.allSettled([
-                // `allowed` reflects the REAL caller (it stays true while
-                // impersonating, so they can still reset), but an impersonated
-                // identity has dropped root, so the entry follows the
-                // impersonated user instead.
-                api.getRoleSwitch(),
+                // may_act_as is the signed-in root admin's; acting on behalf of
+                // somebody drops root, so the entry follows that person.
+                api.getActAs(),
                 // 'direct': what is this user's to decide. Requests inside
                 // delegated sub-budgets belong to their manager — counting them
                 // would nag a root admin with the whole organization.
@@ -60,8 +58,8 @@ export function CloudStatusProvider({ children }) {
             const count = (r) => (r.status === 'fulfilled' ? (r.value ?? 0) : 0);
             return {
                 isRoot: role.status === 'fulfilled'
-                    && !!role.value?.allowed
-                    && !role.value?.impersonated_user,
+                    && !!role.value?.may_act_as
+                    && !role.value?.acting_as,
                 pending: count(pending),
                 hasBudgets: count(myBudgets) > 0,
                 aiOffered: [...items(mine), ...items(eligible)].some(b => budgetKinds(b, resources).includes('aiaas')),

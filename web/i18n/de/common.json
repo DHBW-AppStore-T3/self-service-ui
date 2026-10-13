@@ -32,8 +32,7 @@
         "signOut": "Abmelden",
         "greeting": "Hallo, {{name}}!",
         "signOutTitle": "Abmelden?",
-        "signOutMessage": "Damit endet die Sitzung in der DHBW-Cloud, anschließend erscheint wieder die Anmeldeseite. Die bwIDM-Anmeldung bleibt bestehen, eine erneute Anmeldung fragt also womöglich nicht nach einem Passwort. Sie endet erst mit dem Schließen des Browsers.",
-        "devSwitch": "Lokal wechseln zu (Testdaten)"
+        "signOutMessage": "Damit endet die Sitzung in der DHBW-Cloud, anschließend erscheint wieder die Anmeldeseite. Die bwIDM-Anmeldung bleibt bestehen, eine erneute Anmeldung fragt also womöglich nicht nach einem Passwort. Sie endet erst mit dem Schließen des Browsers."
     },
     "footer": {
         "copyright": "© Dennis Pfisterer, DHBW"
@@ -115,11 +114,27 @@
         "signInTitle": "Anmeldung nötig",
         "signInMessage": "Nach der Anmeldung lassen sich DNS-Zonen und Cloud-Ressourcen einsehen und verwalten.",
         "logIn": "Anmelden",
-        "devLoginLabel": "Dev-Login — als beliebiger Nutzer anmelden",
-        "quickSignIn": "Schnell anmelden:",
         "signInOutage": {
             "title": "Die Anmeldung ist gerade nicht möglich",
             "message": "Der Anmeldedienst der DHBW antwortet nicht. Bestehende Sitzungen laufen weiter. Neue Anmeldungen sind erst wieder möglich, wenn der Dienst zurück ist — dafür ist nichts zu tun."
+        }
+    },
+    "actAs": {
+        "button": "Im Auftrag handeln",
+        "title": "Im Auftrag einer Person handeln",
+        "explain": "Alle Dienste (Cloud, DNS, KI) zeigen und tun dann, was diese Person sieht und tut. Der Projektverlauf nennt zusätzlich die eigene Person. Gilt nur in diesem Tab.",
+        "searchPlaceholder": "Person suchen oder E-Mail eingeben…",
+        "noMatch": "Kein Treffer — eine vollständige E-Mail-Adresse funktioniert trotzdem.",
+        "moreMatches": "Weitere Treffer — weitertippen.",
+        "start": "Übernehmen",
+        "stop": "Zurück zur eigenen Person",
+        "actingAs": "Im Auftrag von {{name}}",
+        "bannerExplain": "Alles auf diesen Seiten geschieht im Namen dieser Person und mit ihren Rechten. Chat und JupyterHub öffnen sich weiterhin mit der eigenen Anmeldung.",
+        "refused": "Nicht wirksam bei: {{services}} (dort fehlt die Administrationsberechtigung).",
+        "service": {
+            "cloud": "Cloud-Projekte",
+            "dns": "DNS",
+            "llm": "KI-Dienst"
         }
     }
 }

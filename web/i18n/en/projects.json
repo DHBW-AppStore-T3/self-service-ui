@@ -248,7 +248,8 @@
             "external_group_removed": "External group removed"
         },
         "name": "Name",
-        "noAutoApprove": "No auto-approval: a manager decides on every request."
+        "noAutoApprove": "No auto-approval: a manager decides on every request.",
+        "actorOnBehalf": "By: {{actor}} (carried out by {{by}})"
     },
     "itemSelector": {
         "placeholder": "Search and add…",
@@ -378,15 +379,6 @@
         "budget": "New budgets",
         "change": "Change requests",
         "imported": "Imported"
-    },
-    "roleSwitch": {
-        "become": "Become",
-        "searchPlaceholder": "Search a user, or type any email…",
-        "noMatch": "No match — a full email works anyway.",
-        "button": "Context switch",
-        "actingAs": "Acting as {{name}}",
-        "moreMatches": "more matches — keep typing.",
-        "reset": "Reset"
     },
     "rootAdmin": {
         "pageSync": "Sync",

@@ -248,7 +248,8 @@
             "external_group_removed": "Externe Gruppe entfernt"
         },
         "name": "Name",
-        "noAutoApprove": "Keine automatische Genehmigung: Über jede Anfrage entscheidet eine verwaltende Person."
+        "noAutoApprove": "Keine automatische Genehmigung: Über jede Anfrage entscheidet eine verwaltende Person.",
+        "actorOnBehalf": "Von: {{actor}} (ausgeführt von {{by}})"
     },
     "itemSelector": {
         "placeholder": "Suchen und hinzufügen…",
@@ -378,15 +379,6 @@
         "budget": "Neue Budgets",
         "change": "Änderungsanfragen",
         "imported": "Importiert"
-    },
-    "roleSwitch": {
-        "become": "Auftreten als",
-        "searchPlaceholder": "Person suchen oder E-Mail eingeben…",
-        "noMatch": "Kein Treffer — eine vollständige E-Mail funktioniert trotzdem.",
-        "button": "Rolle wechseln",
-        "actingAs": "Unterwegs als {{name}}",
-        "moreMatches": "weitere Treffer — weitertippen.",
-        "reset": "Zurücksetzen"
     },
     "rootAdmin": {
         "pageSync": "Abgleich",

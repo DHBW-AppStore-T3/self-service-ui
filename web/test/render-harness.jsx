@@ -42,7 +42,6 @@ const CONFIG = {
         { id: 'ram', name: 'RAM', unit: 'GB', default: 8, min: 1, max: 256 },
     ],
     openstackRoles: ['member', 'reader'],
-    dummyDevUsers: [],
 };
 
 export function renderView(ui, { config = CONFIG, user = USER } = {}) {
@@ -176,9 +175,7 @@ export function fakeNodesApi(tree = fixtureTree()) {
         searchIdentities: async () => [],
         searchPrincipalDetails: async () => [],
         searchPrincipals: async () => [],
-        getRoleSwitch: async () => null,
-        setRoleSwitch: async () => null,
-        clearRoleSwitch: async () => null,
+        getActAs: async () => null,
         getReconcilerStatus: async () => ({ enabled: false }),
         listApiTokens: async () => [],
         createApiToken: async () => ({}),

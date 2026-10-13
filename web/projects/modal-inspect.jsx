@@ -245,7 +245,10 @@ function NodeHistoryPanel({ node, resources }) {
                             <Text size="xs" c="dimmed">{formatDateTime(h.timestamp)}</Text>
                         </Group>
 
-                        <Text size="sm">{t('projects.inspect.actor', { actor: h.actor })}</Text>
+                        {/* acted_by: an admin made the change on the person's behalf (X-Act-As). */}
+                        <Text size="sm">{h.acted_by
+                            ? t('projects.inspect.actorOnBehalf', { actor: h.actor, by: h.acted_by })
+                            : t('projects.inspect.actor', { actor: h.actor })}</Text>
 
                         {h.status_from !== undefined && h.status_to && h.status_from !== h.status_to && (
                             <Group gap="xs" mt="xs">

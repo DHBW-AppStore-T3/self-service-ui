@@ -7,7 +7,6 @@ import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { ErrorBoundary } from '/helper/error-boundary.jsx';
 import { Loading } from '/helper/query-state.jsx';
-import { RoleSwitchPanel } from './component-group-role-switcher.jsx';
 import { TokenLabelProvider } from './token-labels.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 
@@ -30,7 +29,7 @@ export function useProjectConfig() {
 
 // CloudProjectManagement is the cloud resources section: one budget tree in
 // which budgets are delegated downwards and projects hang as leaves.
-const EMPTY_CONFIG = { resources: [], openstackRoles: [], dummyDevUsers: [] };
+const EMPTY_CONFIG = { resources: [], openstackRoles: [] };
 
 export function CloudProjectManagement() {
     const { t } = useTranslation();
@@ -72,15 +71,8 @@ export function CloudProjectManagement() {
             <TokenLabelProvider>
             <Container size="xl" py="md">
 
-                {/* Open, the role switch is a bar across the content. Collapsed,
-                    it is a single button at the right end of this section's nav
-                    bar (see header.jsx), so it costs neither a row nor a column
-                    of width — and it stays reachable when the page under it
-                    changes, which is what impersonating drops you into. */}
-                <RoleSwitchPanel />
-
                 {/* Per-section boundary: a render crash in one section keeps the
-                    role switcher and the navigation usable, and moving to another
+                    navigation usable, and moving to another
                     section (key change) auto-resets it. The outer boundary in
                     index.jsx would blank all of /projects instead. */}
                 <ErrorBoundary
@@ -104,8 +96,8 @@ export function CloudProjectManagement() {
                                 <Redirect to="/projects" replace />
                             </Route>
                             {/* Catch-all: the admin route above UNREGISTERS the
-                                moment isRoot goes false, which is what impersonating
-                                a student does — from the page the admin was standing
+                                moment isRoot goes false, which is what acting on behalf
+                                of a student does — from the page the admin was standing
                                 on. Without this the content area goes blank on a URL
                                 that no longer matches anything.
 

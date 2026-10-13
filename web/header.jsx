@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
-import { DEV_USERS, useAuth } from '/providers/auth.jsx';
+import { useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { Languages, LogOut, User } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 import { LANGUAGES } from '/i18n/index.js';
 import { HEADER_HEIGHT, NAV_BREAKPOINT, SUBNAV_HEIGHT, useNav } from '/nav.jsx';
-import { RoleSwitchButton } from '/projects/component-group-role-switcher.jsx';
+import { ActAsButton } from '/act-as-controls.jsx';
 import { Burger, Group, Button, Menu, Image, Box, Divider, Stack, Text } from '@mantine/core';
 
 import dhbwLogoUrl from '/img/DHBW-Logo.svg';
@@ -96,7 +96,7 @@ export function SubNavItem({ item, active, onClick, vertical = false }) {
 export function Header() {
     const { t } = useTranslation();
     const [opened, setOpened] = useState(false);
-    const { user, login, logout, useDummyAuth, dev_user: devUser } = useAuth();
+    const { user, login, logout, useDummyAuth } = useAuth();
     const confirm = useConfirm();
     const { sections, activeSection, activeItem, subNavItems } = useNav();
 
@@ -205,15 +205,14 @@ export function Header() {
                         )}
                     </Box>
 
-                    {/* The right-hand column mirrors the navigation column on the
-                        left: the account on the first row, the current section's
-                        actions on the second, both ending on the same right edge.
-                        That is what puts the role switch directly under the user —
-                        it is a "who am I acting as" control, and it belongs with
-                        the identity it changes rather than at the end of the tabs. */}
+                    {/* The right-hand column: language, acting on behalf and the
+                        account, on the first row. */}
                     <Box style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                     <Box h={HEADER_HEIGHT} style={{ display: 'flex', alignItems: 'center' }}>
                         <LanguageMenu />
+                        {/* Right before the account it acts for: one click to act
+                            on behalf of somebody, and back (admins only). */}
+                        {user && <ActAsButton />}
                         {user ? (
                             <Menu trigger="hover" openDelay={100} closeDelay={200}>
                                 <Menu.Target>
@@ -228,16 +227,6 @@ export function Header() {
                                 <Menu.Dropdown>
                                     <Menu.Label>{t('account.greeting', { name: user.profile.name })}</Menu.Label>
                                     <Menu.Divider />
-                                    {/* Dev builds only: become another of the mock people. */}
-                                    {useDummyAuth && (
-                                        <>
-                                            <Menu.Label>{t('account.devSwitch')}</Menu.Label>
-                                            {DEV_USERS.filter(e => e !== devUser).map(e => (
-                                                <Menu.Item key={e} onClick={() => login(e)}>{e}</Menu.Item>
-                                            ))}
-                                            <Menu.Divider />
-                                        </>
-                                    )}
                                     <Menu.Item color="red" onClick={confirmLogout}>{t('account.signOut')}</Menu.Item>
                                 </Menu.Dropdown>
                             </Menu>
@@ -245,18 +234,6 @@ export function Header() {
                             <Button onClick={login} size="sm">{t('account.signIn')}</Button>
                         )}
                     </Box>
-
-                        {/* Second row of this column, next to the tabs on the left.
-                            The role switch is not app-wide — only the cloud API
-                            knows about impersonation — so it appears solely while
-                            that section is open, and draws nothing for anyone who
-                            may not switch or while the full panel is open below. */}
-                        {hasSubNav && (
-                            <Box visibleFrom={NAV_BREAKPOINT} h={SUBNAV_HEIGHT}
-                                style={{ display: 'flex', alignItems: 'center' }}>
-                                {activeSection?.id === 'projects' && <RoleSwitchButton />}
-                            </Box>
-                        )}
                     </Box>
                 </Group>
             </Box>

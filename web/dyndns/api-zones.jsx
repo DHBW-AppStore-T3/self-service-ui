@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { apiErrorMessage } from '/helper/api-error.js';
+import { apiError, apiErrorMessage } from '/helper/api-error.js';
 import { useClient } from '/providers/client.jsx';
 // Named imports, not `sdk.<op>`: a property access on a namespace is still
 // only wrong at runtime, while a missing named export fails the build — which
@@ -7,7 +7,7 @@ import { useClient } from '/providers/client.jsx';
 import {
     addZoneOwner, createDelegation, createDnsRecord, createPolicyRule,
     createToken, createZone, deleteDelegation, deleteDnsRecord,
-    deleteOrphanedZone, deletePolicyRule, deleteToken, deleteZone, getZone,
+    deleteOrphanedZone, deletePolicyRule, deleteToken, deleteZone, getMe, getZone,
     joinZone, listDelegations, listDnsRecords, listOrphanedZones,
     listPolicyRules, listTokens, listZoneEvents, listZones, removeZoneOwner,
     rotateZoneKeys, updateDelegation, updatePolicyRule,
@@ -58,6 +58,14 @@ export function useZonesApi() {
     return useMemo(() => {
 
         return {
+            // ── Who am I ─────────────────────────────────────────────────
+            // Whether the signed-in person may act on behalf of others, and for whom this request acted (providers/act-as.jsx). Throws with the status, so a refusal (403) can be told from a failure.
+            getMe: async () => {
+                const res = await getMe({ client });
+                if (apiErrorMessage(res)) throw apiError(res);
+                return res?.data;
+            },
+
             // ── Zones ────────────────────────────────────────────────────
             listZones: async () => unwrap(await listZones({ client }))?.zones ?? [],
             getZone: async (zone) => unwrap(await getZone({ client, path: { zone } })),

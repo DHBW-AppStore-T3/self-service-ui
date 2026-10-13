@@ -8,70 +8,23 @@ export function authHeaders(user) {
     return user?.access_token ? { Authorization: `Bearer ${user.access_token}` } : {};
 }
 
-// Dummy-auth (dev) user object — no real OIDC session.
-// name is what the header shows; a real OIDC session puts a display name there,
-// so the dev user carries the plain address and no "User:" label of its own.
-// Who a dev session signs in as without `?dev_user`. Exported because
-// providers/client.jsx seeds the same identity before React has mounted.
-export const DEV_DEFAULT_EMAIL = 'dennis.pfisterer@dhbw.de';
-
-// The people of the local APIs' mock data (openstack-management-api and
-// aiaas-management-api, internal/dev and the mock role provider), offered by the
-// dev switch in the header and on the dev sign-in screen.
-export const DEV_USERS = [
-    'cs-student@cs.com', 'student2@cs.com', 'faculty@cs.example', 'admin@cs.example',
-    'faculty@bio.example', 'root.admin@uni.example', DEV_DEFAULT_EMAIL,
-];
-
-// The dev identity survives a reload: kept in the browser, read before React
-// mounts (providers/client.jsx). Storage may be unavailable — then a reload
-// falls back to the default, as before.
-const DEV_USER_KEY = 'self-service.dev-user';
-function storedDevUser() {
-    try { return localStorage.getItem(DEV_USER_KEY) || null; } catch { return null; }
-}
-function storeDevUser(email) {
-    try { localStorage.setItem(DEV_USER_KEY, email); } catch { /* not kept, see above */ }
-}
-
-// initialDevUser: who a dev session starts as — ?dev_user, else the one picked
-// last, else the default.
-export function initialDevUser() {
-    return new URLSearchParams(window.location.search).get('dev_user') || storedDevUser() || DEV_DEFAULT_EMAIL;
-}
-
-const makeDummyUser = (email) => ({ profile: { email, name: email }, access_token: 'dummy-token' });
+// Dummy-auth (dev) user: the local APIs sign every request without a bearer in as their dev user, the seed's root admin — so this is who the header shows. Other people of the mock data are reached as in production, by acting on their behalf (providers/act-as.jsx). No token: a bearer would make the APIs verify it.
+export const DEV_EMAIL = 'root.admin@uni.example';
+const devSession = () => ({ profile: { email: DEV_EMAIL, name: DEV_EMAIL }, access_token: null });
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [devUser, setDevUser] = useState(null);
-    // Build-time floor dummy auth (impersonate any user by email) can ONLY
+    // Build-time floor dummy auth (signed in without any login) can ONLY
     // be active in a dev build. `import.meta.env.DEV` is false in every `vite build`
     // artifact (staging/prod images), so no runtime config can re-enable the bypass.
     const useDummyAuth = import.meta.env.DEV && window.appconfig?.dummyAuth === true;
-    const urlParams = new URLSearchParams(window.location.search);
-    const emailParam = urlParams.get('dev_user');
 
     useEffect(() => {
         (async () => {
             try {
                 if (useDummyAuth) {
-                    // Dev/dummy auth: sign in as any user (dev-login screen / ?dev_user).
-                    if (!user) {
-                        if (emailParam && emailParam.trim() !== "") {
-                            urlParams.delete('dev_user');
-                            const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
-                            window.history.replaceState({}, document.title, newUrl);
-                            storeDevUser(emailParam);
-                            setDevUser(emailParam);
-                            setUser(makeDummyUser(emailParam));
-                        } else {
-                            const email = initialDevUser();
-                            setUser(makeDummyUser(email));
-                            setDevUser(email);
-                        }
-                    }
+                    if (!user) setUser(devSession());
                 } else {
                     // BFF mode: authentication is done by the oauth2-proxy in
                     // front of this app. If this code runs at all, the request already
@@ -102,27 +55,15 @@ export function AuthProvider({ children }) {
             }
         })();
         // Intentionally not depending on `user` — the effect must not re-run on
-        // login, which is exactly what it sets. (`urlParams` is derived from the
-        // location and is read once, on the same grounds.)
+        // login, which is exactly what it sets.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [useDummyAuth, emailParam]);
+    }, [useDummyAuth]);
 
     // Dummy (dev) mode: login/logout toggle the local user (preview signed-out state).
     // BFF (prod) mode: the proxy owns the session — login goes through the proxy
     // sign-in, logout through the proxy sign-out (clears the cookie).
-    // Switching from one dev user to another reloads the page: everything
-    // cached so far (queries, the LLM and workspace access) was the other one's.
     const login = useDummyAuth
-        ? (email) => {
-            const e = (typeof email === 'string' && email.trim()) ? email.trim() : (devUser || DEV_DEFAULT_EMAIL);
-            storeDevUser(e);
-            if (user && e !== devUser) {
-                window.location.reload();
-                return;
-            }
-            setDevUser(e);
-            setUser(makeDummyUser(e));
-        }
+        ? () => setUser(devSession())
         : () => { window.location.href = '/oauth2/start?rd=' + encodeURIComponent(window.location.pathname); };
     const logout = useDummyAuth
         ? () => setUser(null)
@@ -147,7 +88,7 @@ export function AuthProvider({ children }) {
         };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading, useDummyAuth, dev_user: devUser }}>
+        <AuthContext.Provider value={{ user, login, logout, loading, useDummyAuth }}>
             {children}
         </AuthContext.Provider>
     );
