@@ -80,21 +80,32 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
                     {section.title && <Text size="sm" fw={700} mb="xs">{section.title}</Text>}
                     <Stack gap="md">
                         {section.parts.map(part => {
-                            const gpuRows = gpuClassRows(part.resources);
+                            const pools = gpuPools(part.resources);
                             return (
                                 <div key={part.key}>
                                     {part.subtitle && <Text size="xs" fw={700} c="dimmed" tt="uppercase" mb={6}>{part.subtitle}</Text>}
-                                    {gpuRows ? (
-                                        // GPU classes (pool and tier of the AI service's GPU administration): one row each, the class's name as a badge, its two amounts side by side.
-                                        <Stack gap="sm">
-                                            {gpuRows.map(row => (
-                                                <Grid key={row.id} align="flex-start">
-                                                    <Grid.Col span={{ base: 12, sm: 4 }}>
-                                                        <Badge variant="light" color="gray" size="lg" tt="none" mt={extra ? 2 : 26}>{row.name}</Badge>
-                                                    </Grid.Col>
-                                                    <Grid.Col span={{ base: 6, sm: 4 }}>{row.gpus && quantity(row.gpus, t('projects.quotaInputs.gpusAtOnce'))}</Grid.Col>
-                                                    <Grid.Col span={{ base: 6, sm: 4 }}>{row.hours && quantity(row.hours, t('projects.quotaInputs.gpuHours'))}</Grid.Col>
-                                                </Grid>
+                                    {pools ? (
+                                        // GPU classes (pool and tier of the AI service's GPU administration), by pool: the pool as heading with its GPU types and, when there are other pools, whether it lends; one row per tier with its two amounts side by side.
+                                        <Stack gap="md">
+                                            {pools.map(pool => (
+                                                <div key={pool.id}>
+                                                    <Group gap={8} align="baseline" mb={4}>
+                                                        <Text size="sm" fw={600}>{t('projects.quotaInputs.pool', { name: pool.name })}</Text>
+                                                        {pool.products && <Text size="xs" c="dimmed">{pool.products}</Text>}
+                                                        {pools.length > 1 && <Text size="xs" c="dimmed">· {t(pool.lends ? 'projects.quotaInputs.poolLends' : 'projects.quotaInputs.poolKeeps')}</Text>}
+                                                    </Group>
+                                                    <Stack gap="sm">
+                                                        {pool.rows.map(row => (
+                                                            <Grid key={row.id} align="flex-start">
+                                                                <Grid.Col span={{ base: 12, sm: 4 }}>
+                                                                    <Badge variant="light" color="gray" size="lg" tt="none" mt={extra ? 2 : 26}>{row.name}</Badge>
+                                                                </Grid.Col>
+                                                                <Grid.Col span={{ base: 6, sm: 4 }}>{row.gpus && quantity(row.gpus, t('projects.quotaInputs.gpusAtOnce'))}</Grid.Col>
+                                                                <Grid.Col span={{ base: 6, sm: 4 }}>{row.hours && quantity(row.hours, t('projects.quotaInputs.gpuHours'))}</Grid.Col>
+                                                            </Grid>
+                                                        ))}
+                                                    </Stack>
+                                                </div>
                                             ))}
                                         </Stack>
                                     ) : (
@@ -149,17 +160,28 @@ export function shortName(name) {
     return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : name;
 }
 
-// gpuClassRows pairs the GPU resources of a group by class (ws-gpus-<class>, ws-gpu-hours-<class>), named by the class ("Allgemein · mittel: GPU hours" → "Allgemein · mittel"); null when the group holds anything else.
-export function gpuClassRows(resources) {
-    const rows = new Map();
+const TIER_ORDER = ['klein', 'mittel', 'gross'];
+
+// gpuPools pairs the GPU resources of a group by class (ws-gpus-<class>, ws-gpu-hours-<class>) and arranges the classes by pool, a row per tier in tier order. Pool and tier come from the resource's gpu_class; without it the name says them ("Allgemein · mittel: GPU hours"). GPU types lose the vendor ("NVIDIA-L40S-12Q" → "L40S-12Q"). null when the group holds anything else.
+export function gpuPools(resources) {
+    const pools = new Map();
     for (const r of resources) {
         const m = /^ws-(gpus|gpu-hours)-(.+)$/.exec(r.id);
         if (!m) return null;
-        const row = rows.get(m[2]) ?? { id: m[2], name: (r.name || m[2]).split(':')[0].trim() };
+        const [poolName, tierName] = (r.name || m[2]).split(':')[0].split('·').map(x => x.trim());
+        const c = r.gpu_class || {};
+        const poolId = c.pool || poolName;
+        const pool = pools.get(poolId) ?? { id: poolId, name: c.pool_name || poolName, products: (c.products || '').replace(/NVIDIA-/g, ''), lends: !!c.lends, rows: new Map() };
+        const row = pool.rows.get(m[2]) ?? { id: m[2], tier: c.tier || tierName || m[2], name: c.tier_name || tierName || m[2] };
         row[m[1] === 'gpus' ? 'gpus' : 'hours'] = r;
-        rows.set(m[2], row);
+        pool.rows.set(m[2], row);
+        pools.set(poolId, pool);
     }
-    return rows.size ? [...rows.values()].sort((a, b) => a.name.localeCompare(b.name)) : null;
+    if (!pools.size) return null;
+    const rank = (tier) => { const i = TIER_ORDER.indexOf(tier); return i < 0 ? TIER_ORDER.length : i; };
+    return [...pools.values()]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(p => ({ ...p, rows: [...p.rows.values()].sort((a, b) => rank(a.tier) - rank(b.tier) || a.name.localeCompare(b.name)) }));
 }
 
 // An availability is granted or it is not. A NumberInput would invite a 2, which
