@@ -138,11 +138,11 @@ export function TokenListEditor({ tokens, onChange, listAs = 'badges', ...props 
     );
 }
 
-// MemberRoleEditor edits a project's members with their OpenStack role
-// (authorized_users: [{ token, openstack_role }]). withRoles=false hides the
-// role picker — for a project without OpenStack, where the role means nothing;
-// every entry still carries one (the one it had, else defaultRole), because the
-// API asks for it.
+// MemberRoleEditor edits a project's members with their role (authorized_users:
+// [{ token, openstack_role }]): the role in OpenStack and, in the workspaces,
+// whether the shared folder is writable (reader only reads). withRoles=false
+// hides the role picker; every entry still carries one (the one it had, else
+// defaultRole), because the API asks for it.
 export function MemberRoleEditor({ members, onChange, roles, defaultRole = 'member', withRoles = true, ...props }) {
     const { t } = useTranslation();
     const roleOf = new Map((members || []).map(m => [m.token, m.openstack_role]));

@@ -458,7 +458,8 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     };
 
     // What the members get depends on what the project is: a role in OpenStack,
-    // the workspaces and the LLM pool of the AI service, or both.
+    // the workspaces and the LLM pool of the AI service, or both. The role also
+    // decides the workspaces' shared folder: reader only reads it.
     const memberKinds = kindsFor(kind);
     const withAi = memberKinds.includes('aiaas');
     const aiOnly = withAi && !memberKinds.includes('openstack');
@@ -670,7 +671,6 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     members={authorizedUsers}
                     onChange={(members) => form.setFieldValue('authorizedUsers', members)}
                     roles={openstackRoles || []}
-                    withRoles={!aiOnly}
                     emptyMessage={t('projects.projectForm.membersEmpty')}
                 />
             </Paper>

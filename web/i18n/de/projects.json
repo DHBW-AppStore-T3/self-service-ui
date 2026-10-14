@@ -357,9 +357,9 @@
         "ownerHint": "Wer für das Projekt verantwortlich ist. Eine Änderung wirkt sofort beim Speichern, ohne Antrag.",
         "moveHint": "Aus welchem Budget das Projekt bezahlt wird. Verschieben wirkt sofort beim Speichern; das Ziel braucht freie Kapazität.",
         "accessAiaas": "Mitglieder",
-        "accessAiaasHint": "Wer das Projekt nutzt: seine Workspaces und das LLM-Kontingent. Das Kontingent ist ein gemeinsamer Topf, alle Mitglieder verbrauchen daraus.",
+        "accessAiaasHint": "Wer das Projekt nutzt: seine Workspaces und das LLM-Kontingent. Das Kontingent ist ein gemeinsamer Topf, alle Mitglieder verbrauchen daraus. Mit der Rolle „Reader“ ist der gemeinsame Ordner project-shared nur lesbar, mit „Member“ auch beschreibbar.",
         "accessBoth": "Zugang",
-        "accessBothHint": "Wer das Projekt nutzt: in OpenStack mit der gewählten Rolle, dazu seine Workspaces und das gemeinsame LLM-Kontingent.",
+        "accessBothHint": "Wer das Projekt nutzt: in OpenStack mit der gewählten Rolle, dazu seine Workspaces und das gemeinsame LLM-Kontingent. Die Rolle gilt auch für den gemeinsamen Ordner project-shared der Workspaces: „Reader“ liest nur, „Member“ schreibt auch.",
         "adminsHintAiaas": "Verwalten das Projekt hier zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt freigeben. Workspaces und LLM-Kontingent nutzen sie mit.",
         "adminsHintBoth": "Verwalten das Projekt hier zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt freigeben. Workspaces und LLM-Kontingent nutzen sie mit, Zugang in OpenStack entsteht dadurch nicht.",
         "nameHintAiaas": "Ein kurzer, wiedererkennbarer Name — so erscheint das Projekt bei Workspaces und LLM."

@@ -357,9 +357,9 @@
         "ownerHint": "Who answers for the project. A change takes effect when saved, without a request.",
         "moveHint": "The budget the project is paid from. Moving takes effect when saved; the target needs free capacity.",
         "accessAiaas": "Members",
-        "accessAiaasHint": "Who uses the project: its workspaces and its LLM quota. The quota is one shared pool all members draw from.",
+        "accessAiaasHint": "Who uses the project: its workspaces and its LLM quota. The quota is one shared pool all members draw from. With the role “Reader” the shared folder project-shared is read-only, with “Member” writable too.",
         "accessBoth": "Access",
-        "accessBothHint": "Who uses the project: in OpenStack with the chosen role, plus its workspaces and the shared LLM quota.",
+        "accessBothHint": "Who uses the project: in OpenStack with the chosen role, plus its workspaces and the shared LLM quota. The role also applies to the workspaces' shared folder project-shared: “Reader” only reads, “Member” writes too.",
         "adminsHintAiaas": "Administer the project here together with the owner: rename it, request changes, edit this list and release it. They use its workspaces and LLM quota too.",
         "adminsHintBoth": "Administer the project here together with the owner: rename it, request changes, edit this list and release it. They use its workspaces and LLM quota too; this gives no access in OpenStack.",
         "nameHintAiaas": "A short, recognizable name — this is how the project appears in workspaces and LLM."
