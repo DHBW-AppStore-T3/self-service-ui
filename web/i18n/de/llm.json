@@ -323,6 +323,15 @@
                 "waiting": "Kueue hält es zurück, weil die GPU gerade für etwas mit höherer Priorität gebraucht wird.",
                 "terminating": "Verdrängt oder ersetzt; gibt die GPU innerhalb einer Minute frei."
             }
+        },
+        "setModel": {
+            "label": "Modell für die ausgewählten Maschinen ({{count}})",
+            "set": "Modell setzen",
+            "reset": "Zurück zum Klassenmodell",
+            "all": "Alle auswählen",
+            "hint": "Gilt vor dem Modell der Klasse (nach Arbeitsspeicher); Kontext und Speichergrenze bleiben die der Klasse. Ein Modell, das es nicht gibt oder das grob nicht in die Speichergrenze passt, wird abgelehnt. Die Maschinen laden das Modell beim nächsten Abgleich, spätestens nach {{minutes}} Minuten, probieren es einmal aus und entfernen dann die übrigen Modelle; scheitert das, steht der Fehler bei der Maschine und das alte Modell bleibt. Fremdverwaltete Rechner sind nicht wählbar.",
+            "override": "gesetzt",
+            "overrideTip": "Von Hand gesetzt. Das Modell der Klasse wäre {{model}}."
         }
     },
     "roles": {

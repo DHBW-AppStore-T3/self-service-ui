@@ -323,6 +323,15 @@
                 "waiting": "Kueue holds it back because the GPU is needed for something with higher priority.",
                 "terminating": "Evicted or replaced; frees the GPU within a minute."
             }
+        },
+        "setModel": {
+            "label": "Model for the selected machines ({{count}})",
+            "set": "Set model",
+            "reset": "Back to the class model",
+            "all": "Select all",
+            "hint": "Takes precedence over the class model (by memory); context and memory limit stay the class's. A model that does not exist or clearly exceeds the memory limit is refused. The machines pull the model at their next enrolment, within {{minutes}} minutes, try it once and then remove their other models; if that fails, the error shows at the machine and the old model stays. Externally managed machines cannot be chosen.",
+            "override": "set",
+            "overrideTip": "Set by hand. The class model would be {{model}}."
         }
     },
     "roles": {

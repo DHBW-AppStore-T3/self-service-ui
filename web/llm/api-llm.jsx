@@ -6,7 +6,7 @@ import { useClient } from '/providers/client.jsx';
 import {
     blockMachine, createKey, deleteCatalogModel, deleteFleetPackage,
     deleteKey, forgetMachine, getFleet, getFleetInference, getMe, getModelCatalog, getUsage,
-    putCatalogModel, putTierModel, setDefaultProject, unblockMachine,
+    putCatalogModel, putTierModel, setDefaultProject, setFleetModel, unblockMachine,
 } from '@dhbw-cloud/llm-client';
 
 // useLlmApi is the one place that knows the transport of the LLM section.
@@ -37,6 +37,8 @@ export function useLlmApi() {
             blockMachine: (serial) => call(blockMachine, { path: { serial } }),
             unblockMachine: (serial) => call(unblockMachine, { path: { serial } }),
             forgetMachine: (serial) => call(forgetMachine, { path: { serial } }),
+            // Empty model: back to the profile's.
+            setFleetModel: (serials, model) => call(setFleetModel, { body: { serials, model }, headers: JSON_HEADERS }),
             deletePackage: () => call(deleteFleetPackage),
 
             // Admins: the platform's own models (docs/bauplan.md 10.16). Every change answers with the whole catalogue.

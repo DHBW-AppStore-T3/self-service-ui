@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Redirect } from 'wouter';
 import { Trans, useTranslation } from 'react-i18next';
-import { Alert, Anchor, Badge, Button, Code, Container, Group, Paper, Stack, Table, Text, TextInput, Title, Tooltip } from '@mantine/core';
+import { Alert, Anchor, Autocomplete, Badge, Button, Checkbox, Code, Container, Group, Paper, Stack, Table, Text, TextInput, Title, Tooltip } from '@mantine/core';
 import { Download, ExternalLink as ExternalIcon } from 'lucide-react';
 import { formatDateTime } from '/format-date.js';
 import { SubNavItem } from '/header.jsx';
@@ -318,6 +318,22 @@ function Machines({ f }) {
     });
     const busy = (serial) => act.isPending && act.variables?.serial === serial;
 
+    // Model for chosen machines: wins over the profile's; the machines pull it at their next enrolment.
+    const [chosen, setChosen] = useState([]);
+    const [model, setModel] = useState('');
+    const setMachineModel = useApiMutation({
+        mutationFn: ({ serials, model: m }) => api.setFleetModel(serials, m),
+        invalidates: [llmKeys.fleet()],
+        onSuccess: () => { setChosen([]); setModel(''); },
+    });
+    const controlled = peers.filter(p => p.controls !== false);
+    const toggle = (serial) => setChosen(c => c.includes(serial) ? c.filter(x => x !== serial) : [...c, serial]);
+    const profileModel = (p) => (f.profiles ?? []).find(pr => pr.name === p.profile)?.model;
+    const suggestions = [...new Set([
+        ...(f.profiles ?? []).map(pr => pr.model),
+        ...peers.flatMap(p => [p.model, ...(p.models ?? [])]),
+    ].filter(Boolean))].sort();
+
     async function forget(p) {
         const ok = await confirm({
             title: t('llm.fleet.forgetTitle'),
@@ -373,10 +389,28 @@ function Machines({ f }) {
                 <Text size="xs"><Trans i18nKey="llm.fleet.machines.paths" components={{ 1: <b /> }} /></Text>
             </Alert>
 
+            <Paper withBorder radius="md" p="sm" mt="md">
+                <Group gap="sm" align="flex-end" wrap="wrap">
+                    <Autocomplete size="xs" w={280} label={t('llm.fleet.setModel.label', { count: chosen.length })} placeholder="qwen3.5:9b"
+                        data={suggestions} value={model} onChange={setModel} disabled={chosen.length === 0} />
+                    <Button size="xs" disabled={chosen.length === 0 || !model.trim()} loading={setMachineModel.isPending && !!setMachineModel.variables?.model}
+                        onClick={() => setMachineModel.mutate({ serials: chosen, model: model.trim() })}>{t('llm.fleet.setModel.set')}</Button>
+                    <Button size="xs" variant="default" disabled={chosen.length === 0} loading={setMachineModel.isPending && !setMachineModel.variables?.model}
+                        onClick={() => setMachineModel.mutate({ serials: chosen, model: '' })}>{t('llm.fleet.setModel.reset')}</Button>
+                </Group>
+                <Text size="xs" c="dimmed" mt={6}>{t('llm.fleet.setModel.hint', { minutes: Math.round((f.reenroll_seconds || 3600) / 60) })}</Text>
+            </Paper>
+
             <Table.ScrollContainer minWidth={1100} mt="md">
                 <Table striped highlightOnHover>
                     <Table.Thead>
                         <Table.Tr>
+                            <Table.Th w={32}>
+                                <Checkbox size="xs" aria-label={t('llm.fleet.setModel.all')}
+                                    checked={controlled.length > 0 && chosen.length === controlled.length}
+                                    indeterminate={chosen.length > 0 && chosen.length < controlled.length}
+                                    onChange={() => setChosen(chosen.length === controlled.length ? [] : controlled.map(p => p.serial))} />
+                            </Table.Th>
                             {['name', 'address', 'profile', 'model', 'lastSeen', 'scripts', 'state', 'inference'].map(c => (
                                 <Table.Th key={c}>{t(`llm.fleet.col.${c}`)}</Table.Th>
                             ))}
@@ -385,10 +419,13 @@ function Machines({ f }) {
                     </Table.Thead>
                     <Table.Tbody>
                         {peers.length === 0 && (
-                            <Table.Tr><Table.Td colSpan={9}><Text size="sm" c="dimmed">{t('llm.fleet.machines.none')}</Text></Table.Td></Table.Tr>
+                            <Table.Tr><Table.Td colSpan={10}><Text size="sm" c="dimmed">{t('llm.fleet.machines.none')}</Text></Table.Td></Table.Tr>
                         )}
                         {peers.map(p => (
                             <Table.Tr key={p.serial}>
+                                <Table.Td>
+                                    {p.controls !== false && <Checkbox size="xs" aria-label={p.name} checked={chosen.includes(p.serial)} onChange={() => toggle(p.serial)} />}
+                                </Table.Td>
                                 <Table.Td>
                                     <Text size="sm" ff="monospace">{p.name}</Text>
                                     <Text size="xs" c="dimmed">{p.serial}{p.os ? ` · ${p.os === 'darwin' ? 'macOS' : p.os}` : ''}</Text>
@@ -423,8 +460,16 @@ function Machines({ f }) {
                                         </Tooltip>
                                     ) : (
                                         <>
-                                            <Text size="sm" ff="monospace">{p.model}</Text>
-                                            {p.model_state === 'abweichend' && (
+                                            <Group gap={6} wrap="nowrap">
+                                                <Text size="sm" ff="monospace">{p.model}</Text>
+                                                {p.model_override && (
+                                                    <Tooltip multiline w={300} withArrow label={t('llm.fleet.setModel.overrideTip', { model: profileModel(p) || '—' })}>
+                                                        <Badge size="xs" variant="light" color="blue">{t('llm.fleet.setModel.override')}</Badge>
+                                                    </Tooltip>
+                                                )}
+                                            </Group>
+                                            {p.model_error && <Text size="xs" c="red" maw={320}>{p.model_error}</Text>}
+                                            {p.model_state === 'abweichend' && !p.model_error && (
                                                 <Tooltip multiline w={300} withArrow label={t('llm.fleet.differsTip', { model: p.model })}>
                                                     <Text size="xs" c="orange" ff="monospace">
                                                         {t('llm.fleet.has', { models: (p.models ?? []).join(', ') })}
