@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Alert, Anchor, Button, Container, Group, Modal, Paper, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core';
+import { Alert, Anchor, Badge, Button, Container, Group, Modal, Paper, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core';
 import { Plus, Trash2 } from 'lucide-react';
 import { formatDateTime } from '/format-date.js';
 import { CodeBlock } from '/helper/codeblock.jsx';
@@ -19,7 +19,10 @@ import { VscodeSetup } from '/llm/vscode-setup.jsx';
 const NAME_OK = /[\p{L}\p{N}]/u;
 
 export function keyLabel(k, t) {
-    return k.chat ? t('llm.keys.chatKey') : (k.name || t('llm.keys.unnamed'));
+    if (k.chat) return t('llm.keys.chatKey');
+    // The key of the person's servers in a workspace project, named after that project.
+    if (k.workspace) return t('llm.keys.workspaceKey', { project: k.workspace_name || k.workspace });
+    return k.name || t('llm.keys.unnamed');
 }
 
 export function LlmKeys() {
@@ -42,6 +45,11 @@ export function LlmKeys() {
     const remove = useApiMutation({
         mutationFn: (id) => api.deleteKey(id),
         invalidates: [llmKeys.usage()],
+    });
+    const setDefault = useApiMutation({
+        mutationFn: (slug) => api.setDefaultProject(slug),
+        invalidates: [llmKeys.usage()],
+        onSuccess: () => setProject(null),
     });
 
     async function onDelete(k) {
@@ -101,6 +109,21 @@ export function LlmKeys() {
                         </Group>
                     </Group>
                     {full && <Text size="xs" c="orange" mt="xs">{t('llm.keys.full')}</Text>}
+                    {/* The default project: where a key without a chosen project and the workspaces of a project without LLM tokens draw from. */}
+                    {defaultProject && (
+                        <Group gap="xs" mt="sm" align="center" wrap="wrap">
+                            <Text size="sm" fw={500}>{t('llm.keys.defaultProject')}</Text>
+                            {projects.length > 1 ? (
+                                <Select size="xs" w={240} aria-label={t('llm.keys.defaultProject')} allowDeselect={false}
+                                    value={defaultProject.slug} disabled={setDefault.isPending}
+                                    onChange={(v) => v && v !== defaultProject.slug && setDefault.mutate(v)}
+                                    data={projects.map(p => ({ value: p.slug, label: p.name || p.slug }))} />
+                            ) : (
+                                <Text size="sm">{defaultProject.name || defaultProject.slug}</Text>
+                            )}
+                            <Text size="xs" c="dimmed">{t('llm.keys.defaultProjectHint')}</Text>
+                        </Group>
+                    )}
                     <Text size="xs" c="dimmed" mt="xs">
                         {t('llm.keys.poolsHint')} <Anchor component={Link} to="/usage" size="xs">{t('llm.keys.toUsage')}</Anchor>
                     </Text>
@@ -122,7 +145,12 @@ export function LlmKeys() {
                             {keys.map(k => (
                                 <Table.Tr key={k.id}>
                                     <Table.Td>{keyLabel(k, t)}</Table.Td>
-                                    <Table.Td>{k.project_name || <Text span size="sm" c="dimmed">{t('llm.keys.noProject')}</Text>}</Table.Td>
+                                    <Table.Td>
+                                        <Group gap={6} wrap="nowrap">
+                                            {k.project_name || <Text span size="sm" c="dimmed">{t('llm.keys.noProject')}</Text>}
+                                            {projects.length > 1 && k.project === defaultProject?.slug && <Badge size="xs" variant="light" color="teal">{t('llm.usage.default')}</Badge>}
+                                        </Group>
+                                    </Table.Td>
                                     <Table.Td>{units(k.spend, 4)} / {units(k.budget)}{k.budget_duration && <Text span size="xs" c="dimmed"> {t('llm.keys.per', { window: k.budget_duration })}</Text>}</Table.Td>
                                     <Table.Td>{k.reset_at ? formatDateTime(k.reset_at) : '—'}</Table.Td>
                                     <Table.Td align="right">

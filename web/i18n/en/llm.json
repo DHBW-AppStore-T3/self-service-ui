@@ -105,7 +105,10 @@
         "shortTerm": "Key’s short-term budget",
         "per": "per {{window}}",
         "poolsHint": "Every key draws from its project’s pool; the column shows only its own short-term budget.",
-        "toUsage": "Pools and limits under Usage"
+        "toUsage": "Pools and limits under Usage",
+        "workspaceKey": "Workspaces: {{project}} (automatic)",
+        "defaultProject": "Default project:",
+        "defaultProjectHint": "New keys without a chosen project and the workspaces of projects without LLM tokens of their own draw from it."
     },
     "usage": {
         "of": "of {{budget}}",

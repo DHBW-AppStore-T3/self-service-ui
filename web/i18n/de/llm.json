@@ -105,7 +105,10 @@
         "shortTerm": "Kurzfrist-Budget des Keys",
         "per": "pro {{window}}",
         "poolsHint": "Jeder Key verbraucht aus dem Topf seines Projekts; die Spalte zeigt nur sein eigenes Kurzfrist-Budget.",
-        "toUsage": "Töpfe und Grenzen unter Nutzung"
+        "toUsage": "Töpfe und Grenzen unter Nutzung",
+        "workspaceKey": "Workspaces: {{project}} (automatisch)",
+        "defaultProject": "Standardprojekt:",
+        "defaultProjectHint": "Daraus verbrauchen neue Keys ohne gewähltes Projekt und die Workspaces von Projekten ohne eigene LLM-Tokens."
     },
     "usage": {
         "of": "von {{budget}}",
