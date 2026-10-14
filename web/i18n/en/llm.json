@@ -1,63 +1,18 @@
 {
     "overview": {
-        "title": "Private language models, run on DHBW hardware — in the browser and via API",
-        "serviceOf": "A service of <1>dhbw.cloud</1>",
-        "intro": "This service pools DHBW's LLM resources behind one shared, <1>OpenAI-compatible endpoint</1> — usable with any tool that accepts a base URL and an API key.",
-        "introChat": "Chatting needs no key: the DHBW chat runs right in the browser.",
-        "promise": "Requests are not stored and never leave DHBW; nothing is passed to commercial providers. Tiered quotas per person keep the sharing fair.",
-        "openChat": "Open the DHBW chat",
-        "createKey": "Create an API key",
-        "steps": {
-            "signIn": {
-                "title": "1 · Sign in",
-                "a": "Sign in with the DHBW account",
-                "b": "The quota follows from the access rule",
-                "c": "Usage always visible under “Usage”"
-            },
-            "key": {
-                "title": "2 · Get an API key",
-                "a": "One API key per device or project",
-                "b": "Visible exactly once",
-                "c": "Deletable at any time without touching the others"
-            },
-            "use": {
-                "title": "3 · Use it",
-                "a": "Works with VS Code, the OpenAI SDK, Continue, Zed, curl",
-                "b": "Stable model names: chat-default, chat-fast, code",
-                "c": "The pool absorbs failures by itself"
-            }
-        },
-        "models": {
-            "title": "Which model names are stable",
-            "stable": "Use the neutral names <1>{{names}}</1>. They stay valid and always point to whatever is best available right now.",
-            "concrete": "The model list also contains the concrete model names of the participating machines. These <1>can disappear at any time</1> — when a GPU is needed for a course or a different model is loaded. Anything meant to outlive a session should therefore use the neutral names."
-        },
-        "tools": {
-            "title": "What it works with",
-            "hint": "Any tool that accepts an OpenAI-compatible endpoint. Enter the base URL and your API key there. The linked guides come from the projects themselves.",
-            "baseUrl": "Base URL:",
-            "tool": "Tool",
-            "kind": "Use",
-            "description": "Description",
-            "ownCode": "For your own programs: <1>examples for the OpenAI SDK, LangChain, LlamaIndex and curl</1> in the LiteLLM documentation."
-        }
-    },
-    "tools": {
-        "kind": {
-            "ide": "IDE",
-            "terminal": "Terminal",
-            "desktop": "Desktop chat"
-        },
-        "description": {
-            "vscode": "Copilot Chat with a custom endpoint, no subscription — guide and ready-made JSON when creating an API key",
-            "continue": "Code assistant for VS Code and JetBrains",
-            "cline": "Agent for VS Code",
-            "zed": "Editor with a built-in assistant",
-            "aider": "Pair programming in the terminal",
-            "cherry": "Chat for macOS, Windows and Linux",
-            "anythingllm": "Desktop app with document storage",
-            "msty": "Chat with a side-by-side view of several models"
-        }
+        "title": "DHBW language models",
+        "intro": "One shared, OpenAI-compatible endpoint for the language models on DHBW hardware: in the browser through the DHBW chat, in your own tools with an API key.",
+        "promise": "Requests are not stored and do not leave DHBW.",
+        "openChat": "Open DHBW chat",
+        "createKey": "Create API key",
+        "connect": "Connect",
+        "baseUrl": "Base URL",
+        "copy": "Copy",
+        "copied": "Copied",
+        "models": "Model names",
+        "modelsHint": "These names stay valid and point to the best model available; concrete model names in the model list can disappear at any time.",
+        "tools": "Tools",
+        "ownCode": "<1>your own code</1>"
     },
     "vscode": {
         "title": "For VS Code (GitHub Copilot Chat)",

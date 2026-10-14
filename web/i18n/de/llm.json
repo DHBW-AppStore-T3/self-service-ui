@@ -1,63 +1,18 @@
 {
     "overview": {
-        "title": "Private Sprachmodelle, betrieben auf Hardware der DHBW — im Browser und per API",
-        "serviceOf": "Ein Service von <1>dhbw.cloud</1>",
-        "intro": "Dieser Dienst bündelt LLM-Ressourcen der DHBW zu einem gemeinsamen, <1>OpenAI-kompatiblen Endpunkt</1> — nutzbar mit jedem Werkzeug, das eine Basis-URL und einen API Key zulässt.",
-        "introChat": "Zum Chatten braucht es keinen Key: der DHBW-Chat läuft direkt im Browser.",
-        "promise": "Anfragen werden nicht gespeichert und verlassen die DHBW nicht, es gibt keine Weitergabe an kommerzielle Anbieter. Gestaffelte Kontingente je Person sorgen für eine faire Verteilung.",
+        "title": "Sprachmodelle der DHBW",
+        "intro": "Ein gemeinsamer, OpenAI-kompatibler Endpunkt für die Sprachmodelle auf Hardware der DHBW: im Browser über den DHBW-Chat, in eigenen Werkzeugen mit einem API Key.",
+        "promise": "Anfragen werden nicht gespeichert und verlassen die DHBW nicht.",
         "openChat": "Zum DHBW-Chat",
         "createKey": "API Key erstellen",
-        "steps": {
-            "signIn": {
-                "title": "1 · Anmelden",
-                "a": "Login mit dem DHBW-Konto",
-                "b": "Das Kontingent ergibt sich aus der Zugriffsregel",
-                "c": "Verbrauch jederzeit unter „Verbrauch“"
-            },
-            "key": {
-                "title": "2 · API Key holen",
-                "a": "Ein eigener API Key je Gerät oder Projekt",
-                "b": "Nur ein einziges Mal sichtbar",
-                "c": "Jederzeit löschbar, ohne die anderen zu berühren"
-            },
-            "use": {
-                "title": "3 · Einsetzen",
-                "a": "Funktioniert mit VS Code, OpenAI-SDK, Continue, Zed, curl",
-                "b": "Stabile Modellnamen: chat-default, chat-fast, code",
-                "c": "Ausfälle fängt der Verbund selbst ab"
-            }
-        },
-        "models": {
-            "title": "Welche Modellnamen stabil sind",
-            "stable": "Empfohlen sind die neutralen Namen <1>{{names}}</1>. Sie bleiben dauerhaft gültig und zeigen jeweils auf das, was gerade am besten verfügbar ist.",
-            "concrete": "In der Modellliste stehen zusätzlich die konkreten Modellnamen der beteiligten Maschinen. Diese <1>können jederzeit verschwinden</1> — etwa wenn eine GPU für eine Lehrveranstaltung gebraucht oder ein anderes Modell geladen wird. Für alles, was länger als eine Sitzung leben soll, gehören deshalb die neutralen Namen in die Konfiguration."
-        },
-        "tools": {
-            "title": "Womit sich das nutzen lässt",
-            "hint": "Jedes Werkzeug, das einen OpenAI-kompatiblen Endpunkt zulässt. Dort werden die Basis-URL und der eigene API Key eingetragen. Die verlinkten Anleitungen stammen von den Projekten selbst.",
-            "baseUrl": "Basis-URL:",
-            "tool": "Werkzeug",
-            "kind": "Einsatz",
-            "description": "Beschreibung",
-            "ownCode": "Für eigene Programme: <1>Beispiele für OpenAI-SDK, LangChain, LlamaIndex und curl</1> in der LiteLLM-Dokumentation."
-        }
-    },
-    "tools": {
-        "kind": {
-            "ide": "Entwicklungsumgebung",
-            "terminal": "Terminal",
-            "desktop": "Desktop-Chat"
-        },
-        "description": {
-            "vscode": "Copilot Chat mit eigenem Endpunkt, ohne Abo — Anleitung und fertiges JSON beim Anlegen eines API Keys",
-            "continue": "Code-Assistent für VS Code und JetBrains",
-            "cline": "Agent für VS Code",
-            "zed": "Editor mit eingebautem Assistenten",
-            "aider": "Programmieren im Terminal",
-            "cherry": "Chat für macOS, Windows und Linux",
-            "anythingllm": "Desktop-App mit Dokumentenablage",
-            "msty": "Chat mit Vergleichsansicht mehrerer Modelle"
-        }
+        "connect": "Verbinden",
+        "baseUrl": "Basis-URL",
+        "copy": "Kopieren",
+        "copied": "Kopiert",
+        "models": "Modellnamen",
+        "modelsHint": "Diese Namen bleiben gültig und zeigen auf das jeweils beste verfügbare Modell; konkrete Modellnamen in der Modellliste können jederzeit verschwinden.",
+        "tools": "Werkzeuge",
+        "ownCode": "<1>eigener Code</1>"
     },
     "vscode": {
         "title": "Für VS Code (GitHub Copilot Chat)",

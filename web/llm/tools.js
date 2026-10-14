@@ -1,18 +1,18 @@
 // Tools that accept an OpenAI-compatible endpoint, with the setup guide each
 // project publishes itself. Names and links are the projects' own and stay
-// untranslated; `kind` and the description are i18n keys under llm.tools.
+// untranslated.
 export const VSCODE_DOCS = 'https://code.visualstudio.com/docs/agent-customization/language-models';
 export const LITELLM_CLIENT_DOCS = 'https://docs.litellm.ai/docs/proxy/user_keys';
 
 export const TOOLS = [
-    { id: 'vscode', name: 'VS Code', kind: 'ide', url: VSCODE_DOCS },
-    { id: 'continue', name: 'Continue', kind: 'ide', url: 'https://docs.continue.dev/customize/model-providers/top-level/openai' },
-    { id: 'cline', name: 'Cline', kind: 'ide', url: 'https://docs.cline.bot/provider-config/openai-compatible' },
-    { id: 'zed', name: 'Zed', kind: 'ide', url: 'https://zed.dev/docs/ai/llm-providers' },
-    { id: 'aider', name: 'Aider', kind: 'terminal', url: 'https://aider.chat/docs/llms/openai-compat.html' },
-    { id: 'cherry', name: 'Cherry Studio', kind: 'desktop', url: 'https://docs.cherry-ai.com/en-us/pre-basic/providers' },
-    { id: 'anythingllm', name: 'AnythingLLM', kind: 'desktop', url: 'https://docs.anythingllm.com/setup/llm-configuration/cloud/openai-generic' },
-    { id: 'msty', name: 'Msty', kind: 'desktop', url: 'https://docs.msty.app/getting-started/onboarding/remote-model-providers' },
+    { id: 'vscode', name: 'VS Code', url: VSCODE_DOCS },
+    { id: 'continue', name: 'Continue', url: 'https://docs.continue.dev/customize/model-providers/top-level/openai' },
+    { id: 'cline', name: 'Cline', url: 'https://docs.cline.bot/provider-config/openai-compatible' },
+    { id: 'zed', name: 'Zed', url: 'https://zed.dev/docs/ai/llm-providers' },
+    { id: 'aider', name: 'Aider', url: 'https://aider.chat/docs/llms/openai-compat.html' },
+    { id: 'cherry', name: 'Cherry Studio', url: 'https://docs.cherry-ai.com/en-us/pre-basic/providers' },
+    { id: 'anythingllm', name: 'AnythingLLM', url: 'https://docs.anythingllm.com/setup/llm-configuration/cloud/openai-generic' },
+    { id: 'msty', name: 'Msty', url: 'https://docs.msty.app/getting-started/onboarding/remote-model-providers' },
 ];
 
 // The stable alias names. They are LiteLLM model groups, not concrete models,
