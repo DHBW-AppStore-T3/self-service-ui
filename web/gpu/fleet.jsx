@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Badge, Button, Container, Group, Paper, Select, Stack, Switch, Table, Text, TextInput, Title } from '@mantine/core';
+import { Alert, Badge, Button, Container, Group, Paper, Select, Stack, Switch, Table, Text, TextInput, Title, Tooltip } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useTranslation } from 'react-i18next';
 import { Loading, LoadError } from '/helper/query-state.jsx';
@@ -167,7 +167,13 @@ export function GpuFleet() {
                                             onChange={e => savePool.mutate({ id: p.id, body: { name: p.name, lend: e.currentTarget.checked } })} />
                                     </Table.Td>
                                     <Table.Td align="right">
-                                        {!usedPools.has(p.id) && p.id !== 'allgemein' && (
+                                        {p.id === 'allgemein' ? (
+                                            <Text size="xs" c="dimmed">{t('gpu.fleet.poolKeptDefault')}</Text>
+                                        ) : usedPools.has(p.id) ? (
+                                            <Tooltip multiline w={320} withArrow label={t('gpu.fleet.poolKeptClassesTip')}>
+                                                <Text size="xs" c="dimmed">{t('gpu.fleet.poolKeptClasses', { classes: classes.filter(c => c.pool === p.id).map(c => c.name).join(', ') })}</Text>
+                                            </Tooltip>
+                                        ) : (
                                             <Button size="xs" variant="subtle" color="red" loading={deletePool.isPending && deletePool.variables === p.id}
                                                 onClick={() => deletePool.mutate(p.id)}>{t('gpu.fleet.deletePool')}</Button>
                                         )}

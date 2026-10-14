@@ -214,6 +214,9 @@
         "gapModel": "Lückenfüller",
         "gapDefault": "Standard der Stufe ({{model}})",
         "gapNone": "keiner",
-        "lend": "verleiht freie GPUs"
+        "lend": "verleiht freie GPUs",
+        "poolKeptDefault": "gibt es immer",
+        "poolKeptClasses": "nicht löschbar: hat {{classes}}",
+        "poolKeptClassesTip": "Eine GPU-Klasse entsteht, sobald dem Pool ein Knoten zugeordnet wird. Sie ist eine Ressource im Budget-Baum, Projekte können Budget darauf halten; deshalb bleiben Klassen und ihr Pool auch ohne Knoten bestehen."
     }
 }

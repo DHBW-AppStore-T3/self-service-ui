@@ -214,6 +214,9 @@
         "gapModel": "Gap filler",
         "gapDefault": "Tier default ({{model}})",
         "gapNone": "none",
-        "lend": "lends idle GPUs"
+        "lend": "lends idle GPUs",
+        "poolKeptDefault": "always exists",
+        "poolKeptClasses": "cannot be deleted: has {{classes}}",
+        "poolKeptClassesTip": "A GPU class comes into being as soon as a node is assigned to the pool. It is a resource of the budget tree and projects may hold budget for it; that is why classes and their pool stay, even without nodes."
     }
 }
