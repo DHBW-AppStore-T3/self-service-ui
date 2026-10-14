@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
-import { Alert, Anchor, Badge, Button, Container, Group, Loader, Modal, Paper, Select, Stack, Table, Text, TextInput, Title, Tooltip } from '@mantine/core';
+import { Alert, Anchor, Badge, Button, Checkbox, Code, Container, CopyButton, Group, Loader, Modal, Paper, Select, Stack, Table, Text, TextInput, Title, Tooltip } from '@mantine/core';
 import { Cpu, ExternalLink, FileText, Play, Plus, RotateCcw, Trash2, Zap } from 'lucide-react';
 import { formatDateTime } from '/format-date.js';
 import { CodeBlock } from '/helper/codeblock.jsx';
@@ -22,6 +22,7 @@ export function GpuEnvironments() {
     const [gitUrl, setGitUrl] = useState('');
     const [ref, setRef] = useState('');
     const [name, setName] = useState('');
+    const [course, setCourse] = useState(false);
     const [logOf, setLogOf] = useState(null);
     const [started, setStarted] = useState(null);
     const [project, setProject] = useState(null);
@@ -39,10 +40,10 @@ export function GpuEnvironments() {
     });
 
     const create = useApiMutation({
-        mutationFn: () => api.createEnvironment({ git_url: gitUrl.trim(), ref: ref.trim(), name: name.trim() }),
+        mutationFn: () => api.createEnvironment({ git_url: gitUrl.trim(), ref: ref.trim(), name: name.trim(), course }),
         invalidates: [gpuKeys.environments()],
         reportErrors: 'inline',
-        onSuccess: () => { setGitUrl(''); setRef(''); setName(''); },
+        onSuccess: () => { setGitUrl(''); setRef(''); setName(''); setCourse(false); },
     });
     const remove = useApiMutation({ mutationFn: (id) => api.deleteEnvironment(id), invalidates: [gpuKeys.environments()] });
     const rebuild = useApiMutation({ mutationFn: (id) => api.rebuildEnvironment(id), invalidates: [gpuKeys.environments()] });
@@ -93,6 +94,7 @@ export function GpuEnvironments() {
                             {t('gpu.envs.add')}
                         </Button>
                     </Group>
+                    <Checkbox mt="sm" label={t('gpu.envs.course')} description={t('gpu.envs.courseHint')} checked={course} onChange={e => setCourse(e.currentTarget.checked)} />
                     <Text size="xs" c="dimmed" mt={6}>{t('gpu.envs.addHint')}</Text>
                     {myProjects.length > 1 && (
                         <Select mt="sm" w={360} label={t('gpu.envs.project')} description={t('gpu.envs.projectHint')} allowDeselect={false}
@@ -116,7 +118,10 @@ export function GpuEnvironments() {
                             {list.map(e => (
                                 <Table.Tr key={e.id}>
                                     <Table.Td>
-                                        <Text size="sm" fw={500}>{e.name}</Text>
+                                        <Group gap={6} wrap="nowrap">
+                                            <Text size="sm" fw={500}>{e.name}</Text>
+                                            {e.base && <Badge size="xs" variant="light" color="teal" style={{ textTransform: 'none' }}>{t('gpu.envs.courseBadge')}</Badge>}
+                                        </Group>
                                         <Anchor size="xs" href={e.git_url} target="_blank" rel="noreferrer">{e.git_url.replace(/^https:\/\//, '')}</Anchor>
                                     </Table.Td>
                                     <Table.Td>
@@ -131,17 +136,27 @@ export function GpuEnvironments() {
                                             </Badge>
                                         </Group>
                                         {e.message && <Text size="xs" c="dimmed">{e.message}</Text>}
+                                        {/* A course image is used through a project (CPU + GPU-Kernel), so its address is what is needed. */}
+                                        {e.base && e.status === 'ready' && (
+                                            <CopyButton value={e.image}>
+                                                {({ copied, copy }) => (
+                                                    <Tooltip label={copied ? t('gpu.envs.copied') : t('gpu.envs.courseUse')}>
+                                                        <Code style={{ cursor: 'pointer', fontSize: 11 }} onClick={copy}>{e.image}</Code>
+                                                    </Tooltip>
+                                                )}
+                                            </CopyButton>
+                                        )}
                                         <Text size="xs" c="dimmed">{formatDateTime(e.updated_at)}</Text>
                                     </Table.Td>
                                     <Table.Td align="right">
                                         <Group gap={4} justify="flex-end" wrap="nowrap">
                                             <Tooltip label={t('gpu.envs.startCpuHint')}>
-                                                <Button size="xs" variant="light" leftSection={<Cpu size={14} />} disabled={e.status !== 'ready' || !allows('git-cpu')}
+                                                <Button size="xs" variant="light" leftSection={<Cpu size={14} />} disabled={e.status !== 'ready' || !allows('git-cpu') || !!e.base}
                                                     loading={start.isPending && start.variables?.id === e.id && !start.variables?.gpu}
                                                     onClick={() => start.mutate({ id: e.id, gpu: false })}>{t('gpu.envs.startCpu')}</Button>
                                             </Tooltip>
                                             <Tooltip label={t('gpu.envs.startGpuHint')}>
-                                                <Button size="xs" variant="light" color="grape" leftSection={<Zap size={14} />} disabled={e.status !== 'ready' || !allows('git-gpu')}
+                                                <Button size="xs" variant="light" color="grape" leftSection={<Zap size={14} />} disabled={e.status !== 'ready' || !allows('git-gpu') || !!e.base}
                                                     loading={start.isPending && start.variables?.id === e.id && start.variables?.gpu}
                                                     onClick={() => start.mutate({ id: e.id, gpu: true })}>{t('gpu.envs.startGpu')}</Button>
                                             </Tooltip>

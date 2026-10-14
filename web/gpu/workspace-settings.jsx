@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { ActionIcon, Badge, Button, Checkbox, Group, MultiSelect, NumberInput, Progress, Select, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
+import { ActionIcon, Autocomplete, Badge, Button, Checkbox, Group, MultiSelect, NumberInput, Progress, Select, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
 import { Plus, X } from 'lucide-react';
 import { llmEnabled } from '/features.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
@@ -78,6 +78,9 @@ export function WorkspaceSettingsPanel({ draft }) {
     const { t } = useTranslation();
     const api = useGpuApi();
     const catalog = useQuery({ queryKey: gpuKeys.catalog(), queryFn: () => api.catalog(), staleTime: 10 * 60 * 1000 });
+    // The caller's course images built from Git (Workspaces → Umgebungen), offered for the course image.
+    const envs = useQuery({ queryKey: gpuKeys.environments(), queryFn: () => api.listEnvironments(), staleTime: 60 * 1000 });
+    const courseImages = [...new Set((envs.data ?? []).filter(e => e.base && e.status === 'ready').map(e => e.image))];
     const p = draft.value;
     if (!p) return null;
     const set = (k, v) => draft.update(cur => ({ ...cur, [k]: v }));
@@ -97,8 +100,8 @@ export function WorkspaceSettingsPanel({ draft }) {
                 data={(catalog.data?.profiles ?? []).map(x => ({ value: x.slug, label: x.gpu_class ? `${x.name} · ${x.gpu_class}` : x.name }))} />
             <Checkbox label={t('gpu.projects.freeImagesLabel')} description={t('gpu.projects.freeImagesHint')}
                 checked={!!p.free_images} onChange={e => set('free_images', e.currentTarget.checked)} />
-            <TextInput label={t('gpu.projects.kernelImageLabel')} description={t('gpu.projects.kernelImageHint')} placeholder="ghcr.io/…/kurs:2026"
-                value={p.kernel_image ?? ''} onChange={e => set('kernel_image', e.currentTarget.value.trim())} />
+            <Autocomplete label={t('gpu.projects.kernelImageLabel')} description={t('gpu.projects.kernelImageHint')} placeholder="ghcr.io/…/kurs:2026"
+                data={courseImages} value={p.kernel_image ?? ''} onChange={v => set('kernel_image', v.trim())} />
 
             <Text size="sm" fw={600}>{t('gpu.projects.limits')}</Text>
             <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
