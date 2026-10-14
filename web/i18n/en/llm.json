@@ -79,7 +79,7 @@
     "keys": {
         "title": "API keys",
         "count": "at most {{max}} at a time · {{own}} in use",
-        "chatNotCounted": "the DHBW chat key does not count",
+        "chatNotCounted": "automatic keys (DHBW chat, workspaces) do not count",
         "namePlaceholder": "Name (required), e.g. vscode",
         "create": "Create API key",
         "full": "Limit reached — delete an old key before creating a new one.",

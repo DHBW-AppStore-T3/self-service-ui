@@ -79,7 +79,7 @@
     "keys": {
         "title": "API Keys",
         "count": "höchstens {{max}} gleichzeitig · {{own}} vergeben",
-        "chatNotCounted": "der Key des DHBW-Chats zählt nicht mit",
+        "chatNotCounted": "automatische Keys (DHBW-Chat, Workspaces) zählen nicht mit",
         "namePlaceholder": "Name (Pflicht), z. B. vscode",
         "create": "API Key erstellen",
         "full": "Höchstzahl erreicht — für einen neuen Key zuerst einen alten löschen.",
