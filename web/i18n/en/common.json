@@ -21,7 +21,6 @@
         "llmUsage": "Usage",
         "llmFleet": "Fleet",
         "gpu": "GPU",
-        "gpuEnvironments": "Environments",
         "gpuServers": "Running",
         "gpuUsage": "Usage",
         "workspaces": "Workspaces"

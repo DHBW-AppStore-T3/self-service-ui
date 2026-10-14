@@ -21,7 +21,6 @@
         "llmUsage": "Verbrauch",
         "llmFleet": "Flotte",
         "gpu": "GPU",
-        "gpuEnvironments": "Umgebungen",
         "gpuServers": "Laufend",
         "gpuUsage": "Nutzung",
         "workspaces": "Workspaces"

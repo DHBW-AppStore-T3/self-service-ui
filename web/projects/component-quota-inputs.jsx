@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Anchor, Checkbox, Grid, Group, NumberInput, Stack, Switch, Text, TextInput } from '@mantine/core';
+import { Anchor, Checkbox, Grid, Group, NumberInput, Paper, Stack, Switch, Text, TextInput } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { UNLIMITED_QUOTA, groupResources, isAvailability, resourceLabel } from './util-project.jsx';
 import { UsageMeter, grantUseText } from './component-project-resources.jsx';
@@ -67,10 +67,12 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
                 <Text size="xs" c="dimmed">{t('projects.quotaInputs.noMatches', { query })}</Text>
             )}
 
+            {/* A named group (Workspaces, LLM, …) is a box of its own, so it is clear at a glance which fields belong together. */}
             {groups.map(([groupName, groupResourcesList]) => (
-                <Stack key={groupName || '__ungrouped'} gap="xs">
+                <Paper key={groupName || '__ungrouped'} withBorder={!!groupName} radius="md" p={groupName ? 'sm' : 0}
+                    bg={groupName ? 'var(--mantine-color-gray-light)' : undefined}>
                     {groupName && (
-                        <Text size="xs" fw={600} c="dimmed" tt="uppercase">{groupName}</Text>
+                        <Text size="sm" fw={700} mb="xs">{groupName}</Text>
                     )}
                     <Grid>
                         {groupResourcesList.map(r => (
@@ -92,7 +94,7 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
                             </Grid.Col>
                         ))}
                     </Grid>
-                </Stack>
+                </Paper>
             ))}
         </Stack>
     );

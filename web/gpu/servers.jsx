@@ -43,7 +43,7 @@ export function GpuServers() {
                         </div>
                         {me?.jupyter_url && (
                             <Button size="xs" component="a" href={`${me.jupyter_url.replace(/\/$/, '')}/hub/spawn`} target="_blank" rel="noreferrer" variant="light" rightSection={<ExternalLink size={14} />}>
-                                {t('gpu.envs.startServer')}
+                                {t('gpu.servers.startServer')}
                             </Button>
                         )}
                     </Group>

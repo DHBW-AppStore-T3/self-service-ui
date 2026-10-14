@@ -5,9 +5,8 @@ import { useClient } from '/providers/client.jsx';
 // URL as the LLM section), under /v1/gpu. Named imports, as in llm/api-llm.jsx:
 // an operation missing from the client fails the build, not the browser.
 import {
-    createGpuEnvironment, deleteGpuEnvironment, deleteWorkspaceProject, getGpuEnvironmentLog, getMyWorkspaceUsage, getGpuHours, getWorkspaceCatalog, getWorkspaceStorage, getWorkspaceUsage,
-    listGpuEnvironments, listGpuServers, listWorkspaceProjects, updateWorkspaceProject,
-    rebuildGpuEnvironment, startGpuEnvironment, stopGpuServer,
+    deleteWorkspaceProject, getMyWorkspaceUsage, getGpuHours, getProjectImageLog, getWorkspaceCatalog, getWorkspaceStorage, getWorkspaceUsage,
+    listGpuServers, listWorkspaceProjects, rebuildProjectImage, stopGpuServer, updateWorkspaceProject,
 } from '@dhbw-cloud/llm-client';
 
 function unwrap(res) {
@@ -23,12 +22,6 @@ export function useGpuApi() {
     return useMemo(() => {
         const call = async (op, opts = {}) => unwrap(await op({ client, ...opts }));
         return {
-            listEnvironments: async () => (await call(listGpuEnvironments)) ?? [],
-            createEnvironment: (env) => call(createGpuEnvironment, { body: env, headers: JSON_HEADERS }),
-            deleteEnvironment: (id) => call(deleteGpuEnvironment, { path: { id } }),
-            rebuildEnvironment: (id) => call(rebuildGpuEnvironment, { path: { id } }),
-            environmentLog: async (id) => (await call(getGpuEnvironmentLog, { path: { id } }))?.log ?? '',
-            startEnvironment: (id, gpu, project) => call(startGpuEnvironment, { path: { id }, body: { gpu, project }, headers: JSON_HEADERS }),
             listServers: async () => (await call(listGpuServers)) ?? [],
             // The default server has no name; the API calls it "-".
             stopServer: (name) => call(stopGpuServer, { path: { name: name || '-' } }),
@@ -40,6 +33,9 @@ export function useGpuApi() {
             catalog: () => call(getWorkspaceCatalog),
             updateProject: (p) => call(updateWorkspaceProject, { path: { slug: p.slug }, body: p, headers: JSON_HEADERS }),
             deleteProject: (slug) => call(deleteWorkspaceProject, { path: { slug } }),
+            // The project image from Git (docs/bauplan.md 10.12): build again, and the build's log.
+            rebuildProjectImage: (slug) => call(rebuildProjectImage, { path: { slug } }),
+            projectImageLog: async (slug) => (await call(getProjectImageLog, { path: { slug } }))?.log ?? '',
             // Admins: how full the workspace storage and its metadata are.
             storage: () => call(getWorkspaceStorage),
             // GPU use per hour; period = { from, to }, project for a project's managers.

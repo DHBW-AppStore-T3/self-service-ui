@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { ActionIcon, Autocomplete, Badge, Button, Checkbox, Group, MultiSelect, NumberInput, Progress, Select, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
-import { Plus, X } from 'lucide-react';
+import { ActionIcon, Badge, Button, Checkbox, Code, Group, Loader, Modal, MultiSelect, NumberInput, Paper, Progress, SegmentedControl, Select, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
+import { FileText, Plus, RotateCcw, X } from 'lucide-react';
+import { CodeBlock } from '/helper/codeblock.jsx';
 import { llmEnabled } from '/features.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
 
-// How a Lab/KI project's workspaces are used — profiles, images, limits and shares per person, shorter windows. Everything else about the project (name, members, end, quotas) is the project's own and edited in its dialog; this is the one part only the AI service knows, so it is a tab of the project's edit dialog (modal-project-form.jsx) instead of a second list of the same projects.
+// How a Lab/KI project's workspaces are used — profiles, the project image, limits and shares per person, shorter windows. Everything else about the project (name, members, end, quotas) is the project's own and edited in its dialog; this is the one part only the AI service knows, so it is a tab of the project's edit dialog (modal-project-form.jsx) instead of a second list of the same projects.
 
 const UNITS = ['vcpu_hours', 'ram_gb_hours', 'gpu_hours', 'server_hours'];
 const WINDOWS = ['24h', '7d', '30d', 'total'];
@@ -48,6 +49,8 @@ export function useWorkspaceSettings(nodeId, active) {
         queryFn: () => api.listProjects(false),
         enabled: llmEnabled && active && !!nodeId,
         staleTime: 60 * 1000,
+        // While the project image builds, its state follows.
+        refetchInterval: (q) => ((q.state.data ?? []).some(p => p.image_build?.status === 'building') ? 10 * 1000 : false),
     });
     const project = (projects.data ?? []).find(p => p.tree_node === nodeId) ?? null;
     const available = !!project && (isAdmin || project.role === 'manager' || project.role === 'admin');
@@ -69,8 +72,104 @@ export function useWorkspaceSettings(nodeId, active) {
 
 // The part of a workspace project its settings change; the rest (name, members, end, quotas) belongs to the tree and is sent back as it is.
 function editable(project) {
-    const { role: _role, budget_status: _status, ...rest } = project;
+    const { role: _role, budget_status: _status, image_build: _build, ...rest } = project;
     return { ...rest, limits: { ...DEFAULT_LIMITS, ...(project.limits ?? {}) } };
+}
+
+// Box is one part of the tab, with its title and an optional hint below the fields.
+function Box({ title, hint, children }) {
+    return (
+        <Paper withBorder radius="md" p="sm" bg="var(--mantine-color-gray-light)">
+            <Text size="sm" fw={700} mb="xs">{title}</Text>
+            <Stack gap="xs">{children}</Stack>
+            {hint && <Text size="xs" c="dimmed" mt="xs">{hint}</Text>}
+        </Paper>
+    );
+}
+
+const BUILD_COLOUR = { building: 'blue', ready: 'teal', failed: 'red' };
+
+// ProjectImage is where the project image comes from: notebook-base itself, a Git repository built on it, or a finished image derived from it (docs/bauplan.md 10.12). The image is used by "CPU + GPU-Kernel" and "Projekt-Image (GPU)".
+function ProjectImage({ draft, set }) {
+    const { t } = useTranslation();
+    const api = useGpuApi();
+    const queryClient = useQueryClient();
+    const p = draft.value;
+    const saved = draft.project;
+    const [source, setSource] = useState(p.image_git_url ? 'git' : p.project_image ? 'image' : 'base');
+    const [log, setLog] = useState(null);
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState('');
+    const build = saved?.image_git_url && saved.image_git_url === p.image_git_url ? saved.image_build : null;
+    const choose = (v) => {
+        setSource(v);
+        draft.update(cur => ({ ...cur, image_git_url: '', image_git_ref: '', project_image: v === 'image' && !cur.image_git_url ? cur.project_image : '' }));
+    };
+    const rebuild = async () => {
+        setBusy(true); setError('');
+        try {
+            await api.rebuildProjectImage(saved.slug);
+            await queryClient.invalidateQueries({ queryKey: ['gpu', 'projects'] });
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setBusy(false);
+        }
+    };
+    const showLog = async () => {
+        try {
+            setLog(await api.projectImageLog(saved.slug) || t('gpu.projects.image.logEmpty'));
+        } catch (e) {
+            setLog(e.message);
+        }
+    };
+    return (
+        <Stack gap={6}>
+            <Text size="sm" fw={500}>{t('gpu.projects.image.label')}</Text>
+            <Text size="xs" c="dimmed">{t('gpu.projects.image.hint')}</Text>
+            <SegmentedControl size="xs" value={source} onChange={choose} data={[
+                { value: 'base', label: t('gpu.projects.image.sourceBase') },
+                { value: 'git', label: t('gpu.projects.image.sourceGit') },
+                { value: 'image', label: t('gpu.projects.image.sourceImage') },
+            ]} />
+            {source === 'git' && (
+                <>
+                    <Group gap="xs" wrap="nowrap" align="flex-end">
+                        <TextInput style={{ flex: 1 }} label={t('gpu.projects.image.gitUrl')} placeholder="https://github.com/…/kurs" value={p.image_git_url ?? ''}
+                            onChange={e => set('image_git_url', e.currentTarget.value.trim())} />
+                        <TextInput w={160} label={t('gpu.projects.image.gitRef')} placeholder={t('gpu.projects.image.gitRefPlaceholder')} value={p.image_git_ref ?? ''}
+                            onChange={e => set('image_git_ref', e.currentTarget.value.trim())} />
+                    </Group>
+                    <Text size="xs" c="dimmed">{t('gpu.projects.image.gitHint')}</Text>
+                    {build && (
+                        <Group gap="xs" wrap="wrap">
+                            {build.status === 'building' && <Loader size={12} />}
+                            <Badge variant="light" color={BUILD_COLOUR[build.status] ?? 'gray'} style={{ textTransform: 'none' }}>
+                                {t(`gpu.projects.image.status.${build.status}`, { defaultValue: build.status })}
+                            </Badge>
+                            <Text size="xs" c="dimmed" ff="monospace">{(build.commit || '').slice(0, 12)}{build.branch ? ` (${build.branch})` : ''}</Text>
+                            <Button size="compact-xs" variant="subtle" leftSection={<FileText size={12} />} onClick={showLog}>{t('gpu.projects.image.log')}</Button>
+                            <Button size="compact-xs" variant="subtle" leftSection={<RotateCcw size={12} />} loading={busy} disabled={build.status === 'building'} onClick={rebuild}>{t('gpu.projects.image.rebuild')}</Button>
+                        </Group>
+                    )}
+                    {build?.message && <Text size="xs" c={build.status === 'failed' ? 'red' : 'dimmed'}>{build.message}</Text>}
+                    {!build && p.image_git_url && <Text size="xs" c="dimmed">{t('gpu.projects.image.buildOnSave')}</Text>}
+                    {error && <Text size="xs" c="red">{error}</Text>}
+                </>
+            )}
+            {source === 'image' && (
+                <TextInput label={t('gpu.projects.image.finished')} description={t('gpu.projects.image.finishedHint')} placeholder="ghcr.io/…/kurs:2026"
+                    value={p.project_image ?? ''} onChange={e => set('project_image', e.currentTarget.value.trim())} />
+            )}
+            <Text size="xs">
+                {t('gpu.projects.image.current')}{' '}
+                {saved?.project_image ? <Code>{saved.project_image}</Code> : t('gpu.projects.image.currentBase')}
+            </Text>
+            <Modal opened={log !== null} onClose={() => setLog(null)} title={t('gpu.projects.image.log')} size={1000} centered>
+                <CodeBlock language="plaintext" code={log ?? ''} />
+            </Modal>
+        </Stack>
+    );
 }
 
 // WorkspaceSettingsPanel is the dialog's "Workspaces" tab.
@@ -78,75 +177,58 @@ export function WorkspaceSettingsPanel({ draft }) {
     const { t } = useTranslation();
     const api = useGpuApi();
     const catalog = useQuery({ queryKey: gpuKeys.catalog(), queryFn: () => api.catalog(), staleTime: 10 * 60 * 1000 });
-    // The caller's course images built from Git (Workspaces → Umgebungen), offered for the course image.
-    const envs = useQuery({ queryKey: gpuKeys.environments(), queryFn: () => api.listEnvironments(), staleTime: 60 * 1000 });
-    const courseImages = [...new Set((envs.data ?? []).filter(e => e.base && e.status === 'ready').map(e => e.image))];
     const p = draft.value;
     if (!p) return null;
     const set = (k, v) => draft.update(cur => ({ ...cur, [k]: v }));
     const setLimit = (k, v) => draft.update(cur => ({ ...cur, limits: { ...cur.limits, [k]: Number(v) || 0 } }));
 
-    const images = p.images ?? [];
     const budgets = p.budgets ?? [];
     const firstOwn = budgets.findIndex(b => !b.tree);
     // The project's own quotas show their use under their fields already; here only the shares this part sets.
     const status = (draft.project?.budget_status ?? []).filter(b => !b.tree);
     const setBudget = (i, patch) => set('budgets', budgets.map((x, j) => (j === i ? { ...x, ...patch } : x)));
     return (
-        <Stack gap="sm">
-            {status.length > 0 && <Stack gap={6}>{status.map((b, i) => <BudgetBar key={i} b={b} />)}</Stack>}
+        <Stack gap="md">
+            <Box title={t('gpu.projects.environments')}>
+                <MultiSelect label={t('gpu.projects.profiles')} description={t('gpu.projects.profilesHint')} value={p.profiles ?? []} onChange={v => set('profiles', v)}
+                    data={(catalog.data?.profiles ?? []).map(x => ({ value: x.slug, label: x.gpu_class ? `${x.name} · ${x.gpu_class}` : x.name }))} />
+                <Checkbox label={t('gpu.projects.freeImagesLabel')} description={t('gpu.projects.freeImagesHint')}
+                    checked={!!p.free_images} onChange={e => set('free_images', e.currentTarget.checked)} />
+                <ProjectImage draft={draft} set={set} />
+            </Box>
 
-            <MultiSelect label={t('gpu.projects.profiles')} description={t('gpu.projects.profilesHint')} value={p.profiles ?? []} onChange={v => set('profiles', v)}
-                data={(catalog.data?.profiles ?? []).map(x => ({ value: x.slug, label: x.gpu_class ? `${x.name} · ${x.gpu_class}` : x.name }))} />
-            <Checkbox label={t('gpu.projects.freeImagesLabel')} description={t('gpu.projects.freeImagesHint')}
-                checked={!!p.free_images} onChange={e => set('free_images', e.currentTarget.checked)} />
-            <Autocomplete label={t('gpu.projects.kernelImageLabel')} description={t('gpu.projects.kernelImageHint')} placeholder="ghcr.io/…/kurs:2026"
-                data={courseImages} value={p.kernel_image ?? ''} onChange={v => set('kernel_image', v.trim())} />
+            <Box title={t('gpu.projects.limits')} hint={t('gpu.projects.limitsHint')}>
+                <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
+                    <NumberInput label={t('gpu.projects.limit.serversShort')} min={0} value={p.limits.servers_per_person} onChange={v => setLimit('servers_per_person', v)} />
+                    <NumberInput label={t('gpu.projects.limit.cpuShort')} min={0} decimalScale={1} value={p.limits.cpu_per_person} onChange={v => setLimit('cpu_per_person', v)} />
+                    <NumberInput label={t('gpu.projects.limit.ramShort')} min={0} value={p.limits.ram_gb_per_person} onChange={v => setLimit('ram_gb_per_person', v)} />
+                    <NumberInput label={t('gpu.projects.limit.gpusShort')} min={0} value={p.limits.gpus_per_person} onChange={v => setLimit('gpus_per_person', v)} />
+                </SimpleGrid>
+            </Box>
 
-            <Text size="sm" fw={600}>{t('gpu.projects.limits')}</Text>
-            <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
-                <NumberInput label={t('gpu.projects.limit.serversShort')} min={0} value={p.limits.servers_per_person} onChange={v => setLimit('servers_per_person', v)} />
-                <NumberInput label={t('gpu.projects.limit.cpuShort')} min={0} decimalScale={1} value={p.limits.cpu_per_person} onChange={v => setLimit('cpu_per_person', v)} />
-                <NumberInput label={t('gpu.projects.limit.ramShort')} min={0} value={p.limits.ram_gb_per_person} onChange={v => setLimit('ram_gb_per_person', v)} />
-                <NumberInput label={t('gpu.projects.limit.gpusShort')} min={0} value={p.limits.gpus_per_person} onChange={v => setLimit('gpus_per_person', v)} />
-            </SimpleGrid>
-            <Text size="xs" c="dimmed">{t('gpu.projects.limitsHint')}</Text>
-
-            <Text size="sm" fw={600}>{t('gpu.projects.budgets')}</Text>
-            {/* The project's own quotas arrive here as budgets too (tree); they are edited in the quotas tab, so only the limits set here are listed — the others are kept and sent back as they are. */}
-            {budgets.map((b, i) => (b.tree ? null : (
-                <Group key={i} gap="xs" wrap="nowrap" align="flex-end">
-                    <NumberInput w={110} min={0} label={i === firstOwn ? t('gpu.projects.budget.amount') : undefined} value={b.amount}
-                        onChange={v => setBudget(i, { amount: Number(v) || 0 })} />
-                    <Select w={170} allowDeselect={false} label={i === firstOwn ? t('gpu.projects.budget.unit') : undefined} value={b.unit}
-                        data={UNITS.map(u => ({ value: u, label: t(`gpu.projects.budget.units.${u}`) }))} onChange={v => setBudget(i, { unit: v })} />
-                    {b.unit === 'gpu_hours' && (
-                        <Select w={110} clearable label={i === firstOwn ? t('gpu.projects.budget.class') : undefined} value={b.gpu_class || null}
-                            placeholder={t('gpu.projects.budget.allClasses')} data={catalog.data?.gpuClasses ?? []} onChange={v => setBudget(i, { gpu_class: v || '' })} />
-                    )}
-                    <Select w={130} allowDeselect={false} label={i === firstOwn ? t('gpu.projects.budget.window') : undefined} value={b.window}
-                        data={WINDOWS.map(w => ({ value: w, label: t(`gpu.projects.budget.windows.${w}`) }))} onChange={v => setBudget(i, { window: v })} />
-                    <Checkbox label={t('gpu.projects.budget.perPerson')} checked={!!b.per_person} mb={8}
-                        onChange={e => setBudget(i, { per_person: e.currentTarget.checked })} />
-                    <ActionIcon variant="subtle" color="red" mb={4} aria-label={t('gpu.projects.remove')} onClick={() => set('budgets', budgets.filter((_, j) => j !== i))}><X size={16} /></ActionIcon>
-                </Group>
-            )))}
-            <Button size="xs" variant="subtle" leftSection={<Plus size={14} />} w="fit-content"
-                onClick={() => set('budgets', [...budgets, { unit: 'vcpu_hours', window: '30d', amount: 40, per_person: true }])}>{t('gpu.projects.addBudget')}</Button>
-            <Text size="xs" c="dimmed">{t('gpu.projects.budgetsHint')}</Text>
-
-            <Text size="sm" fw={600}>{t('gpu.projects.images')}</Text>
-            {images.map((im, i) => (
-                <Group key={i} gap="xs" wrap="nowrap">
-                    <TextInput w={180} placeholder={t('gpu.projects.imageName')} value={im.name}
-                        onChange={e => set('images', images.map((x, j) => (j === i ? { ...x, name: e.currentTarget.value } : x)))} />
-                    <TextInput style={{ flex: 1 }} placeholder="registry.gpu.services.dhbw.cloud/envs/…:…" value={im.image}
-                        onChange={e => set('images', images.map((x, j) => (j === i ? { ...x, image: e.currentTarget.value.trim() } : x)))} />
-                    <ActionIcon variant="subtle" color="red" aria-label={t('gpu.projects.remove')} onClick={() => set('images', images.filter((_, j) => j !== i))}><X size={16} /></ActionIcon>
-                </Group>
-            ))}
-            <Button size="xs" variant="subtle" leftSection={<Plus size={14} />} w="fit-content"
-                onClick={() => set('images', [...images, { name: '', image: '' }])}>{t('gpu.projects.addImage')}</Button>
+            <Box title={t('gpu.projects.budgets')} hint={t('gpu.projects.budgetsHint')}>
+                {status.length > 0 && <Stack gap={6}>{status.map((b, i) => <BudgetBar key={i} b={b} />)}</Stack>}
+                {/* The project's own quotas arrive here as budgets too (tree); they are edited in the quotas tab, so only the limits set here are listed — the others are kept and sent back as they are. */}
+                {budgets.map((b, i) => (b.tree ? null : (
+                    <Group key={i} gap="xs" wrap="nowrap" align="flex-end">
+                        <NumberInput w={110} min={0} label={i === firstOwn ? t('gpu.projects.budget.amount') : undefined} value={b.amount}
+                            onChange={v => setBudget(i, { amount: Number(v) || 0 })} />
+                        <Select w={170} allowDeselect={false} label={i === firstOwn ? t('gpu.projects.budget.unit') : undefined} value={b.unit}
+                            data={UNITS.map(u => ({ value: u, label: t(`gpu.projects.budget.units.${u}`) }))} onChange={v => setBudget(i, { unit: v })} />
+                        {b.unit === 'gpu_hours' && (
+                            <Select w={110} clearable label={i === firstOwn ? t('gpu.projects.budget.class') : undefined} value={b.gpu_class || null}
+                                placeholder={t('gpu.projects.budget.allClasses')} data={catalog.data?.gpuClasses ?? []} onChange={v => setBudget(i, { gpu_class: v || '' })} />
+                        )}
+                        <Select w={130} allowDeselect={false} label={i === firstOwn ? t('gpu.projects.budget.window') : undefined} value={b.window}
+                            data={WINDOWS.map(w => ({ value: w, label: t(`gpu.projects.budget.windows.${w}`) }))} onChange={v => setBudget(i, { window: v })} />
+                        <Checkbox label={t('gpu.projects.budget.perPerson')} checked={!!b.per_person} mb={8}
+                            onChange={e => setBudget(i, { per_person: e.currentTarget.checked })} />
+                        <ActionIcon variant="subtle" color="red" mb={4} aria-label={t('gpu.projects.remove')} onClick={() => set('budgets', budgets.filter((_, j) => j !== i))}><X size={16} /></ActionIcon>
+                    </Group>
+                )))}
+                <Button size="xs" variant="subtle" leftSection={<Plus size={14} />} w="fit-content"
+                    onClick={() => set('budgets', [...budgets, { unit: 'vcpu_hours', window: '30d', amount: 40, per_person: true }])}>{t('gpu.projects.addBudget')}</Button>
+            </Box>
         </Stack>
     );
 }

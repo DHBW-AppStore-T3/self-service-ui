@@ -19,22 +19,9 @@ vi.mock('/gpu/api-gpu.jsx', async (importOriginal) => {
     return { ...actual, useGpuApi: () => globalThis.__gpuApi };
 });
 
-const ENVS = [
-    { id: 2, owner: 'dennis.pfisterer@dhbw.de', name: 'Conda-Beispiel', git_url: 'https://github.com/binder-examples/conda', branch: 'main',
-      commit: 'f00a783146e9c6a2ed9726f01fc09fbfbad2f89e', image: 'reg/envs/github-com-binder-examples-conda:f00a783146e9', status: 'building',
-      created_at: '2026-10-10T12:15:41Z', updated_at: '2026-10-10T12:15:41Z' },
-    { id: 1, owner: 'dennis.pfisterer@dhbw.de', name: 'requirements', git_url: 'https://github.com/binder-examples/requirements', branch: 'main',
-      commit: '505a59f0430cb6414a4acbdd88803ce33c7fd953', image: 'reg/envs/github-com-binder-examples-requirements:505a59f0430c', status: 'ready',
-      created_at: '2026-10-10T12:15:41Z', updated_at: '2026-10-10T12:15:41Z' },
-    { id: 3, owner: 'dennis.pfisterer@dhbw.de', name: 'kaputt', git_url: 'https://github.com/o/kaputt', branch: 'main',
-      commit: '0123456789abcdef0123456789abcdef01234567', image: 'reg/envs/github-com-o-kaputt:0123456789ab', status: 'failed',
-      message: 'Build fehlgeschlagen, Details im Build-Log.', created_at: '2026-10-10T12:15:41Z', updated_at: '2026-10-10T12:15:41Z' },
-];
-
 const SERVERS = [
     { name: '', ready: true, url: 'https://jupyter.example/user/a/', profile: 'cpu-gpukernel' },
-    { name: 'conda-beispiel-2', ready: false, pending: 'spawn', url: 'https://jupyter.example/user/a/conda-beispiel-2/', profile: 'git-gpu',
-      image: 'reg/envs/github-com-binder-examples-conda:f00a783146e9' },
+    { name: 'kurs-gpu', ready: false, pending: 'spawn', url: 'https://jupyter.example/user/a/kurs-gpu/', profile: 'project-gpu' },
 ];
 
 const USAGE = {
@@ -50,16 +37,17 @@ const USAGE = {
 
 const PROJECTS = [
     { slug: 'wwi23seb-ml', tree_node: 'p_ml', name: 'Machine Learning WWI23SEB', description: 'Übungen', role: 'manager', profiles: ['cpu', 'pytorch'], gpu_classes: ['l4-3q'],
-      members: [{ token: 'group:wwi23seb', role: 'member' }], images: [], free_images: false,
+      members: [{ token: 'group:wwi23seb', role: 'member' }], free_images: false,
+      image_git_url: 'https://github.com/o/ml-kurs', project_image: 'reg/envs/github-com-o-ml-kurs:0123456789ab-v1.1.0',
+      image_build: { status: 'building', image: 'reg/envs/github-com-o-ml-kurs:89abcdef0123-v1.1.0', commit: '89abcdef0123456', branch: 'main', updated_at: '2026-10-14T08:00:00Z' },
       limits: { servers_per_person: 2, cpu_per_person: 4, ram_gb_per_person: 16, gpus_per_person: 1 }, gpus_by_class: { "l4-3q": 4 },
       budgets: [{ unit: 'vcpu_hours', window: '30d', amount: 40, per_person: true }],
       budget_status: [{ unit: 'vcpu_hours', window: '30d', amount: 40, per_person: true, used: 34.5, exhausted: false }] },
-    { slug: 'statistik', name: 'Statistik', role: 'member', profiles: ['cpu', 'git-cpu'], gpu_classes: [], members: [], images: [{ name: 'R', image: 'reg/envs/r:1' }],
+    { slug: 'statistik', name: 'Statistik', role: 'member', profiles: ['cpu'], gpu_classes: [], members: [],
       limits: { servers_per_person: 1 }, budgets: [], ends_at: '2027-03-31T00:00:00Z' },
 ];
-const CATALOG = { profiles: [{ slug: 'cpu', name: 'CPU' }, { slug: 'pytorch', name: 'PyTorch (GPU)', gpu_class: 'l4-3q' }, { slug: 'git-cpu', name: 'Umgebung aus Git (CPU)' }], gpuClasses: ['l4-3q'] };
+const CATALOG = { profiles: [{ slug: 'cpu', name: 'CPU' }, { slug: 'pytorch', name: 'PyTorch (GPU)', gpu_class: 'l4-3q' }, { slug: 'project-gpu', name: 'Projekt-Image (GPU)', gpu_class: 'l4-3q' }], gpuClasses: ['l4-3q'] };
 
-const { GpuEnvironments } = await import('/gpu/environments.jsx');
 const { GpuServers } = await import('/gpu/servers.jsx');
 const { GpuUsage, groupUsage } = await import('/gpu/usage.jsx');
 const { WorkspaceSettingsPanel, useWorkspaceSettings } = await import('/gpu/workspace-settings.jsx');
@@ -72,9 +60,9 @@ function SettingsTab({ nodeId }) {
 let consoleErrors = [];
 beforeEach(() => {
     globalThis.__gpuApi = {
-        listEnvironments: async () => ENVS,
         listServers: async () => SERVERS,
-        environmentLog: async () => 'log',
+        projectImageLog: async () => 'log',
+        rebuildProjectImage: async () => ({}),
         myWorkspaceUsage: async () => USAGE,
         listProjects: async () => PROJECTS,
         catalog: async () => CATALOG,
@@ -95,22 +83,18 @@ function expectNoRenderFailure() {
 }
 
 describe('the GPU views render', () => {
-    it('Environments lists the environments with their status', async () => {
-        renderView(<GpuEnvironments />);
-        expect(await screen.findByText('Conda-Beispiel')).toBeTruthy();
-        expect(screen.getByText('Build fehlgeschlagen, Details im Build-Log.')).toBeTruthy();
-        expectNoRenderFailure();
-    });
-
     it('Servers lists the servers', async () => {
         renderView(<GpuServers />);
-        expect(await screen.findByText('conda-beispiel-2')).toBeTruthy();
+        expect(await screen.findByText('kurs-gpu')).toBeTruthy();
         expectNoRenderFailure();
     });
 
     it('the workspace settings tab shows a project the AI service knows, with what is used of it', async () => {
         renderView(<SettingsTab nodeId="p_ml" />);
         expect(await screen.findByText(/34.5 (von|of) 40/)).toBeTruthy();
+        // The project image from Git: its build and the image in use until the build is ready.
+        expect(screen.getByText('reg/envs/github-com-o-ml-kurs:0123456789ab-v1.1.0')).toBeTruthy();
+        expect(screen.getByText('89abcdef0123 (main)')).toBeTruthy();
         expectNoRenderFailure();
     });
 

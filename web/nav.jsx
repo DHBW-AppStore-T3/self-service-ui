@@ -83,7 +83,6 @@ export function useNav() {
             label: t('nav.workspaces'),
             base: '/workspaces',
             items: [
-                { label: t('nav.gpuEnvironments'), href: '/workspaces/environments' },
                 { label: t('nav.gpuServers'), href: '/workspaces/servers' },
                 { label: t('nav.gpuUsage'), href: '/workspaces/usage' },
             ],
