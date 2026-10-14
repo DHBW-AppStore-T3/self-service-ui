@@ -12,6 +12,14 @@
             "c": "Runs until the end date you choose, and can be extended",
             "open": "Manage projects"
         },
+        "workspaces": {
+            "title": "Workspaces",
+            "lead": "JupyterLab and VS Code in the browser, on CPU or GPU — with the project's environment.",
+            "a": "Notebook on the CPU, a GPU kernel only while it computes",
+            "b": "Files stay with the project, with a shared folder for all members",
+            "c": "Your own environment from a container image or a Git repository",
+            "open": "Open workspaces"
+        },
         "dns": {
             "title": "DNS names & certificates",
             "lead": "Your own hostnames for your services, with TLS certificates.",

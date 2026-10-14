@@ -1,8 +1,9 @@
 import { Link } from 'wouter';
 import { Container, Stack, Title, Text, Paper, Button, ThemeIcon, SimpleGrid, List, Group } from '@mantine/core';
-import { Globe, ShieldCheck, ArrowRight, FolderKanban, Sparkles } from 'lucide-react';
+import { Globe, ShieldCheck, ArrowRight, FolderKanban, Sparkles, SquareTerminal } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
 import { cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
+import { hasWorkspaces } from '/gpu/access.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useCloudStatus } from '/projects/cloud-status.jsx';
 
@@ -23,10 +24,12 @@ export function Home() {
     const { t } = useTranslation();
     const acmeServer = window.appconfig?.acmeServer || 'https://certificates.dhbw.cloud';
     const acmeHost = acmeServer.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    const { me: llmMe, hasAccess } = useLlmMe();
+    const { me: llmMe, hasAccess, isAdmin } = useLlmMe();
     const { aiOffered } = useCloudStatus();
     // Like the menu: with LLM tokens, or with a budget in reach to get some.
     const withLlm = !!llmMe && (hasAccess || aiOffered);
+    // Like the menu: member of a project with workspaces (or admin), or a budget in reach offers one.
+    const withWorkspaces = !!llmMe && (hasWorkspaces(llmMe, isAdmin) || aiOffered);
 
     const services = [
         cloudProjectsEnabled && {
@@ -40,6 +43,12 @@ export function Home() {
             icon: Sparkles,
             color: 'grape',
             to: '/llm/overview',
+        },
+        withWorkspaces && {
+            key: 'workspaces',
+            icon: SquareTerminal,
+            color: 'orange',
+            to: '/workspaces/servers',
         },
         dnsZonesEnabled && {
             key: 'dns',
@@ -57,7 +66,8 @@ export function Home() {
                     <Text size="lg" c="dimmed" maw={760}>{t('home.hero.intro')}</Text>
                 </Stack>
 
-                <SimpleGrid cols={{ base: 1, md: services.length > 2 ? 3 : services.length }} spacing="md">
+                {/* Four cards as two rows of two: four columns leave too little width for the lists. */}
+                <SimpleGrid cols={{ base: 1, md: services.length === 4 ? 2 : Math.min(services.length, 3) }} spacing="md">
                     {services.map(({ key, icon: Icon, color, to }) => (
                         <Paper key={key} p="lg" shadow="xs" radius="md" withBorder
                             style={{ display: 'flex', flexDirection: 'column' }}>

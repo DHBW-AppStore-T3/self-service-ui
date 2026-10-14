@@ -12,6 +12,14 @@
             "c": "Läuft bis zum gewählten Enddatum, verlängerbar",
             "open": "Projekte verwalten"
         },
+        "workspaces": {
+            "title": "Workspaces",
+            "lead": "JupyterLab und VS Code im Browser, auf CPU oder GPU — mit der Umgebung des Projekts.",
+            "a": "Notebook auf der CPU, GPU-Kernel nur, solange gerechnet wird",
+            "b": "Dateien bleiben beim Projekt, mit gemeinsamem Ordner für alle Mitglieder",
+            "c": "Eigene Umgebung aus einem Container-Image oder Git-Repository",
+            "open": "Zu den Workspaces"
+        },
         "dns": {
             "title": "DNS-Namen & Zertifikate",
             "lead": "Eigene Hostnamen für die eigenen Dienste, mit TLS-Zertifikaten.",
