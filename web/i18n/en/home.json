@@ -1,7 +1,7 @@
 {
     "hero": {
-        "title": "dhbwCloud Self-Service",
-        "intro": "The DHBW's cloud, workspaces, language models and DNS, self-managed, no ticket needed."
+        "title": "Welcome to dhbwCloud Self-Service",
+        "intro": "The DHBW's cloud, workspaces, language models and DNS."
     },
     "services": {
         "projects": {
