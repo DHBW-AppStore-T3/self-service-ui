@@ -56,7 +56,8 @@
             "project": "Project",
             "person": "Person",
             "profile": "Profile",
-            "gpu_class": "GPU class"
+            "gpu_class": "GPU class",
+            "gpu_product": "GPU type"
         },
         "project": "Project: {{name}}"
     },
@@ -187,7 +188,7 @@
         "types": "GPU types",
         "resources": "Resources in the tree",
         "nodesTitle": "Nodes",
-        "nodesHint": "New GPU nodes appear here as soon as they are in the cluster. Changes apply to new pods within a minute; running ones stay where they are.",
+        "nodesHint": "New GPU nodes appear here as soon as they are in the cluster. Changes apply to new pods within a minute; running ones stay where they are. The gap filler is an LLM that uses the GPU while no workspace needs it.",
         "noNodes": "No GPU nodes in the cluster.",
         "node": "Node",
         "state": "State",
@@ -204,11 +205,15 @@
         "gpus_one": "{{count}} GPU",
         "gpus_other": "{{count}} GPUs",
         "pools": "Pools",
-        "poolsHint": "“allgemein” is for everybody; a pool of its own is for GPUs only certain budgets should get (grant them in the tree only there). The id becomes part of the tree resources and is fixed then.",
+        "poolsHint": "“allgemein” is for everybody; a pool of its own is for GPUs only certain budgets should get (grant them in the tree only there). The id becomes part of the tree resources and is fixed then. A pool that lends gives idle GPUs to the other pools of the same tier and takes them back as soon as it needs them.",
         "poolId": "Id",
         "poolIdHint": "e.g. wi",
         "poolName": "Name",
         "addPool": "Add pool",
-        "deletePool": "Delete"
+        "deletePool": "Delete",
+        "gapModel": "Gap filler",
+        "gapDefault": "Tier default ({{model}})",
+        "gapNone": "none",
+        "lend": "lends idle GPUs"
     }
 }

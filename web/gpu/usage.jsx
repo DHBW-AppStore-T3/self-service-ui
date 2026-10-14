@@ -13,7 +13,7 @@ import { GpuHours } from '/gpu/gpu-hours.jsx';
 
 // What workspaces reserved, from the rows llm-management-api books every minute (docs/plan-workspaces.md, W1): the same units as the cloud projects' report — server hours, vCPU-h, RAM-GB-h, GPU-h, home GB-days — plus the measured CPU use against the reservation. Everyone sees their own; admins can switch to all.
 
-export const USAGE_GROUPINGS = ['project', 'person', 'profile', 'gpu_class'];
+export const USAGE_GROUPINGS = ['project', 'person', 'profile', 'gpu_class', 'gpu_product'];
 const SUMS = ['server_hours', 'vcpu_hours', 'ram_gb_hours', 'gpu_hours', 'cpu_used_hours', 'ram_used_gb_hours', 'home_gb_days'];
 
 // groupUsage sums the report's entries by one dimension. people counts the distinct persons in a group.
@@ -70,7 +70,7 @@ export function GpuUsage() {
     // Projects by name; for admins all of them (others get their own). A project that is gone keeps its slug.
     const allProjects = useQuery({ queryKey: gpuKeys.projects(true), queryFn: () => api.listProjects(true), staleTime: 5 * 60 * 1000 });
     const names = useMemo(() => new Map((allProjects.data ?? []).map(p => [p.slug, p.name || p.slug])), [allProjects.data]);
-    const label = (r) => (by === 'project' && r.name ? names.get(r.name) ?? r.name : r.name) || (by === 'gpu_class' ? t('gpu.usage.noGpu') : '—');
+    const label = (r) => (by === 'project' && r.name ? names.get(r.name) ?? r.name : r.name) || (by === 'gpu_class' || by === 'gpu_product' ? t('gpu.usage.noGpu') : '—');
 
     const columns = [
         { label: t(`gpu.usage.groupBy.${by}`), value: label },

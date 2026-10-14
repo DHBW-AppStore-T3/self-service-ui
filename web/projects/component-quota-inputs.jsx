@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Anchor, Checkbox, Grid, Group, NumberInput, Paper, Stack, Switch, Text, TextInput } from '@mantine/core';
+import { Anchor, Badge, Checkbox, Grid, Group, NumberInput, Paper, Stack, Switch, Text, TextInput } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { UNLIMITED_QUOTA, groupResources, isAvailability, resourceLabel } from './util-project.jsx';
+import { UNLIMITED_QUOTA, groupResources, isAvailability, resourceLabel, resourceUnit } from './util-project.jsx';
 import { UsageMeter, grantUseText } from './component-project-resources.jsx';
 
 // Above this many fields the list stops being scannable and gets a filter. The
@@ -50,6 +50,11 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
 
     const groups = groupResources(matching, p => t(`projects.resources.provider.${p}`, { defaultValue: p }));
     const searchable = resources.length > SEARCH_THRESHOLD;
+    const quantity = (r, name) => (
+        <QuantityField providerDefaults={providerDefaults} emptyIsZero={emptyIsZero} resource={r} name={name}
+            value={value?.[r.id]} onChange={onChange} error={errors[r.id]} disabled={disabled} allowUnlimited={allowUnlimited}
+            free={headroom?.[r.id]} extra={extra} used={usage?.inUse?.[r.id]} total={usage?.total?.[r.id] ?? value?.[r.id]} />
+    );
 
     return (
         <Stack gap="md">
@@ -67,36 +72,94 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
                 <Text size="xs" c="dimmed">{t('projects.quotaInputs.noMatches', { query })}</Text>
             )}
 
-            {/* A named group (Workspaces, LLM, …) is a box of its own, so it is clear at a glance which fields belong together. */}
-            {groups.map(([groupName, groupResourcesList]) => (
-                <Paper key={groupName || '__ungrouped'} withBorder={!!groupName} radius="md" p={groupName ? 'md' : 0}>
-                    {groupName && (
-                        <Text size="sm" fw={700} mb="xs">{groupName}</Text>
-                    )}
-                    <Grid>
-                        {groupResourcesList.map(r => (
-                            <Grid.Col key={r.id} span={{ base: 12, sm: isAvailability(r) ? 6 : 4 }}>
-                                {isAvailability(r)
-                                    ? <AvailabilityField resource={r} value={value?.[r.id]} onChange={onChange} disabled={disabled} error={errors[r.id]} used={usage?.grantUse?.[r.id]} />
-                                    : <QuantityField providerDefaults={providerDefaults} emptyIsZero={emptyIsZero}
-                                        resource={r}
-                                        value={value?.[r.id]}
-                                        onChange={onChange}
-                                        error={errors[r.id]}
-                                        disabled={disabled}
-                                        allowUnlimited={allowUnlimited}
-                                        free={headroom?.[r.id]}
-                                        extra={extra}
-                                        used={usage?.inUse?.[r.id]}
-                                        total={usage?.total?.[r.id] ?? value?.[r.id]}
-                                    />}
-                            </Grid.Col>
-                        ))}
-                    </Grid>
+            {allowUnlimited && <Text size="xs" c="dimmed">{t('projects.quotaInputs.noCapNote')}</Text>}
+
+            {/* A section (Workspaces, LLM, or an OpenStack group) is a box of its own; Workspaces has CPU and GPU inside. Field names drop what the heading says already ("Workspace CPU" → "CPU"). */}
+            {quotaSections(groups).map(section => (
+                <Paper key={section.title || '__ungrouped'} withBorder={!!section.title} radius="md" p={section.title ? 'md' : 0}>
+                    {section.title && <Text size="sm" fw={700} mb="xs">{section.title}</Text>}
+                    <Stack gap="md">
+                        {section.parts.map(part => {
+                            const gpuRows = gpuClassRows(part.resources);
+                            return (
+                                <div key={part.key}>
+                                    {part.subtitle && <Text size="xs" fw={700} c="dimmed" tt="uppercase" mb={6}>{part.subtitle}</Text>}
+                                    {gpuRows ? (
+                                        // GPU classes (pool and tier of the AI service's GPU administration): one row each, the class's name as a badge, its two amounts side by side.
+                                        <Stack gap="sm">
+                                            {gpuRows.map(row => (
+                                                <Grid key={row.id} align="flex-start">
+                                                    <Grid.Col span={{ base: 12, sm: 4 }}>
+                                                        <Badge variant="light" color="gray" size="lg" tt="none" mt={extra ? 2 : 26}>{row.name}</Badge>
+                                                    </Grid.Col>
+                                                    <Grid.Col span={{ base: 6, sm: 4 }}>{row.gpus && quantity(row.gpus, t('projects.quotaInputs.gpusAtOnce'))}</Grid.Col>
+                                                    <Grid.Col span={{ base: 6, sm: 4 }}>{row.hours && quantity(row.hours, t('projects.quotaInputs.gpuHours'))}</Grid.Col>
+                                                </Grid>
+                                            ))}
+                                        </Stack>
+                                    ) : (
+                                        <Grid>
+                                            {part.resources.map(r => (
+                                                <Grid.Col key={r.id} span={{ base: 12, sm: isAvailability(r) ? 6 : 4 }}>
+                                                    {isAvailability(r)
+                                                        ? <AvailabilityField resource={r} label={part.short ? shortName(r.name) : undefined} value={value?.[r.id]} onChange={onChange} disabled={disabled} error={errors[r.id]} used={usage?.grantUse?.[r.id]} />
+                                                        : quantity(r, part.short ? shortName(r.name) : undefined)}
+                                                </Grid.Col>
+                                            ))}
+                                        </Grid>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </Stack>
                 </Paper>
             ))}
         </Stack>
     );
+}
+
+// quotaSections arranges the display groups: the AI service's groups Workspaces and Workspaces GPU become one section Workspaces with the parts CPU and GPU, LLM a section of its own; their field names are shortened (short). Every other group is a section of one part, as before.
+export function quotaSections(groups) {
+    const sections = [];
+    let workspaces = null;
+    for (const [title, resources] of groups) {
+        const raw = resources[0]?.group || '';
+        if (raw === 'Workspaces' || raw === 'Workspaces GPU') {
+            const gpu = raw === 'Workspaces GPU';
+            if (!workspaces) {
+                workspaces = { title: gpu ? title.replace(/\s*GPU$/, '') : title, parts: [] };
+                sections.push(workspaces);
+            }
+            workspaces.parts.push({ key: raw, subtitle: gpu ? 'GPU' : 'CPU', resources, short: true });
+            continue;
+        }
+        sections.push({ title, parts: [{ key: title || '__ungrouped', resources, short: raw === 'LLM' }] });
+    }
+    for (const sec of sections) {
+        // CPU before GPU, whatever order the catalogue has.
+        sec.parts.sort((a, b) => (a.subtitle === 'GPU') - (b.subtitle === 'GPU'));
+        if (sec.parts.length === 1) sec.parts[0].subtitle = undefined;
+    }
+    return sections;
+}
+
+// shortName drops the prefix the section heading says already: "Workspace CPU" → "CPU", "LLM tokens per minute" → "Tokens per minute", "LLM: every model directly" → "Every model directly".
+export function shortName(name) {
+    const rest = (name || '').replace(/^(workspaces?|llm)\s*:?\s+/i, '');
+    return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : name;
+}
+
+// gpuClassRows pairs the GPU resources of a group by class (ws-gpus-<class>, ws-gpu-hours-<class>), named by the class ("Allgemein · mittel: GPU hours" → "Allgemein · mittel"); null when the group holds anything else.
+export function gpuClassRows(resources) {
+    const rows = new Map();
+    for (const r of resources) {
+        const m = /^ws-(gpus|gpu-hours)-(.+)$/.exec(r.id);
+        if (!m) return null;
+        const row = rows.get(m[2]) ?? { id: m[2], name: (r.name || m[2]).split(':')[0].trim() };
+        row[m[1] === 'gpus' ? 'gpus' : 'hours'] = r;
+        rows.set(m[2], row);
+    }
+    return rows.size ? [...rows.values()].sort((a, b) => a.name.localeCompare(b.name)) : null;
 }
 
 // An availability is granted or it is not. A NumberInput would invite a 2, which
@@ -110,7 +173,7 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
 // Switched off while in use, the line turns into a warning: a network cannot
 // be taken away while anything is attached, and a flavour or image taken away
 // leaves its servers running but unable to be rebuilt or resized.
-function AvailabilityField({ resource, value, onChange, disabled, error, used }) {
+function AvailabilityField({ resource, label, value, onChange, disabled, error, used }) {
     const { t } = useTranslation();
     const on = value === 1;
     const useText = grantUseText(t, resource, used);
@@ -122,7 +185,7 @@ function AvailabilityField({ resource, value, onChange, disabled, error, used })
                     checked={on}
                     disabled={disabled}
                     onChange={e => onChange(resource.id, e.currentTarget.checked ? 1 : 0)}
-                    label={resource.name}
+                    label={label ?? resource.name}
                     description={resource.message}
                     error={error}
                 />
@@ -142,23 +205,24 @@ function showsDefault(r) {
     return !!r.provider && r.provider !== 'openstack' && r.kind !== 'window' && (r.default ?? 0) > 0;
 }
 
-function QuantityField({ providerDefaults, emptyIsZero, resource: r, value: current, onChange, error, disabled, allowUnlimited, free, extra, used, total }) {
+// name replaces the resource's own (shortened under its section heading); the unit and window follow in grey.
+function QuantityField({ providerDefaults, emptyIsZero, resource: r, name, value: current, onChange, error, disabled, allowUnlimited, free, extra, used, total }) {
     const { t } = useTranslation();
     const isUnlimited = current === UNLIMITED_QUOTA;
     return (
         <Stack gap="4">
             <NumberInput
-                label={resourceLabel(t, r)}
+                label={name ? <>{name} <Text span size="xs" c="dimmed" fw={400}>{resourceUnit(t, r)}</Text></> : resourceLabel(t, r)}
                 size={extra ? 'xs' : undefined}
                 min={allowUnlimited || extra ? 0 : r.min}
                 max={r.max}
                 disabled={disabled || isUnlimited}
                 value={isUnlimited ? '' : current}
-                placeholder={isUnlimited ? t('projects.quotaInputs.noCap') : (extra || emptyIsZero) ? '0' : (providerDefaults && showsDefault(r) ? t('projects.quotaInputs.defaultValue', { value: r.default }) : undefined)}
+                placeholder={isUnlimited ? '∞' : (extra || emptyIsZero) ? '0' : (providerDefaults && showsDefault(r) ? t('projects.quotaInputs.defaultValue', { value: r.default }) : undefined)}
                 // Emptied, a field with a default goes back to it: absent from the limit, not an empty string.
                 onChange={v => onChange(r.id, v === '' && (emptyIsZero || (providerDefaults && showsDefault(r))) ? undefined : v)}
                 error={error}
-                description={isUnlimited ? t('projects.quotaInputs.noCapHint') : (extra ? undefined : r.message)}
+                description={isUnlimited || extra || name ? undefined : r.message}
             />
             <HeadroomShare free={free} value={isUnlimited ? UNLIMITED_QUOTA : current}
                 onTake={disabled ? undefined : () => onChange(r.id, typeof r.max === 'number' && r.max > 0 ? Math.min(free, r.max) : free)} />

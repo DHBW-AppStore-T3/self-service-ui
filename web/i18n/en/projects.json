@@ -366,6 +366,9 @@
     },
     "quotaInputs": {
         "filter": "Filter resources",
+        "gpusAtOnce": "GPUs at the same time",
+        "gpuHours": "GPU hours",
+        "noCapNote": "No cap: everything below may use any amount.",
         "noMatches": "Nothing matches “{{query}}”.",
         "noCap": "No cap",
         "noCapHint": "Children may use any amount",

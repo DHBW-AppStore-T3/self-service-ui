@@ -56,7 +56,8 @@
             "project": "Projekt",
             "person": "Person",
             "profile": "Profil",
-            "gpu_class": "GPU-Klasse"
+            "gpu_class": "GPU-Klasse",
+            "gpu_product": "GPU-Typ"
         },
         "project": "Projekt: {{name}}"
     },
@@ -187,7 +188,7 @@
         "types": "GPU-Typen",
         "resources": "Ressourcen im Baum",
         "nodesTitle": "Knoten",
-        "nodesHint": "Neue GPU-Knoten erscheinen hier, sobald sie im Cluster sind. Änderungen gelten innerhalb einer Minute für neue Pods; laufende bleiben, wo sie sind.",
+        "nodesHint": "Neue GPU-Knoten erscheinen hier, sobald sie im Cluster sind. Änderungen gelten innerhalb einer Minute für neue Pods; laufende bleiben, wo sie sind. Der Lückenfüller ist ein LLM, das die GPU nutzt, solange kein Workspace sie braucht.",
         "noNodes": "Keine GPU-Knoten im Cluster.",
         "node": "Knoten",
         "state": "Status",
@@ -204,11 +205,15 @@
         "gpus_one": "{{count}} GPU",
         "gpus_other": "{{count}} GPUs",
         "pools": "Pools",
-        "poolsHint": "„allgemein“ ist für alle; ein eigener Pool ist für GPUs, die nur bestimmte Budgets bekommen sollen (im Baum nur dort freigeben). Das Kürzel wird Teil der Ressourcen im Baum und ist danach fest.",
+        "poolsHint": "„allgemein“ ist für alle; ein eigener Pool ist für GPUs, die nur bestimmte Budgets bekommen sollen (im Baum nur dort freigeben). Das Kürzel wird Teil der Ressourcen im Baum und ist danach fest. Ein Pool, der verleiht, gibt freie GPUs an die anderen Pools derselben Stufe und holt sie sofort zurück, sobald er sie selbst braucht.",
         "poolId": "Kürzel",
         "poolIdHint": "z. B. wi",
         "poolName": "Name",
         "addPool": "Pool anlegen",
-        "deletePool": "Löschen"
+        "deletePool": "Löschen",
+        "gapModel": "Lückenfüller",
+        "gapDefault": "Standard der Stufe ({{model}})",
+        "gapNone": "keiner",
+        "lend": "verleiht freie GPUs"
     }
 }

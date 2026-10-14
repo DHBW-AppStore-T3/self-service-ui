@@ -366,6 +366,9 @@
     },
     "quotaInputs": {
         "filter": "Ressourcen filtern",
+        "gpusAtOnce": "GPUs gleichzeitig",
+        "gpuHours": "GPU-Stunden",
+        "noCapNote": "Kein Limit: darunter darf beliebig viel genutzt werden.",
         "noMatches": "Nichts passt zu „{{query}}“.",
         "noCap": "Kein Limit",
         "noCapHint": "Darunter darf beliebig viel genutzt werden",

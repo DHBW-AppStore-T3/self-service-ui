@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Badge, Button, Container, Group, Paper, Select, Stack, Table, Text, TextInput, Title } from '@mantine/core';
+import { Alert, Badge, Button, Container, Group, Paper, Select, Stack, Switch, Table, Text, TextInput, Title } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useTranslation } from 'react-i18next';
 import { Loading, LoadError } from '/helper/query-state.jsx';
@@ -27,15 +27,15 @@ function Section({ title, hint, children }) {
 }
 
 // One node: its pool, tier and end, saved together.
-function NodeRow({ node, pools, tiers, onSave, saving }) {
+function NodeRow({ node, pools, tiers, models, tierModels, onSave, saving }) {
     const { t } = useTranslation();
     const a = node.assignment;
-    const initial = { pool: a?.pool ?? '', tier: a?.tier ?? node.suggested_tier, until: day(a?.available_until) };
+    const initial = { pool: a?.pool ?? '', tier: a?.tier ?? node.suggested_tier, until: day(a?.available_until), model: a?.gap_model ?? '' };
     const [draft, setDraft] = useState(initial);
-    const dirty = draft.pool !== initial.pool || (draft.pool && draft.tier !== initial.tier) || draft.until !== initial.until;
+    const dirty = draft.pool !== initial.pool || (draft.pool && (draft.tier !== initial.tier || draft.model !== initial.model)) || draft.until !== initial.until;
     const save = () => onSave(node.name, {
         pool: draft.pool, tier: draft.pool ? draft.tier : '',
-        available_until: draft.pool && draft.until ? `${draft.until}T23:59:59Z` : undefined, gap_model: a?.gap_model ?? '',
+        available_until: draft.pool && draft.until ? `${draft.until}T23:59:59Z` : undefined, gap_model: draft.pool ? draft.model : '',
     });
     return (
         <Table.Tr>
@@ -59,6 +59,15 @@ function NodeRow({ node, pools, tiers, onSave, saving }) {
             <Table.Td>
                 <DateInput size="xs" w={140} clearable disabled={!draft.pool} valueFormat="DD.MM.YYYY" placeholder={t('gpu.fleet.permanent')}
                     value={draft.until} onChange={v => setDraft({ ...draft, until: v || null })} aria-label={t('gpu.fleet.until')} />
+            </Table.Td>
+            <Table.Td>
+                <Select size="xs" w={190} allowDeselect={false} disabled={!draft.pool} value={draft.model} aria-label={t('gpu.fleet.gapModel')}
+                    data={[
+                        { value: '', label: t('gpu.fleet.gapDefault', { model: tierModels?.[draft.tier] || '—' }) },
+                        ...models.map(m => ({ value: m, label: m })),
+                        { value: '-', label: t('gpu.fleet.gapNone') },
+                    ]}
+                    onChange={v => setDraft({ ...draft, model: v ?? '' })} />
             </Table.Td>
             <Table.Td>
                 <Button size="xs" disabled={!dirty} loading={saving} onClick={save}>{t('gpu.fleet.save')}</Button>
@@ -97,7 +106,7 @@ export function GpuFleet() {
     if (!isAdmin) return <Container size="md" py="md"><Alert color="gray" variant="light">{t('gpu.noAccess.page')}</Alert></Container>;
     if (query.isPending) return <Container size="lg" py="md"><Loading /></Container>;
     if (query.isError) return <Container size="lg" py="md"><LoadError query={query} /></Container>;
-    const { nodes = [], pools = [], tiers = [], classes = [] } = query.data ?? {};
+    const { nodes = [], pools = [], tiers = [], classes = [], models = [], tier_models: tierModels = {} } = query.data ?? {};
     const usedPools = new Set(classes.map(c => c.pool));
 
     return (
@@ -117,7 +126,7 @@ export function GpuFleet() {
                         <Table.Tbody>
                             {classes.map(c => (
                                 <Table.Tr key={c.id}>
-                                    <Table.Td><Text size="sm" fw={500}>{c.name}</Text></Table.Td>
+                                    <Table.Td><Badge variant="light" color="gray" size="lg" tt="none">{c.name}</Badge></Table.Td>
                                     <Table.Td>{c.nodes}</Table.Td>
                                     <Table.Td>{c.gpus}</Table.Td>
                                     <Table.Td><Text size="xs">{c.products || '—'}</Text></Table.Td>
@@ -132,12 +141,12 @@ export function GpuFleet() {
                     {nodes.length === 0 ? <Text size="sm" c="dimmed">{t('gpu.fleet.noNodes')}</Text> : (
                         <Table>
                             <Table.Thead><Table.Tr>
-                                <Table.Th>{t('gpu.fleet.node')}</Table.Th><Table.Th>{t('gpu.fleet.state')}</Table.Th><Table.Th>{t('gpu.fleet.pool')}</Table.Th><Table.Th>{t('gpu.fleet.tier')}</Table.Th><Table.Th>{t('gpu.fleet.until')}</Table.Th><Table.Th />
+                                <Table.Th>{t('gpu.fleet.node')}</Table.Th><Table.Th>{t('gpu.fleet.state')}</Table.Th><Table.Th>{t('gpu.fleet.pool')}</Table.Th><Table.Th>{t('gpu.fleet.tier')}</Table.Th><Table.Th>{t('gpu.fleet.until')}</Table.Th><Table.Th>{t('gpu.fleet.gapModel')}</Table.Th><Table.Th />
                             </Table.Tr></Table.Thead>
                             <Table.Tbody>
                                 {nodes.map(n => (
                                     // Keyed by the saved assignment: after a save the row starts again from what is stored.
-                                    <NodeRow key={`${n.name}:${n.assignment?.updated_at ?? ''}`} node={n} pools={pools} tiers={tiers} saving={assign.isPending && assign.variables?.name === n.name}
+                                    <NodeRow key={`${n.name}:${n.assignment?.updated_at ?? ''}`} node={n} pools={pools} tiers={tiers} models={models} tierModels={tierModels} saving={assign.isPending && assign.variables?.name === n.name}
                                         onSave={(name, body) => assign.mutate({ name, body })} />
                                 ))}
                             </Table.Tbody>
@@ -152,6 +161,10 @@ export function GpuFleet() {
                                 <Table.Tr key={p.id}>
                                     <Table.Td><Text size="sm" fw={500}>{p.name}</Text></Table.Td>
                                     <Table.Td><Text size="xs" c="dimmed" ff="monospace">{p.id}</Text></Table.Td>
+                                    <Table.Td>
+                                        <Switch size="xs" checked={!!p.lend} label={t('gpu.fleet.lend')} disabled={savePool.isPending}
+                                            onChange={e => savePool.mutate({ id: p.id, body: { name: p.name, lend: e.currentTarget.checked } })} />
+                                    </Table.Td>
                                     <Table.Td align="right">
                                         {!usedPools.has(p.id) && p.id !== 'allgemein' && (
                                             <Button size="xs" variant="subtle" color="red" loading={deletePool.isPending && deletePool.variables === p.id}

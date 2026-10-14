@@ -286,9 +286,15 @@ export function windowName(t, window) {
 // resourceLabel is how a resource is named next to a value: its name, its unit,
 // and for an amount per window the window — "GPU hours (h per 30 days)".
 export function resourceLabel(t, r) {
+    const suffix = resourceUnit(t, r);
+    return suffix ? `${r.name} ${suffix}` : r.name;
+}
+
+// resourceUnit is the unit and window of a resource in brackets ("(GPU h per 30 days)"); '' without either.
+export function resourceUnit(t, r) {
     const per = r.window ? t('projects.resources.perWindow', { window: windowName(t, r.window) }) : '';
     const suffix = [r.unit, per].filter(Boolean).join(' ');
-    return suffix ? `${r.name} (${suffix})` : r.name;
+    return suffix ? `(${suffix})` : '';
 }
 
 // groupResources sorts the catalogue into its display groups, keeping the
