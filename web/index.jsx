@@ -7,7 +7,7 @@ import { createRoot } from 'react-dom/client';
 import { lazy, Suspense } from 'react';
 import { Redirect, Router, Route, Switch, useLocation } from 'wouter';
 
-import { apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled, llmEnabled } from '/features.js';
+import { cloudProjectsEnabled, dnsZonesEnabled, llmEnabled } from '/features.js';
 // Imported for its side effect: initialising i18next before the first render,
 // so nothing flashes in one language and settles in another.
 import '/i18n/index.js';
@@ -39,8 +39,12 @@ import { ClientProvider } from './providers/client.jsx';
 
 // Route-level code splitting: the projects and dyndns trees (swagger-ui lives
 // inside the latter) load as separate chunks only when their route is visited.
-const CloudProjectManagement = lazy(() =>
-    import('./projects/projects.jsx').then(m => ({ default: m.CloudProjectManagement })));
+const CloudSection = lazy(() =>
+    import('./projects/projects.jsx').then(m => ({ default: m.CloudSection })));
+const BudgetsSection = lazy(() =>
+    import('./projects/projects.jsx').then(m => ({ default: m.BudgetsSection })));
+const ProjectsStart = lazy(() =>
+    import('./projects/projects.jsx').then(m => ({ default: m.ProjectsStart })));
 const DynamicDnsManagement = lazy(() =>
     import('./dyndns/dyndns-routes.jsx').then(m => ({ default: m.DynamicDnsManagement })));
 // Lazy for the same reason, and one reason more: this page touches BOTH section
@@ -50,8 +54,6 @@ const LlmManagement = lazy(() =>
     import('./llm/llm-routes.jsx').then(m => ({ default: m.LlmManagement })));
 const GpuManagement = lazy(() =>
     import('./gpu/gpu-routes.jsx').then(m => ({ default: m.GpuManagement })));
-const ApiTokens = lazy(() =>
-    import('./tokens/api-tokens.jsx').then(m => ({ default: m.ApiTokens })));
 
 createRoot(document.getElementById('app')).render(
     <MantineProvider
@@ -150,12 +152,17 @@ function AppRoutes() {
                 <Switch>
                     <Route path="/" component={Home} />
                     {dnsZonesEnabled && <Route path="/dyndns" component={DynamicDnsManagement} nest />}
-                    {cloudProjectsEnabled && <Route path="/projects" component={CloudProjectManagement} nest />}
+                    {cloudProjectsEnabled && <Route path="/cloud" component={CloudSection} nest />}
+                    {cloudProjectsEnabled && <Route path="/budgets" component={BudgetsSection} nest />}
+                    {/* The start page for a project of an area, and the addresses of before the sections. */}
+                    {cloudProjectsEnabled && <Route path="/projects" component={ProjectsStart} nest />}
                     {llmEnabled && <Route path="/llm" component={LlmManagement} nest />}
                     {llmEnabled && <Route path="/workspaces" component={GpuManagement} nest />}
                     {/* The section was called GPU until W2; old links keep working. */}
                     {llmEnabled && <Route path="/gpu/*?">{(params) => <Redirect to={`/workspaces/${params['*'] ?? ''}`} replace />}</Route>}
-                    {apiTokensEnabled && <Route path="/tokens" component={ApiTokens} nest />}
+                    {/* The token pages moved into the sections of their APIs. */}
+                    <Route path="/tokens/dns"><Redirect to="/dyndns/tokens" replace /></Route>
+                    <Route path="/tokens/*?"><Redirect to="/cloud/tokens" replace /></Route>
                     <Route component={NotFound} />
                 </Switch>
             </ErrorBoundary>

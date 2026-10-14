@@ -7,7 +7,8 @@ import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { useProjectConfig } from './projects.jsx';
-import { autoApproveHeadroom, defaultsWithin, isAvailability, latestProjectEnd, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
+import { autoApproveHeadroom, defaultsWithin, isAvailability, kindOfResource, latestProjectEnd, PROJECT_KINDS, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
+import { AREA_PROJECTS } from './start-link.js';
 
 // Where somebody comes who has no project with resources of a provider yet —
 // sent here from Jupyter, the chat or the keys page (/projects/start?for=aiaas).
@@ -20,7 +21,8 @@ export function StartView() {
     const config = useProjectConfig();
     const queryClient = useQueryClient();
     const params = new URLSearchParams(useSearch());
-    const provider = params.get('for') || 'aiaas';
+    // The area the project is for (?for=workspaces|llm|cloud).
+    const area = PROJECT_KINDS.includes(params.get('for')) ? params.get('for') : 'workspaces';
     const back = safeBack(params.get('back'));
 
     const [eligibleQuery, mineQuery] = useQueries({
@@ -37,7 +39,7 @@ export function StartView() {
     const offers = useMemo(() => {
         const mine = mineQuery.data?.items ?? [];
         return (eligibleQuery.data?.items ?? []).map(budget => {
-            const offered = visibleResources(resources, budget).filter(r => r.provider === provider && !isAvailability(r));
+            const offered = visibleResources(resources, budget).filter(r => kindOfResource(r) === area && !isAvailability(r));
             if (offered.length === 0) return null;
             const has = mine.some(p => p.parent_id === budget.id && ['pending', 'approved', 'change_pending'].includes(p.status));
             const headroom = autoApproveHeadroom(budget, resources, mine);
@@ -47,7 +49,7 @@ export function StartView() {
                 : defaultsWithin(offered, roomIn(budget, offered));
             return { budget, offered, amounts, instant, has };
         }).filter(Boolean);
-    }, [eligibleQuery.data, mineQuery.data, resources, provider]);
+    }, [eligibleQuery.data, mineQuery.data, resources, area]);
 
     if (!api || !config || eligibleQuery.isPending || mineQuery.isPending) return <Loading />;
     if (eligibleQuery.isError) return <LoadError query={eligibleQuery} />;
@@ -83,7 +85,7 @@ export function StartView() {
         setBusy(false);
     }
 
-    const providerName = t(`projects.resources.provider.${provider}`, { defaultValue: provider });
+    const providerName = t(`projects.kind.${area}`);
     return (
         <Stack gap="md" maw={720}>
             <Title order={3}>{t('projects.start.title', { provider: providerName })}</Title>
@@ -95,7 +97,7 @@ export function StartView() {
                     {result.failed.length > 0 && <Alert color="red" variant="light">{t('projects.start.failed', { list: result.failed.join(' · ') })}</Alert>}
                     <Group>
                         {back && <Button component="a" href={back}>{t('projects.start.back')}</Button>}
-                        <Button variant="default" component="a" href={`/projects/projects?kind=${encodeURIComponent(provider)}`}>{t('projects.start.toProjects')}</Button>
+                        <Button variant="default" component="a" href={AREA_PROJECTS[area]}>{t('projects.start.toProjects')}</Button>
                     </Group>
                 </Stack>
             ) : offers.length === 0 ? (

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { labDeletion } from './util-project.jsx';
 
-const resources = [{ id: 'cores', provider: 'openstack' }, { id: 'ws-storage-gb', provider: 'aiaas' }];
+const resources = [{ id: 'cores', provider: 'openstack', area: 'cloud' }, { id: 'ws-storage-gb', provider: 'aiaas', area: 'workspaces' }];
 const retirement = { aiaasDeleteGraceDays: 14 };
 
 describe('labDeletion', () => {

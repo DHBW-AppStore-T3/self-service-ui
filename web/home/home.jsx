@@ -25,30 +25,30 @@ export function Home() {
     const acmeServer = window.appconfig?.acmeServer || 'https://certificates.dhbw.cloud';
     const acmeHost = acmeServer.replace(/^https?:\/\//, '').replace(/\/$/, '');
     const { me: llmMe, hasAccess, isAdmin } = useLlmMe();
-    const { aiOffered } = useCloudStatus();
+    const { offered } = useCloudStatus();
     // Like the menu: with LLM tokens, or with a budget in reach to get some.
-    const withLlm = !!llmMe && (hasAccess || aiOffered);
+    const withLlm = !!llmMe && (hasAccess || offered.includes('llm'));
     // Like the menu: member of a project with workspaces (or admin), or a budget in reach offers one.
-    const withWorkspaces = !!llmMe && (hasWorkspaces(llmMe, isAdmin) || aiOffered);
+    const withWorkspaces = !!llmMe && (hasWorkspaces(llmMe, isAdmin) || offered.includes('workspaces'));
 
     const services = [
         cloudProjectsEnabled && {
             key: 'projects',
             icon: FolderKanban,
             color: 'blue',
-            to: '/projects',
+            to: '/cloud/projects',
         },
         withLlm && {
             key: 'llm',
             icon: Sparkles,
             color: 'grape',
-            to: '/llm/overview',
+            to: hasAccess ? '/llm/overview' : '/llm/projects',
         },
         withWorkspaces && {
             key: 'workspaces',
             icon: SquareTerminal,
             color: 'orange',
-            to: '/workspaces/servers',
+            to: hasWorkspaces(llmMe, isAdmin) ? '/workspaces/servers' : '/workspaces/projects',
         },
         dnsZonesEnabled && {
             key: 'dns',

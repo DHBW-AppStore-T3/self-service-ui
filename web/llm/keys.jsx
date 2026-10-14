@@ -56,7 +56,7 @@ export function LlmKeys() {
     if (usage.isPending) return <Container size="lg" py="md"><Loading /></Container>;
     // No LLM tokens through any project: the way to get some, instead of an error.
     if (usage.isError && usage.error?.status === 403) {
-        return <NoProject title={t('llm.noAccess.title')} text={t('llm.noAccess.text')} />;
+        return <NoProject area="llm" title={t('llm.noAccess.title')} text={t('llm.noAccess.text')} />;
     }
     if (usage.isError) return <Container size="lg" py="md"><LoadError query={usage} /></Container>;
 

@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
-import { ArrowUpDown, Plus, Server, Sparkles } from 'lucide-react';
+import { ArrowUpDown } from 'lucide-react';
 import { useLocalStorage } from '@mantine/hooks';
-import { Alert, Button, Divider, Group, SegmentedControl, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core';
-import { useSearch } from 'wouter';
+import { Alert, Divider, Group, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useNodesApi } from './api-nodes.jsx';
@@ -19,13 +18,15 @@ import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 import { useTranslation } from 'react-i18next';
-import { COLOR, PROJECT_SORTS, budgetKinds, catalogKinds, getAuthUserEmail, ownerEmail, projectKinds, sortProjects, pollWhileDeleting } from './util-project.jsx';
+import { COLOR, PROJECT_SORTS, budgetKinds, getAuthUserEmail, ownerEmail, projectKinds, resourcesOfKinds, sortProjects, pollWhileDeleting } from './util-project.jsx';
 
-// MyProjectsView lists the projects the signed-in user owns and lets them
-// request new ones, propose changes and release finished projects. Above them
-// sit the budgets the user may draw from — for somebody without budgets of
-// their own this is the whole cloud section (see nav.jsx).
-export function MyProjectsView() {
+// MyProjectsView lists the projects of one area (cloud, workspaces, llm) the
+// signed-in user owns or shares, and lets them request new ones, propose changes
+// and release finished projects; below them the budgets offering that area.
+// Each section of the menu shows its own (see nav.jsx). A project of several
+// areas appears in each, its card showing only that area's resources; the
+// dialogs keep the whole project.
+export function MyProjectsView({ area = 'cloud' }) {
     const { t } = useTranslation();
     // The order the viewer picked last; anything the browser kept that is no
     // longer an option falls back to the name.
@@ -35,17 +36,6 @@ export function MyProjectsView() {
         getInitialValueInEffect: false,
     });
     const sort = PROJECT_SORTS.includes(storedSort) ? storedSort : PROJECT_SORTS[0];
-    // Which kind of project the list shows ('all', 'openstack', 'aiaas'): a
-    // link may ask for one (?kind=aiaas, from the LLM and workspace pages),
-    // otherwise the one picked last.
-    const [storedKind, setStoredKind] = useLocalStorage({
-        key: 'self-service.my-projects.kind',
-        defaultValue: 'all',
-        getInitialValueInEffect: false,
-    });
-    const asked = new URLSearchParams(useSearch()).get('kind');
-    const [pickedKind, setPickedKind] = useState(asked);
-    const chooseKind = (k) => { setPickedKind(k); setStoredKind(k); };
     const api = useNodesApi();
     const config = useProjectConfig();
     const { user } = useAuth();
@@ -75,19 +65,18 @@ export function MyProjectsView() {
 
     const resources = config.resources || [];
     const projects = projectsQuery.data ?? { items: [], total: 0 };
-    // The filter only where there are two kinds to tell apart. A project that
-    // holds nothing yet belongs to every kind, so it never goes missing.
-    const kinds = catalogKinds(resources);
-    const kind = kinds.length > 1 && kinds.includes(pickedKind ?? storedKind) ? (pickedKind ?? storedKind) : 'all';
-    const ofKind = (n) => kind === 'all' || projectKinds(n, resources).length === 0 || projectKinds(n, resources).includes(kind);
+    // The projects of this area. One that holds nothing yet belongs to every
+    // area, so it never goes missing.
+    const kinds = [area];
+    const ofKind = (n) => projectKinds(n, resources).length === 0 || projectKinds(n, resources).includes(area);
     const shown = projects.items.filter(ofKind);
-    const kindCount = (k) => k === 'all' ? projects.total
-        : projects.items.filter(n => projectKinds(n, resources).length === 0 || projectKinds(n, resources).includes(k)).length;
+    const areaResources = resourcesOfKinds(resources, kinds);
     const myBudgets = myBudgetsQuery.data?.items ?? [];
     const eligibleBudgets = eligibleQuery.data?.items ?? [];
-    // A kind can be started where a budget in reach offers it: one the viewer
-    // manages or may request from.
-    const availableKinds = kinds.filter(k => [...myBudgets, ...eligibleBudgets].some(b => budgetKinds(b, resources).includes(k)));
+    // A project can be started where a budget in reach offers the area: one the
+    // viewer manages or may request from.
+    const offersArea = (b) => budgetKinds(b, resources).includes(area);
+    const availableKinds = [...myBudgets, ...eligibleBudgets].some(offersArea) ? kinds : [];
     // The list also holds projects the viewer only administers. What counts
     // against a per-person share is what they OWN — the server sums by owner —
     // so only those go into the arithmetic below.
@@ -97,7 +86,7 @@ export function MyProjectsView() {
     // The offers are what the user may REQUEST from; budgets they manage live
     // in "My Budgets" and would only repeat themselves here.
     const managedIds = new Set(myBudgets.map(b => b.id));
-    const offers = eligibleBudgets.filter(b => !managedIds.has(b.id));
+    const offers = eligibleBudgets.filter(b => !managedIds.has(b.id) && offersArea(b));
     const budgetRequestTargets = offers.filter(b => b.allow_sub_budget_requests !== false);
 
     return (
@@ -107,32 +96,12 @@ export function MyProjectsView() {
                 Before, the budget cards came first under a small caption and the
                 project cards followed without one, so the two read as one list. */}
             <Stack gap="xs">
-                {/* One row: the heading, which projects it shows, their order,
-                    and the way to a new one at its end. The filter names what
-                    each kind is for and how many there are, so a first-time
-                    reader learns the two kinds from it without an intro text. */}
+                {/* One row: the heading, the order, and the way to a new one at its end. */}
                 <Group justify="space-between" align="center" gap="sm">
-                    <Group gap="md" align="center">
-                        <Title order={4}>{t('projects.myProjects.headingPlain')}</Title>
-                        {kinds.length > 1 && (
-                            <SegmentedControl
-                                size="sm"
-                                aria-label={t('projects.kind.label')}
-                                value={kind}
-                                onChange={chooseKind}
-                                data={['all', ...kinds].map(k => ({
-                                    value: k,
-                                    label: (
-                                        <Group gap={6} wrap="nowrap">
-                                            {k === 'openstack' && <Server size={14} />}
-                                            {k === 'aiaas' && <Sparkles size={14} />}
-                                            <span>{t(`projects.kind.filter_${k}`, { count: kindCount(k) })}</span>
-                                        </Group>
-                                    ),
-                                }))}
-                            />
-                        )}
-                    </Group>
+                    <Stack gap={0}>
+                        <Title order={4}>{t(`projects.kind.heading_${area}`)}</Title>
+                        <Text size="xs" c="dimmed">{t(`projects.kind.${area}Hint`)}</Text>
+                    </Stack>
                     <Group gap="sm" align="center" ml="auto">
                         {shown.length > 1 && (
                             <Select
@@ -146,7 +115,7 @@ export function MyProjectsView() {
                                 allowDeselect={false}
                             />
                         )}
-                        <NewProjectButton kinds={kinds} available={availableKinds} onPick={(k) => setNewProject({ budget: '', kind: k })} />
+                        <NewProjectButton kinds={kinds} available={availableKinds} label={t(`projects.kind.${area}Project`)} onPick={(k) => setNewProject({ budget: '', kind: k })} />
                     </Group>
                 </Group>
 
@@ -158,11 +127,7 @@ export function MyProjectsView() {
                 </Alert>
             )}
 
-            {projects.items.length > 0 && shown.length === 0 && (
-                <Text size="sm" c="dimmed">{t('projects.kind.none')}</Text>
-            )}
-
-            {projects.items.length === 0 && (
+            {shown.length === 0 && (
                 canRequest ? (
                     <Alert color={COLOR.info} variant="light">
                         {t('projects.myProjects.noneCanRequest')}
@@ -180,7 +145,7 @@ export function MyProjectsView() {
                     <ProjectCard
                         key={node.id}
                         node={node}
-                        resources={resources}
+                        resources={areaResources}
                         parentName={node.parent_name}
                         perspective="owner"
                         onAction={handleAction}

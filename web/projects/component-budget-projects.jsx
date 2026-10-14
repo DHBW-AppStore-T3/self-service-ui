@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, ArrowDown, ArrowUp, ArrowUpDown, Eye, Gift, LogOut, Package, Pencil, Rocket, Scale, Search, Server, Sparkles, Trash2, X } from 'lucide-react';
+import { Activity, ArrowDown, ArrowUp, ArrowUpDown, Eye, Gift, LogOut, Package, Pencil, Rocket, Scale, Search, Server, Sparkles, SquareTerminal, Trash2, X } from 'lucide-react';
 import { ActionIcon, Badge, Box, Group, Loader, MultiSelect, Pagination, Paper, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
 import { useDebouncedValue, useElementSize, useLocalStorage } from '@mantine/hooks';
 import { keepPreviousData, useQueries, useQuery } from '@tanstack/react-query';
@@ -65,7 +65,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
         getInitialValueInEffect: false,
     });
     const [q] = useDebouncedValue(search.trim(), SEARCH_DEBOUNCE_MS);
-    // Cloud or Lab/KI projects only, where the budget offers both: the table then shows that kind's resources as columns instead of everything behind the (i). Remembered per browser, like the sort.
+    // The projects of one area only (Cloud, Workspaces, LLM), where the budget offers several: the table then shows that area's resources as columns instead of everything behind the (i). Remembered per browser, like the sort.
     const kinds = budgetKinds(budget, resources);
     const [storedKind, setStoredKind] = useLocalStorage({
         key: 'self-service.budget-projects.kind',
@@ -73,17 +73,17 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
         getInitialValueInEffect: false,
     });
     const kind = kinds.length > 1 && kinds.includes(storedKind) ? storedKind : 'all';
-    const provider = kind === 'all' ? '' : kind;
+    const area = kind === 'all' ? '' : kind;
 
     // Every filter change starts over at the first page: page 7 of the old
     // result means nothing for the new one.
     const refilter = (apply) => (value) => { apply(value); setPage(1); };
 
-    const params = { q, status: statuses, group, groupMode, sort: sort.key, order: sort.order, page, allocated: allocatedOnly, deep, provider };
+    const params = { q, status: statuses, group, groupMode, sort: sort.key, order: sort.order, page, allocated: allocatedOnly, deep, area };
     const query = useQuery({
         queryKey: projectKeys.budgetProjects(budget.id, params),
         queryFn: () => api.listChildren(budget.id, {
-            kind: 'project', q, status: statuses, group, groupMode, allocated: allocatedOnly, deep: deep && !allocatedOnly, provider,
+            kind: 'project', q, status: statuses, group, groupMode, allocated: allocatedOnly, deep: deep && !allocatedOnly, area,
             sort: sort.key, order: sort.order,
             limit: TABLE_PAGE_SIZE, offset: (page - 1) * TABLE_PAGE_SIZE,
         }),
@@ -97,10 +97,10 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
     // How many projects each kind has under the same filters, for the switch.
     const counts = useQueries({
         queries: (kinds.length > 1 ? ['all', ...kinds] : []).map(k => {
-            const p = { ...params, page: 1, provider: k === 'all' ? '' : k, count: true };
+            const p = { ...params, page: 1, area: k === 'all' ? '' : k, count: true };
             return {
                 queryKey: projectKeys.budgetProjects(budget.id, p),
-                queryFn: () => api.listChildren(budget.id, { kind: 'project', q, status: statuses, group, groupMode, allocated: allocatedOnly, deep: deep && !allocatedOnly, provider: p.provider, limit: 1 }),
+                queryFn: () => api.listChildren(budget.id, { kind: 'project', q, status: statuses, group, groupMode, allocated: allocatedOnly, deep: deep && !allocatedOnly, area: p.area, limit: 1 }),
                 enabled: !!api,
                 placeholderData: keepPreviousData,
             };
@@ -109,7 +109,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
     const countOf = (k) => counts[['all', ...kinds].indexOf(k)]?.data?.total ?? '…';
 
     const items = query.data?.items ?? [];
-    const columns = resourceColumns(t, kind === 'all' ? resources : resourcesOfKinds(resources, [kind]), items, kind === 'aiaas');
+    const columns = resourceColumns(t, kind === 'all' ? resources : resourcesOfKinds(resources, [kind]), items, kind !== 'all' && kind !== 'cloud');
     // Too narrow for a column per resource, each row shows an (i) with them
     // instead. Measured, not guessed from the screen: the panel's width depends
     // on the layout around it as much as on the window.
@@ -159,8 +159,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                             value: k,
                             label: (
                                 <Group gap={6} wrap="nowrap">
-                                    {k === 'openstack' && <Server size={13} />}
-                                    {k === 'aiaas' && <Sparkles size={13} />}
+                                    {KIND_ICONS[k] && <KindIcon kind={k} />}
                                     <span>{t(`projects.kind.filter_${k}`, { count: countOf(k) })}</span>
                                 </Group>
                             ),
@@ -398,6 +397,13 @@ function resourceColumns(t, resources, items, short = false) {
 }
 
 const VMS = '__vms';
+
+// The symbol of each kind in the switch.
+const KIND_ICONS = { cloud: Server, workspaces: SquareTerminal, llm: Sparkles };
+function KindIcon({ kind }) {
+    const Icon = KIND_ICONS[kind];
+    return <Icon size={13} />;
+}
 
 const DEFAULT_SORT = { key: 'name', order: 'asc' };
 

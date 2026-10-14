@@ -1,7 +1,6 @@
 import { useLocation } from 'wouter';
 import { useTranslation } from 'react-i18next';
-import { apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled, llmEnabled } from '/features.js';
-import { TOKEN_SCOPES, tokenScopeLabel, tokenScopePath } from '/tokens/scopes.js';
+import { cloudProjectsEnabled, dnsZonesEnabled, llmEnabled } from '/features.js';
 import { useCloudStatus } from '/projects/cloud-status.jsx';
 import { useDnsPolicyStatus } from '/dyndns/use-policy.jsx';
 import { hasWorkspaces } from '/gpu/access.js';
@@ -36,7 +35,7 @@ export const NAV_BREAKPOINT = 'md';
 export function useNav() {
     const [currentPath] = useLocation();
     const { t } = useTranslation();
-    const { isRoot, pending, hasBudgets, aiOffered } = useCloudStatus();
+    const { isRoot, pending, hasBudgets, offered } = useCloudStatus();
     const { hasPolicy, adminEvents, ownEvents } = useDnsPolicyStatus();
     const llm = useLlmMe();
 
@@ -44,56 +43,53 @@ export function useNav() {
 
     const sections = [
         { id: 'home', label: t('nav.home'), href: '/', items: [] },
+        // One section per concern: Cloud, Workspaces, LLM and DNS each with their
+        // own projects (a project of several areas shows in each), the API
+        // tokens and documentation of the API that serves them, and Budgets for
+        // whoever runs them. Docs: docs/bauplan.md 8.14 in aiaas-deployment.
         cloudProjectsEnabled && {
-            id: 'projects',
-            label: t('nav.projects'),
-            base: '/projects',
-            // A dot, not a count: the budget view can widen its scope, so a
-            // number up here would disagree with the number down there.
-            dot: pending > 0,
+            id: 'cloud',
+            label: t('nav.cloud'),
+            base: '/cloud',
             items: [
-                { label: t('nav.myProjects'), href: '/projects/projects' },
-                // Only for someone who manages a budget or may request one —
-                // for everybody else the page is a single "nothing here" box.
-                hasBudgets && { label: t('nav.myBudgets'), href: '/projects/budgets', dot: pending > 0 },
-                isRoot && { label: t('nav.rootAdmin'), href: '/projects/admin' },
-                { label: t('nav.apiDocumentation'), href: '/projects/api-doc' },
-            ].filter(Boolean),
+                { label: t('nav.projects'), href: '/cloud/projects' },
+                { label: t('nav.apiTokens'), href: '/cloud/tokens' },
+                { label: t('nav.apiDocumentation'), href: '/cloud/api-doc' },
+            ],
         },
+        // Workspaces (Jupyter now, Coder later) from the AI service: for members
+        // of a project, and admins, who manage the projects; for everybody else
+        // the way to a project, when a budget in reach offers one.
+        llmEnabled && llm.me && (hasWorkspaces(llm.me, llm.isAdmin) ? {
+            id: 'workspaces',
+            label: t('nav.workspaces'),
+            base: '/workspaces',
+            items: [
+                cloudProjectsEnabled && { label: t('nav.projects'), href: '/workspaces/projects' },
+                { label: t('nav.gpuServers'), href: '/workspaces/servers' },
+                { label: t('nav.gpuUsage'), href: '/workspaces/usage' },
+                llm.isAdmin && { label: t('nav.gpuFleet'), href: '/workspaces/gpus' },
+            ].filter(Boolean),
+        } : cloudProjectsEnabled && offered.includes('workspaces') && { id: 'workspaces', label: t('nav.workspaces'), base: '/workspaces', items: [{ label: t('nav.projects'), href: '/workspaces/projects' }] }),
         // For whoever has LLM tokens through a project (or a role there); for
         // somebody without, only the way to a project, and only when a budget
-        // in reach offers one — otherwise the section does not appear at all.
-        // Its API keys are LiteLLM keys for the model endpoint — a different
-        // thing from the API tokens below, which manage this platform.
+        // in reach offers one. Its API keys are LiteLLM keys for the model
+        // endpoint — a different thing from the API tokens of Cloud and DNS,
+        // which manage this platform.
         llmEnabled && llm.me && (llm.hasAccess ? {
             id: 'llm',
             label: t('nav.llm'),
             base: '/llm',
             items: [
                 { label: t('nav.llmOverview'), href: '/llm/overview' },
+                cloudProjectsEnabled && { label: t('nav.projects'), href: '/llm/projects' },
                 { label: t('nav.llmKeys'), href: '/llm/keys' },
                 { label: t('nav.llmUsage'), href: '/llm/usage' },
                 llm.isFleetAdmin && { label: t('nav.llmFleet'), href: '/llm/fleet' },
                 llm.isAdmin && { label: t('nav.llmModels'), href: '/llm/models' },
                 { label: t('nav.apiDocumentation'), href: '/llm/api-doc' },
             ].filter(Boolean),
-        } : aiOffered && { id: 'llm', label: t('nav.llm'), base: '/llm', items: [{ label: t('nav.llmOverview'), href: '/llm/overview' }] }),
-        // Workspaces (Jupyter now, Coder later; docs/plan-workspaces.md) from the same service: for members of a project, and admins, who manage the projects; for everybody else the way to a project, when a budget in reach offers one.
-        llmEnabled && llm.me && (hasWorkspaces(llm.me, llm.isAdmin) ? {
-            id: 'workspaces',
-            label: t('nav.workspaces'),
-            base: '/workspaces',
-            items: [
-                { label: t('nav.gpuServers'), href: '/workspaces/servers' },
-                { label: t('nav.gpuUsage'), href: '/workspaces/usage' },
-                llm.isAdmin && { label: t('nav.gpuFleet'), href: '/workspaces/gpus' },
-            ].filter(Boolean),
-        } : aiOffered && { id: 'workspaces', label: t('nav.workspaces'), base: '/workspaces', items: [{ label: t('nav.gpuServers'), href: '/workspaces/servers' }] }),
-        // Last, and a category of its own with nothing under it: tokens belong
-        // to the account rather than to one of the domains above — both APIs
-        // issue their own, and a credential has to be findable in one place to
-        // be revocable in a hurry. It used to sit under DNS Zones, from when
-        // that was the only API that had them.
+        } : cloudProjectsEnabled && offered.includes('llm') && { id: 'llm', label: t('nav.llm'), base: '/llm', items: [{ label: t('nav.projects'), href: '/llm/projects' }] }),
         dnsZonesEnabled && {
             id: 'dyndns',
             label: t('nav.dnsZones'),
@@ -109,18 +105,22 @@ export function useNav() {
                 // administrative ones (delegations, orphaned zones, zone
                 // events). Old /policy links redirect (see dyndns-routes).
                 hasPolicy && { label: t('nav.administration'), href: '/dyndns/administration', dot: adminEvents > 0 },
+                { label: t('nav.apiTokens'), href: '/dyndns/tokens' },
                 { label: t('nav.apiDocumentation'), href: '/dyndns/api-doc' },
             ].filter(Boolean),
         },
-        apiTokensEnabled && {
-            id: 'tokens',
-            label: t('nav.apiTokens'),
-            base: '/tokens',
-            // A tab per issuing API, from the same list the page routes on. The
-            // two are not one credential — different prefixes, different
-            // databases — and a tab bar says that more plainly than two boxes
-            // stacked on one page did.
-            items: TOKEN_SCOPES.map(s => ({ label: tokenScopeLabel(s, t), href: tokenScopePath(s) })),
+        // Only for someone who manages a budget or is root admin. A dot, not a
+        // count: the budget view can widen its scope, so a number up here would
+        // disagree with the number down there.
+        cloudProjectsEnabled && (hasBudgets || isRoot) && {
+            id: 'budgets',
+            label: t('nav.budgets'),
+            base: '/budgets',
+            dot: pending > 0,
+            items: [
+                { label: t('nav.myBudgets'), href: '/budgets', dot: pending > 0 },
+                isRoot && { label: t('nav.rootAdmin'), href: '/budgets/admin' },
+            ].filter(Boolean),
         },
     ].filter(Boolean).map(s => ({ ...s, href: s.href ?? s.items[0]?.href ?? '/' }));
 

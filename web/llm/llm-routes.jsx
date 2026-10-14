@@ -8,6 +8,7 @@ import { LlmOverview } from '/llm/overview.jsx';
 import { LlmKeys } from '/llm/keys.jsx';
 import { LlmUsage } from '/llm/usage.jsx';
 import { NoProject } from '/projects/no-project.jsx';
+import { AreaProjects } from '/projects/projects.jsx';
 
 const LlmFleet = lazy(() => import('/llm/fleet.jsx').then(m => ({ default: m.LlmFleet })));
 const LlmModels = lazy(() => import('/llm/models.jsx').then(m => ({ default: m.LlmModels })));
@@ -24,13 +25,21 @@ export function LlmManagement() {
 
     if (query.isPending) return <Container size="lg" py="md"><Loading /></Container>;
     if (query.isError) return <Container size="lg" py="md"><LoadError query={query} /></Container>;
+    // The projects of this area are there for everybody: they are the way to a first one.
+    const projects = <Route path="/projects"><AreaProjects area="llm" /></Route>;
     if (!hasAccess) {
-        return <NoProject title={t('llm.noAccess.title')} text={t('llm.noAccess.text')} />;
+        return (
+            <Switch>
+                {projects}
+                <Route><NoProject area="llm" title={t('llm.noAccess.title')} text={t('llm.noAccess.text')} /></Route>
+            </Switch>
+        );
     }
 
     return (
         <Suspense fallback={<Container size="lg" py="md"><Loading /></Container>}>
             <Switch>
+                {projects}
                 <Route path="/overview" component={LlmOverview} />
                 <Route path="/keys" component={LlmKeys} />
                 <Route path="/usage" component={LlmUsage} />

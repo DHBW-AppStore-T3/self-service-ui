@@ -37,10 +37,10 @@ export function RetireModal({ opened, onClose, onDone, node, mode = 'release' })
     const offerDelete = mode === 'release' && deletesOnRequest(retirement) && !immediately;
     const deleting = mode === 'delete' || deleteNow || immediately;
 
-    // A Lab/AI project has workspace storage instead of OpenStack volumes; one from before the split has both. A project holding nothing is told the cloud's story, as before.
+    // A workspaces project has workspace storage instead of OpenStack volumes; a project may have both. A project holding nothing is told the cloud's story, as before.
     const kinds = projectKinds(node, config?.resources);
-    const cloud = kinds.length === 0 || kinds.includes('openstack');
-    const lab = kinds.includes('aiaas');
+    const cloud = kinds.length === 0 || kinds.includes('cloud');
+    const lab = kinds.includes('workspaces');
     const consequences = deleting
         ? [cloud && t('projects.retire.deleteWhat'), lab && t('projects.retire.deleteWorkspaces'), t('projects.retire.deleteAfter')].filter(Boolean)
         : [...(cloud ? releaseConsequences(t, retirement) : []), lab && (retirement.aiaasDeleteGraceDays ? t('projects.retire.releaseWorkspacesGrace', { count: retirement.aiaasDeleteGraceDays }) : t('projects.retire.releaseWorkspaces'))].filter(Boolean);

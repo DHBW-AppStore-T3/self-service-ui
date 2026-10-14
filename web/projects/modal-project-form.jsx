@@ -19,7 +19,7 @@ import { PersonInput, personEmail } from './principal-search.jsx';
 import { AllocationSection, useAllocationDraft } from './component-allocation-section.jsx';
 import { WorkspaceSettingsPanel, useWorkspaceSettings } from '/gpu/workspace-settings.jsx';
 import { withCurrentParent } from './component-budget-select.jsx';
-import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide, resourceLabel, budgetKinds, catalogKinds, projectKinds, resourcesOfKinds, PROJECT_KINDS } from './util-project.jsx';
+import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide, resourceLabel, budgetKinds, catalogKinds, projectKinds, resourcesOfKinds, PROJECT_KINDS, kindOfResource, isLab } from './util-project.jsx';
 import { AttributesEditor, AttributesView, hasAttributes, useAttributesTab } from './component-node-attributes.jsx';
 import { nodeExtraTabs } from './modal-inspect.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
@@ -107,7 +107,7 @@ function OutcomeNote({ outcome, isChange, budget, hasPolicy, over = [] }) {
 // may move to. Allocations from budgets further up are part of the Resources
 // tab, for the managers who may grant them and the holders who may give one back.
 //
-// initialKind: the kind of a new project ('openstack', 'aiaas', see
+// initialKind: the kind of a new project ('cloud', 'workspaces', 'llm', see
 // PROJECT_KINDS) — the list's filter when it was opened from there. The kind
 // decides which budgets and resources the form offers; a project is of the
 // kind whose resources it holds, so changing one keeps to the kinds it is
@@ -177,7 +177,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     const catalog = catalogKinds(resources);
     const changeKinds = isChange ? projectKinds(node, resources) : [];
     const kindsFor = (kind) => catalog.length < 2 ? []
-        : isAdopt ? ['openstack']
+        : isAdopt ? ['cloud']
         : isChange ? (changeKinds.length ? changeKinds : catalog)
         : (kind ? [kind] : []);
     const offersKind = (b, kind) => catalog.length < 2 || !kind || budgetKinds(b, resources).includes(kind);
@@ -372,8 +372,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             || values.reason.trim() !== (node.reason || '').trim();
     };
 
-    // One resources tab per provider where the catalogue has several, so everything about the cloud side and everything about the Lab/KI side sits together; a resource without a provider is OpenStack's. The first tab also carries what concerns the whole project (shares from other budgets).
-    const kindOfResource = (r) => r?.provider || 'openstack';
+    // One resources tab per kind where the project has several, so everything about one area sits together. The first tab also carries what concerns the whole project (shares from other budgets).
     const resourceTabKinds = (() => {
         const ks = catalog.length < 2 ? [] : PROJECT_KINDS.filter(k => offered.some(r => kindOfResource(r) === k));
         return ks.length > 1 ? ks : [ks[0] ?? null];
@@ -461,8 +460,8 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     // the workspaces and the LLM pool of the AI service, or both. The role also
     // decides the workspaces' shared folder: reader only reads it.
     const memberKinds = kindsFor(kind);
-    const withAi = memberKinds.includes('aiaas');
-    const aiOnly = withAi && !memberKinds.includes('openstack');
+    const withAi = isLab(memberKinds);
+    const aiOnly = withAi && !memberKinds.includes('cloud');
     const accessKey = aiOnly ? 'accessAiaas' : withAi ? 'accessBoth' : 'access';
     const adminsHintKey = aiOnly ? 'adminsHintAiaas' : withAi ? 'adminsHintBoth' : 'adminsHint';
 
@@ -494,10 +493,10 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     emptyDescription={catalog.length > 1 && [...(myBudgets || []), ...(requestable || [])].length > 0
                         ? t('projects.kind.noBudget') : t('projects.projectForm.budgetNone')}
                     groups={[
-                        { label: t('projects.projectForm.budgetsManaged'), budgets: (myBudgets || []).filter(b => offersKind(b, isAdopt ? 'openstack' : kind)) },
+                        { label: t('projects.projectForm.budgetsManaged'), budgets: (myBudgets || []).filter(b => offersKind(b, isAdopt ? 'cloud' : kind)) },
                         {
                             label: isAdopt ? t('projects.adopt.budgetsOwnerCanRequest') : t('projects.projectForm.budgetsRequestable'),
-                            budgets: (requestable || []).filter(b => !managedIds.has(b.id) && offersKind(b, isAdopt ? 'openstack' : kind)),
+                            budgets: (requestable || []).filter(b => !managedIds.has(b.id) && offersKind(b, isAdopt ? 'cloud' : kind)),
                         },
                     ]}
                     markInstant

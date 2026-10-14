@@ -5,8 +5,8 @@
     },
     "services": {
         "projects": {
-            "title": "Projects",
-            "lead": "Cloud projects with virtual machines and Lab/AI projects with workspaces and LLM tokens.",
+            "title": "Cloud",
+            "lead": "Cloud projects with virtual machines, networks and storage in OpenStack.",
             "a": "Small requests are often approved instantly",
             "b": "Add others to work on it together",
             "c": "Runs until the end date you choose, and can be extended",

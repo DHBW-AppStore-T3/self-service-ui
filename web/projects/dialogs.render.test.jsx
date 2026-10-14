@@ -69,18 +69,18 @@ describe('node dialogs', () => {
         expect(fatal()).toEqual([]);
     });
 
-    it('a new AI project offers only AI budgets and resources, and members without OpenStack roles', async () => {
+    it('a new LLM project offers only LLM budgets and resources, and members without OpenStack roles', async () => {
         const tree = fixtureTree();
         const mixed = [
-            { id: 'cores', name: 'Cores', default: 4, min: 1, max: 64, provider: 'openstack' },
-            { id: 'llm-mtokens', name: 'LLM tokens', unit: 'M tokens', kind: 'window', window: '30d', default: 0, min: 0, max: 1000, provider: 'aiaas' },
+            { id: 'cores', name: 'Cores', default: 4, min: 1, max: 64, provider: 'openstack', area: 'cloud' },
+            { id: 'llm-mtokens', name: 'LLM tokens', unit: 'M tokens', kind: 'window', window: '30d', default: 0, min: 0, max: 1000, provider: 'aiaas', area: 'llm' },
         ];
         const cloudOnly = { ...tree.roots[0], id: 'b_cloud', name: 'Cloud budget', available_resources: ['cores'] };
         const both = { ...tree.roots[0], id: 'b_both', name: 'Both budget', available_resources: ['cores', 'llm-mtokens'] };
         renderView(<ProjectFormModal opened onClose={() => {}} resources={mixed} openstackRoles={['member', 'reader']}
-            myBudgets={[cloudOnly, both]} initialKind="aiaas" />);
+            myBudgets={[cloudOnly, both]} initialKind="llm" />);
 
-        expect(await screen.findByText(/New Lab\/AI project|Neues Lab\/KI-Projekt/)).toBeTruthy();
+        expect(await screen.findByText(/New LLM project|Neues LLM-Projekt/)).toBeTruthy();
         fireEvent.click(screen.getByRole('tab', { name: /Resources|Ressourcen/ }));
         expect(await screen.findByText(/LLM tokens \(M tokens/)).toBeTruthy();
         expect(screen.queryByText(/^Cores/)).toBeNull();
@@ -91,8 +91,8 @@ describe('node dialogs', () => {
 
     it('a project holding both kinds shows both in its members tab', async () => {
         const mixed = [
-            { id: 'cores', name: 'Cores', default: 4, min: 1, max: 64, provider: 'openstack' },
-            { id: 'llm-mtokens', name: 'LLM tokens', unit: 'M tokens', kind: 'window', window: '30d', default: 0, min: 0, max: 1000, provider: 'aiaas' },
+            { id: 'cores', name: 'Cores', default: 4, min: 1, max: 64, provider: 'openstack', area: 'cloud' },
+            { id: 'llm-mtokens', name: 'LLM tokens', unit: 'M tokens', kind: 'window', window: '30d', default: 0, min: 0, max: 1000, provider: 'aiaas', area: 'llm' },
         ];
         renderView(<ProjectFormModal opened onClose={() => {}} resources={mixed} openstackRoles={['member', 'reader']}
             node={project({ limit: { cores: 2, 'llm-mtokens': 50 }, allocations: [] })} />);
@@ -103,13 +103,13 @@ describe('node dialogs', () => {
 
     it('a project holding both kinds has one resources tab per kind', async () => {
         const mixed = [
-            { id: 'cores', name: 'Cores', default: 4, min: 1, max: 64, provider: 'openstack' },
-            { id: 'llm-mtokens', name: 'LLM tokens', unit: 'M tokens', kind: 'window', window: '30d', default: 0, min: 0, max: 1000, provider: 'aiaas' },
+            { id: 'cores', name: 'Cores', default: 4, min: 1, max: 64, provider: 'openstack', area: 'cloud' },
+            { id: 'llm-mtokens', name: 'LLM tokens', unit: 'M tokens', kind: 'window', window: '30d', default: 0, min: 0, max: 1000, provider: 'aiaas', area: 'llm' },
         ];
         renderView(<ProjectFormModal opened onClose={() => {}} resources={mixed} openstackRoles={['member', 'reader']}
             node={project({ limit: { cores: 2, 'llm-mtokens': 50 }, allocations: [] })} />);
         expect(screen.getByRole('tab', { name: /^Cloud$/ })).toBeTruthy();
-        fireEvent.click(screen.getByRole('tab', { name: /Lab\/(AI|KI)/ }));
+        fireEvent.click(screen.getByRole('tab', { name: /^LLM$/ }));
         expect((await screen.findAllByText(/LLM tokens/)).length).toBeGreaterThan(0);
         expect(screen.queryByRole('tab', { name: /^(Resources|Ressourcen)$/ })).toBeNull();
         expect(fatal()).toEqual([]);
@@ -117,12 +117,12 @@ describe('node dialogs', () => {
 
     it('new project: one button per kind, a kind without a budget disabled', async () => {
         const picked = [];
-        renderView(<NewProjectButton kinds={['openstack', 'aiaas']} available={['aiaas']} onPick={k => picked.push(k)} />);
-        const cloud = await screen.findByRole('button', { name: /Cloud project|Cloud-Projekt/ });
-        const ai = screen.getByRole('button', { name: /Lab\/AI project|Lab\/KI-Projekt/ });
+        renderView(<NewProjectButton kinds={['cloud', 'llm']} available={['llm']} onPick={k => picked.push(k)} />);
+        const cloud = await screen.findByRole('button', { name: /cloud project|Cloud-Projekt/ });
+        const llm = screen.getByRole('button', { name: /LLM project|LLM-Projekt/ });
         expect(cloud.disabled).toBe(true);
-        fireEvent.click(ai);
-        expect(picked).toEqual(['aiaas']);
+        fireEvent.click(llm);
+        expect(picked).toEqual(['llm']);
     });
 
     it('the decision dialog shows a proposed change', async () => {

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '/providers/auth.jsx';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
-import { budgetKinds } from './util-project.jsx';
+import { budgetKinds, PROJECT_KINDS } from './util-project.jsx';
 
 // What the header has to know about the cloud section without opening it:
 //
@@ -14,17 +14,17 @@ import { budgetKinds } from './util-project.jsx';
 //   hasBudgets whether the user manages a budget. The budget view is for
 //              running budgets; somebody who only draws from them finds them
 //              on "My Projects", and the entry is left out (see nav.jsx).
-//   aiOffered  whether a budget in reach (managed, or one the user may request
-//              from) offers resources of the AI service. Without it the LLM and
-//              workspace sections have nothing to offer somebody who has no
-//              project there: the way to a project would lead nowhere.
+//   offered    the kinds (cloud, workspaces, llm) a budget in reach (managed, or
+//              one the user may request from) offers resources of. Without one,
+//              the LLM or workspace section has nothing to offer somebody who has
+//              no project there: the way to a project would lead nowhere.
 //
 // It lives above the header (see index.jsx) because the menu is rendered there,
 // and the views below call refresh() after every decision so the badge follows
 // what just happened.
 
 const CloudStatusContext = createContext(null);
-const EMPTY = { isRoot: false, pending: 0, hasBudgets: false, aiOffered: false, ready: false, refresh: () => {} };
+const EMPTY = { isRoot: false, pending: 0, hasBudgets: false, offered: [], ready: false, refresh: () => {} };
 
 export function CloudStatusProvider({ children }) {
     const api = useNodesApi();
@@ -47,8 +47,8 @@ export function CloudStatusProvider({ children }) {
                 api.countToManage('direct'),
                 // Count only, no rows — the menu asks "any?", not "which?".
                 api.countMyBudgets(),
-                // For aiOffered: the catalogue says which resources are the AI
-                // service's, the budgets which of them are in reach.
+                // For offered: the catalogue says which kind each resource is,
+                // the budgets which of them are in reach.
                 api.getConfig(),
                 api.listMyBudgets(),
                 api.listEligibleForMe(),
@@ -62,7 +62,8 @@ export function CloudStatusProvider({ children }) {
                     && !role.value?.acting_as,
                 pending: count(pending),
                 hasBudgets: count(myBudgets) > 0,
-                aiOffered: [...items(mine), ...items(eligible)].some(b => budgetKinds(b, resources).includes('aiaas')),
+                // The kinds a budget in reach offers (managed or requestable): a section without a project shows the way to one only then.
+                offered: PROJECT_KINDS.filter(k => [...items(mine), ...items(eligible)].some(b => budgetKinds(b, resources).includes(k))),
             };
         },
         enabled: !!api && !!user,
@@ -72,7 +73,7 @@ export function CloudStatusProvider({ children }) {
         isRoot: statusQuery.data?.isRoot ?? false,
         pending: statusQuery.data?.pending ?? 0,
         hasBudgets: statusQuery.data?.hasBudgets ?? false,
-        aiOffered: statusQuery.data?.aiOffered ?? false,
+        offered: statusQuery.data?.offered ?? [],
         // Whether the answers above are KNOWN yet. Until the query settles,
         // isRoot is false because nothing has been asked — not because the user
         // is not root. Anything that acts on the difference (a route that

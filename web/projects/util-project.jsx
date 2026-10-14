@@ -140,7 +140,7 @@ export function scheduledDeletion(node, retirement) {
 // with the deletion switched off (aiaasDeleteGraceDays 0).
 export function labDeletion(node, resources, retirement) {
     const grace = retirement?.aiaasDeleteGraceDays || 0;
-    if (!grace || !projectKinds(node, resources).includes('aiaas')) return null;
+    if (!grace || !isLab(projectKinds(node, resources))) return null;
     const days = [];
     if (node.termination_date) days.push(node.termination_date.slice(0, 10));
     const released = isRetired(node) ? lastEventAt(node, 'released') : null;
@@ -191,37 +191,45 @@ export function holdsResourceOf(node, resources, provider, ownOnly = false) {
         && ((limit[r.id] ?? 0) > 0 || limit[r.id] === UNLIMITED_QUOTA));
 }
 
-// The kinds of project the UI tells apart, one per provider: a cloud project
-// (OpenStack, virtual machines) and an AI project (the AI service: workspaces
-// and LLM tokens). The tree knows no kinds — a project is of a kind when it
-// holds resources of that provider, so one from before the split may be both.
-export const PROJECT_KINDS = ['openstack', 'aiaas'];
+// The kinds of project the UI tells apart, one per area of the catalogue (the
+// `area` of every resource): cloud (OpenStack, virtual machines), workspaces and
+// LLM (both carried out by the AI service). The tree knows no kinds — a project
+// is of every kind it holds resources of, so one may be several.
+export const PROJECT_KINDS = ['cloud', 'workspaces', 'llm'];
+// The kinds the AI service carries out.
+export const LAB_KINDS = ['workspaces', 'llm'];
+
+// kindOfResource: a resource's area; OpenStack's resources are cloud.
+export const kindOfResource = (r) => r?.area || (!r?.provider || r.provider === 'openstack' ? 'cloud' : '');
+
+// isLab: whether kinds include one of the AI service.
+export const isLab = (kinds) => (kinds || []).some(k => LAB_KINDS.includes(k));
 
 // catalogKinds: the kinds the catalogue offers anything of, in PROJECT_KINDS
 // order. One kind means there is nothing to tell apart.
 export function catalogKinds(resources) {
-    return PROJECT_KINDS.filter(k => (resources || []).some(r => r.provider === k));
+    return PROJECT_KINDS.filter(k => (resources || []).some(r => kindOfResource(r) === k));
 }
 
 // projectKinds: the kinds a project is — what it holds (allocations included)
 // or asks for in a waiting change. Empty for a project holding nothing.
 export function projectKinds(node, resources) {
     const limits = [effectiveLimit(node, node?.limit), node?.pending?.limit].filter(Boolean);
-    return PROJECT_KINDS.filter(k => limits.some(limit => (resources || []).some(r => r.provider === k
+    return PROJECT_KINDS.filter(k => limits.some(limit => (resources || []).some(r => kindOfResource(r) === k
         && ((limit[r.id] ?? 0) > 0 || limit[r.id] === UNLIMITED_QUOTA))));
 }
 
-// resourcesOfKinds: the resources of these kinds; one without a provider
-// belongs to every kind. No kinds — no filter.
+// resourcesOfKinds: the resources of these kinds; one without an area belongs
+// to every kind. No kinds — no filter.
 export function resourcesOfKinds(resources, kinds) {
     if (!kinds?.length) return resources || [];
-    return (resources || []).filter(r => !r.provider || kinds.includes(r.provider));
+    return (resources || []).filter(r => !kindOfResource(r) || kinds.includes(kindOfResource(r)));
 }
 
 // budgetKinds: the kinds a budget offers resources of.
 export function budgetKinds(budget, resources) {
     const offered = visibleResources(resources, budget);
-    return PROJECT_KINDS.filter(k => offered.some(r => r.provider === k));
+    return PROJECT_KINDS.filter(k => offered.some(r => kindOfResource(r) === k));
 }
 
 // Returns Mantine badge color + variant for a node status.
@@ -735,16 +743,16 @@ export function normalizeObjectResponse(res, fallback = {}) {
 
 // The role of a project member: in OpenStack member or reader; in the workspaces of
 // the AI service the same role decides whether the shared folder is writable.
-// kinds (kindsFor) says what the project is, so a Lab/AI project names the
-// workspace meaning and a project with both names both.
+// kinds (kindsFor) says what the project is, so a project with workspaces names
+// the workspace meaning and one with cloud and workspaces names both.
 const WORKSPACE_ROLE_LABELS = { member: 'Shared Workspace Writer', reader: 'Shared Workspace Reader' };
 
 export function formatRoleLabel(roleId, kinds) {
     if (!roleId) return '';
     const openstack = roleId.charAt(0).toUpperCase() + roleId.slice(1);
-    if (!kinds?.includes('aiaas')) return openstack;
+    if (!kinds?.includes('workspaces')) return openstack;
     const workspace = WORKSPACE_ROLE_LABELS[roleId] || openstack;
-    return kinds.includes('openstack') ? `${openstack} · ${workspace}` : workspace;
+    return kinds.includes('cloud') ? `${openstack} · ${workspace}` : workspace;
 }
 
 export function getAuthUserEmail(user) {

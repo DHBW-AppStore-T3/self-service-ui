@@ -14,6 +14,7 @@ import { MyProjectsView } from './view-my-projects.jsx';
 import { StartView } from './view-start.jsx';
 import { MyBudgetsView } from './view-my-budgets.jsx';
 import { RootAdminView } from './root-admin-view.jsx';
+import { ApiTokens } from '/tokens/api-tokens.jsx';
 
 // Swagger UI is ~1 MB — load it only when the API-doc route is opened. Same
 // component as the dyndns section's, pointed at the other API.
@@ -27,29 +28,15 @@ export function useProjectConfig() {
     return useContext(ProjectConfigContext);
 }
 
-// CloudProjectManagement is the cloud resources section: one budget tree in
-// which budgets are delegated downwards and projects hang as leaves.
 const EMPTY_CONFIG = { resources: [], openstackRoles: [] };
 
-export function CloudProjectManagement() {
+// ProjectsShell gives the views of the budget tree what they share: /v1/config
+// (resource definitions, OpenStack roles) through ProjectConfigContext, the token
+// labels, and an error boundary per page. Every section that shows projects or
+// budgets (Cloud, Workspaces, LLM, Budgets) renders its pages inside one.
+function ProjectsShell({ page, children }) {
     const { t } = useTranslation();
     const api = useNodesApi();
-    const { isRoot, ready } = useCloudStatus();
-
-    // Which section is showing — used to key the error boundary, so a crash in
-    // one section resets when the user navigates to another.
-    const [matchProjects] = useRoute('/projects');
-    const [matchBudgets] = useRoute('/budgets/:id?');
-    const [matchAdmin] = useRoute('/admin/:page?');
-    const [matchApiDoc] = useRoute('/api-doc');
-
-    function getActiveSection() {
-        if (matchProjects) return 'projects';
-        if (matchBudgets) return 'budgets';
-        if (matchAdmin) return 'admin';
-        if (matchApiDoc) return 'api-doc';
-        return '';
-    }
 
     // Through the facade like everything else, and cached: the config is asked
     // for by several views. A failure falls back to empty lists rather than
@@ -67,52 +54,80 @@ export function CloudProjectManagement() {
     return (
         <ProjectConfigContext.Provider value={projectConfig}>
             {/* Group labels are resolved once per token and shared by every view
-                below, so moving between sections does not look them up again. */}
+                below, so moving between pages does not look them up again. */}
             <TokenLabelProvider>
             <Container size="xl" py="md">
-
-                {/* Per-section boundary: a render crash in one section keeps the
-                    navigation usable, and moving to another
-                    section (key change) auto-resets it. The outer boundary in
-                    index.jsx would blank all of /projects instead. */}
+                {/* Per-page boundary: a render crash in one page keeps the
+                    navigation usable, and moving to another page (key change)
+                    auto-resets it. */}
                 <ErrorBoundary
-                    key={getActiveSection()}
+                    key={page}
                     title={t('projects.shell.renderErrorTitle')}
                     message={t('projects.shell.renderErrorMessage')}
                 >
                     <Suspense fallback={<div style={{ padding: '2rem' }}>{t('projects.actions.loading')}</div>}>
-                        <Switch>
-                            <Route path="/projects" component={MyProjectsView} />
-                            <Route path="/budgets/:id?" component={MyBudgetsView} />
-                            <Route path="/start" component={StartView} />
-                            {isRoot ? <Route path="/admin/:page?" component={RootAdminView} /> : null}
-                            {/* The admin page used to be one page under this name. */}
-                            <Route path="/admin-sync">
-                                <Redirect to="/admin" replace />
-                            </Route>
-                            <Route path="/api-doc" component={CloudProjectsApiSwagger} />
-                            {/* /projects itself, before anything is known. */}
-                            <Route path="/">
-                                <Redirect to="/projects" replace />
-                            </Route>
-                            {/* Catch-all: the admin route above UNREGISTERS the
-                                moment isRoot goes false, which is what acting on behalf
-                                of a student does — from the page the admin was standing
-                                on. Without this the content area goes blank on a URL
-                                that no longer matches anything.
-
-                                Only once the status is KNOWN, though. isRoot starts
-                                false on every page load, so redirecting before the
-                                answer arrives throws a root admin off /admin on
-                                every single reload — which is exactly what it did. */}
-                            <Route>
-                                {ready ? <Redirect to="/projects" replace /> : <Loading size="sm" />}
-                            </Route>
-                        </Switch>
+                        {children}
                     </Suspense>
                 </ErrorBoundary>
             </Container>
             </TokenLabelProvider>
         </ProjectConfigContext.Provider>
+    );
+}
+
+// AreaProjects is the project list of one area, for the sections Workspaces and LLM (mounted there under /projects).
+export function AreaProjects({ area }) {
+    return <ProjectsShell page={`projects-${area}`}><MyProjectsView area={area} /></ProjectsShell>;
+}
+
+// CloudSection (/cloud): the cloud projects, the API tokens of this API and its documentation.
+export function CloudSection() {
+    const [matchTokens] = useRoute('/tokens');
+    const [matchApiDoc] = useRoute('/api-doc');
+    return (
+        <ProjectsShell page={matchTokens ? 'tokens' : matchApiDoc ? 'api-doc' : 'projects'}>
+            <Switch>
+                <Route path="/projects"><MyProjectsView area="cloud" /></Route>
+                <Route path="/tokens"><ApiTokens scope="projects" /></Route>
+                <Route path="/api-doc" component={CloudProjectsApiSwagger} />
+                <Route><Redirect to="/projects" replace /></Route>
+            </Switch>
+        </ProjectsShell>
+    );
+}
+
+// BudgetsSection (/budgets): the budgets the user manages, and the root admin pages.
+export function BudgetsSection() {
+    const { isRoot, ready } = useCloudStatus();
+    const [matchAdmin] = useRoute('/admin/:page?');
+    return (
+        <ProjectsShell page={matchAdmin ? 'admin' : 'budgets'}>
+            <Switch>
+                {/* Before the budget id: "admin" is no budget. Registered for
+                    root admins only, and only once that is KNOWN: isRoot starts
+                    false on every page load, and acting on behalf of somebody
+                    turns it false from the page the admin stood on. */}
+                {isRoot ? <Route path="/admin/:page?" component={RootAdminView} /> : null}
+                {!ready && <Route path="/admin/:page?"><Loading size="sm" /></Route>}
+                <Route path="/:id?" component={MyBudgetsView} />
+            </Switch>
+        </ProjectsShell>
+    );
+}
+
+// ProjectsStart (/projects): the start page that gets somebody a project of an area
+// (/projects/start?for=…, linked from the other services), and the addresses of
+// the time before the sections, forwarded to where their pages are now.
+export function ProjectsStart() {
+    return (
+        <ProjectsShell page="start">
+            <Switch>
+                <Route path="/start" component={StartView} />
+                <Route path="/budgets/:id?">{(p) => <Redirect to={`~/budgets/${p.id ?? ''}`} replace />}</Route>
+                <Route path="/admin/*?">{(p) => <Redirect to={`~/budgets/admin/${p['*'] ?? ''}`} replace />}</Route>
+                <Route path="/api-doc"><Redirect to="~/cloud/api-doc" replace /></Route>
+                <Route><Redirect to="~/cloud/projects" replace /></Route>
+            </Switch>
+        </ProjectsShell>
     );
 }

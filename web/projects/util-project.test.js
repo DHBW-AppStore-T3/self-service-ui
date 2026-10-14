@@ -764,23 +764,25 @@ describe('pollWhileDeleting', () => {
 
 describe('project kinds', () => {
     const RES = [
-        { id: 'cores', provider: 'openstack' },
-        { id: 'llm-mtokens', provider: 'aiaas' },
+        { id: 'cores', provider: 'openstack', area: 'cloud' },
+        { id: 'llm-mtokens', provider: 'aiaas', area: 'llm' },
+        { id: 'ws-storage-gb', provider: 'aiaas', area: 'workspaces' },
         { id: 'legacy' },
     ];
-    it('a project is of the kinds it holds or asks for', () => {
-        expect(projectKinds({ limit: { cores: 2 } }, RES)).toEqual(['openstack']);
-        expect(projectKinds({ limit: { 'llm-mtokens': -1 } }, RES)).toEqual(['aiaas']);
-        expect(projectKinds({ limit: { cores: 1 }, pending: { limit: { cores: 1, 'llm-mtokens': 5 } } }, RES)).toEqual(['openstack', 'aiaas']);
-        expect(projectKinds({ limit: {}, allocations: [{ limit: { 'llm-mtokens': 3 } }] }, RES)).toEqual(['aiaas']);
-        expect(projectKinds({ limit: { legacy: 4 } }, RES)).toEqual([]);
+    it('a project is of the areas it holds or asks for', () => {
+        expect(projectKinds({ limit: { cores: 2 } }, RES)).toEqual(['cloud']);
+        expect(projectKinds({ limit: { 'llm-mtokens': -1 } }, RES)).toEqual(['llm']);
+        expect(projectKinds({ limit: { cores: 1 }, pending: { limit: { cores: 1, 'llm-mtokens': 5 } } }, RES)).toEqual(['cloud', 'llm']);
+        expect(projectKinds({ limit: {}, allocations: [{ limit: { 'ws-storage-gb': 3 } }] }, RES)).toEqual(['workspaces']);
+        // Without an area and provider a resource is OpenStack's, so cloud.
+        expect(projectKinds({ limit: { legacy: 4 } }, RES)).toEqual(['cloud']);
     });
-    it('the catalogue, resources and budgets by kind', () => {
-        expect(catalogKinds(RES)).toEqual(['openstack', 'aiaas']);
-        expect(catalogKinds([{ id: 'cores', provider: 'openstack' }])).toEqual(['openstack']);
-        expect(resourcesOfKinds(RES, ['aiaas']).map(r => r.id)).toEqual(['llm-mtokens', 'legacy']);
-        expect(resourcesOfKinds(RES, [])).toHaveLength(3);
-        expect(budgetKinds({ available_resources: ['cores'] }, RES)).toEqual(['openstack']);
-        expect(budgetKinds({}, RES)).toEqual(['openstack', 'aiaas']);
+    it('the catalogue, resources and budgets by area', () => {
+        expect(catalogKinds(RES)).toEqual(['cloud', 'workspaces', 'llm']);
+        expect(catalogKinds([{ id: 'cores', provider: 'openstack' }])).toEqual(['cloud']);
+        expect(resourcesOfKinds(RES, ['llm']).map(r => r.id)).toEqual(['llm-mtokens']);
+        expect(resourcesOfKinds(RES, [])).toHaveLength(4);
+        expect(budgetKinds({ available_resources: ['cores'] }, RES)).toEqual(['cloud']);
+        expect(budgetKinds({}, RES)).toEqual(['cloud', 'workspaces', 'llm']);
     });
 });

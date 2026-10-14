@@ -53,7 +53,7 @@ const CHILDREN_STALE_MS = 30_000;
 // matches would be slower and harder to read than naming their budget.
 const EMPTY_PAGE = { items: [], total: 0 };
 
-// The selected node is in the URL (/budgets/<id>), so a link to a budget or a
+// The selected node is in the URL (/budgets/<id>, this view is mounted at /budgets), so a link to a budget or a
 // project can be sent: opening it selects the node and opens the tree down to
 // it. A node that does not exist, or that the viewer may not see, falls back to
 // the first budget with a note saying so.
@@ -176,7 +176,7 @@ export function MyBudgetsView({ params }) {
     const linkLoading = !!linkedId && selectedNode?.id !== linkedId && linkedQuery.isPending;
     const selected = linkLoading ? null
         : (linked ?? selectedNode ?? rootBudgets[0] ?? requestableOnly[0] ?? null);
-    const linkTo = (node) => `${window.location.origin}${router.base}/budgets/${encodeURIComponent(node.id)}`;
+    const linkTo = (node) => `${window.location.origin}${router.base}/${encodeURIComponent(node.id)}`;
 
     const childLimit = (nodeId) => limits[nodeId] ?? PAGE_SIZE;
     const childQuery = (nodeId) => ({
@@ -278,7 +278,7 @@ export function MyBudgetsView({ params }) {
             if (selectedNode) {
                 const current = await api.getNode(selectedNode.id).catch(() => null);
                 setSelectedNode(current);
-                if (!current) navigate('/budgets', { replace: true });
+                if (!current) navigate('/', { replace: true });
             }
         } catch (e) {
             showError(formatError(e));
@@ -435,7 +435,7 @@ export function MyBudgetsView({ params }) {
     // onLoadChildren on first open.
     const select = (node) => {
         setSelectedNode(node);
-        navigate(`/budgets/${encodeURIComponent(node.id)}`, { replace: true });
+        navigate(`/${encodeURIComponent(node.id)}`, { replace: true });
     };
 
     const handleDelete = async (node) => {

@@ -8,7 +8,6 @@
         "projects": "Projekte",
         "dnsZones": "DNS-Zonen",
         "apiTokens": "API-Tokens",
-        "myProjects": "Meine Projekte",
         "myBudgets": "Meine Budgets",
         "rootAdmin": "Administration",
         "apiDocumentation": "API-Dokumentation",
@@ -25,7 +24,9 @@
         "gpuServers": "Laufend",
         "gpuUsage": "Nutzung",
         "gpuFleet": "GPUs",
-        "workspaces": "Workspaces"
+        "workspaces": "Workspaces",
+        "cloud": "Cloud",
+        "budgets": "Budgets"
     },
     "account": {
         "signIn": "Anmelden",

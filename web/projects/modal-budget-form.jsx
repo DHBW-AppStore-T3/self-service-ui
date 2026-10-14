@@ -10,7 +10,7 @@ import { DIALOG_SIZE, FormModal, FormTabs, tabHasError as tabFlag, tabWithError 
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenListEditor } from './component-token-list-editor.jsx';
 import { formatError } from '/helper/api-error.js';
-import { COLOR, catalogKinds, freeAmount, isAvailability, isPoolAutoApprove, PROJECT_KINDS, UNLIMITED_QUOTA, visibleResources } from './util-project.jsx';
+import { COLOR, catalogKinds, freeAmount, isAvailability, isPoolAutoApprove, kindOfResource, PROJECT_KINDS, UNLIMITED_QUOTA, visibleResources } from './util-project.jsx';
 import { BudgetSelect, withCurrentParent } from './component-budget-select.jsx';
 import { ReasonField, reasonError } from './component-reason-field.jsx';
 import { useNodeMutation } from './use-node-mutation.jsx';
@@ -164,8 +164,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     // The budget whose limit one that inherits passes on, by name where known.
     const inheritedFrom = isEdit ? node?.parent_name : parent?.name;
     const offered = visibleResources(resources, scopeFor(form.values.parentId));
-    // One resources tab per provider where the budget offers several (Cloud, Lab/KI), as in the project dialog; a resource without a provider is OpenStack's.
-    const kindOfResource = (r) => r?.provider || 'openstack';
+    // One resources tab per kind where the budget offers several (Cloud, Workspaces, LLM), as in the project dialog.
     const resourceKinds = (() => {
         const ks = catalogKinds(resources).length < 2 ? [] : PROJECT_KINDS.filter(k => offered.some(r => kindOfResource(r) === k));
         return ks.length > 1 ? ks : [null];
