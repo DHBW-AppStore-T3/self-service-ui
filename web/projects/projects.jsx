@@ -116,18 +116,11 @@ export function BudgetsSection() {
 }
 
 // ProjectsStart (/projects): the start page that gets somebody a project of an area
-// (/projects/start?for=…, linked from the other services), and the addresses of
-// the time before the sections, forwarded to where their pages are now.
+// (/projects/start?for=…, linked from the other services).
 export function ProjectsStart() {
     return (
         <ProjectsShell page="start">
-            <Switch>
-                <Route path="/start" component={StartView} />
-                <Route path="/budgets/:id?">{(p) => <Redirect to={`~/budgets/${p.id ?? ''}`} replace />}</Route>
-                <Route path="/admin/*?">{(p) => <Redirect to={`~/budgets/admin/${p['*'] ?? ''}`} replace />}</Route>
-                <Route path="/api-doc"><Redirect to="~/cloud/api-doc" replace /></Route>
-                <Route><Redirect to="~/cloud/projects" replace /></Route>
-            </Switch>
+            <Route path="/start" component={StartView} />
         </ProjectsShell>
     );
 }

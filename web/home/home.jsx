@@ -38,17 +38,17 @@ export function Home() {
             color: 'blue',
             to: '/cloud/projects',
         },
-        withLlm && {
-            key: 'llm',
-            icon: Sparkles,
-            color: 'grape',
-            to: hasAccess ? '/llm/overview' : '/llm/projects',
-        },
         withWorkspaces && {
             key: 'workspaces',
             icon: SquareTerminal,
             color: 'orange',
             to: hasWorkspaces(llmMe, isAdmin) ? '/workspaces/servers' : '/workspaces/projects',
+        },
+        withLlm && {
+            key: 'llm',
+            icon: Sparkles,
+            color: 'grape',
+            to: hasAccess ? '/llm/overview' : '/llm/projects',
         },
         dnsZonesEnabled && {
             key: 'dns',
@@ -59,12 +59,12 @@ export function Home() {
     ].filter(Boolean);
 
     return (
-        <Container size="lg" py="xl">
-            <Stack gap="xl">
-                <Stack gap="xs">
-                    <Title order={1}>{t('home.hero.title')}</Title>
-                    <Text size="lg" c="dimmed" maw={760}>{t('home.hero.intro')}</Text>
-                </Stack>
+        <Container size="lg" py="lg">
+            <Stack gap="lg">
+                <div>
+                    <Title order={2}>{t('home.hero.title')}</Title>
+                    <Text size="sm" c="dimmed">{t('home.hero.intro')}</Text>
+                </div>
 
                 {/* Four cards as two rows of two: four columns leave too little width for the lists. */}
                 <SimpleGrid cols={{ base: 1, md: services.length === 4 ? 2 : Math.min(services.length, 3) }} spacing="md">

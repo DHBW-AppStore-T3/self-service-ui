@@ -1,7 +1,7 @@
 {
     "hero": {
-        "title": "Willkommen beim dhbwCloud-Self-Service",
-        "intro": "Die Dienste der dhbwCloud zur Selbstbedienung: Ressourcen beantragen, eigene Namen und Zertifikate vergeben und Sprachmodelle nutzen — ohne Ticket."
+        "title": "dhbwCloud-Self-Service",
+        "intro": "Cloud, Workspaces, Sprachmodelle und DNS der DHBW, selbst verwaltet, ohne Ticket."
     },
     "services": {
         "projects": {

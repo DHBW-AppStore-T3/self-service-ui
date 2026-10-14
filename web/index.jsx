@@ -154,15 +154,10 @@ function AppRoutes() {
                     {dnsZonesEnabled && <Route path="/dyndns" component={DynamicDnsManagement} nest />}
                     {cloudProjectsEnabled && <Route path="/cloud" component={CloudSection} nest />}
                     {cloudProjectsEnabled && <Route path="/budgets" component={BudgetsSection} nest />}
-                    {/* The start page for a project of an area, and the addresses of before the sections. */}
+                    {/* The start page for a project of an area (/projects/start?for=…). */}
                     {cloudProjectsEnabled && <Route path="/projects" component={ProjectsStart} nest />}
                     {llmEnabled && <Route path="/llm" component={LlmManagement} nest />}
                     {llmEnabled && <Route path="/workspaces" component={GpuManagement} nest />}
-                    {/* The section was called GPU until W2; old links keep working. */}
-                    {llmEnabled && <Route path="/gpu/*?">{(params) => <Redirect to={`/workspaces/${params['*'] ?? ''}`} replace />}</Route>}
-                    {/* The token pages moved into the sections of their APIs. */}
-                    <Route path="/tokens/dns"><Redirect to="/dyndns/tokens" replace /></Route>
-                    <Route path="/tokens/*?"><Redirect to="/cloud/tokens" replace /></Route>
                     <Route component={NotFound} />
                 </Switch>
             </ErrorBoundary>
