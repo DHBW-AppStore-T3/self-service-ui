@@ -65,7 +65,7 @@ function NodeRow({ node, pools, tiers, models, tierModels, onSave, saving }) {
                     data={[
                         { value: '', label: t('gpu.fleet.gapDefault', { model: tierModels?.[draft.tier] || '—' }) },
                         // Only what fits the node's GPU memory (the catalogue's "from GB"); the one chosen before stays listed.
-                        ...models.filter(m => !node.memory_gb || (m.min_gb || 0) <= node.memory_gb || m.key === draft.model).map(m => ({ value: m.key, label: m.key })),
+                        ...models.filter(m => !node.memory_gb || (m.min_gb || 0) <= node.memory_gb || m.key === draft.model).map(m => ({ value: m.key, label: m.category ? `${m.key} · ${t(`llm.models.categories.${m.category}`)}` : m.key })),
                         { value: '-', label: t('gpu.fleet.gapNone') },
                     ]}
                     onChange={v => setDraft({ ...draft, model: v ?? '' })} />

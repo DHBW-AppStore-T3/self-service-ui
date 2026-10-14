@@ -372,6 +372,16 @@
         "waiting_one": "{{count}} wartet auf GPU",
         "waiting_other": "{{count}} warten auf GPU",
         "restarts_one": "{{count}} Neustart",
-        "restarts_other": "{{count}} Neustarts"
+        "restarts_other": "{{count}} Neustarts",
+        "categories": {
+            "chat": "Chat",
+            "code": "Code",
+            "fast": "Schnell",
+            "general": "Allzweck"
+        },
+        "category": "Kategorie",
+        "categoryHint": "wofür es gedacht ist; gemessen wird später",
+        "measured": "gemessen",
+        "stated": "angegeben, noch nicht gemessen"
     }
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Badge, Button, Code, Container, Group, Modal, NumberInput, Paper, Select, SimpleGrid, Stack, Table, Text, TextInput, Textarea, Title } from '@mantine/core';
+import { Alert, Badge, Button, Code, Container, Group, Modal, NumberInput, Paper, Select, SimpleGrid, Stack, Table, Text, TextInput, Textarea, Title, Tooltip } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useLlmApi } from '/llm/api-llm.jsx';
@@ -8,7 +8,23 @@ import { llmKeys } from '/llm/query-keys.js';
 
 // For admins: the models the platform runs itself on its GPUs (llm-management-api, /v1/inference; docs/bauplan.md 10.16). The inference gap fillers of the GPU nodes run them: each tier's default, or the model chosen at a node (Workspaces → GPUs). The state comes from the vLLM pods, so arguments that do not fit the GPU (context length, memory share) show up here as restarts.
 
-const EMPTY = { key: '', model: '', args: [], cpu: '', memory_request: '', memory_limit: '', min_gb: 0 };
+const EMPTY = { key: '', model: '', args: [], cpu: '', memory_request: '', memory_limit: '', min_gb: 0, category: 'general' };
+
+export const MODEL_CATEGORIES = ['chat', 'code', 'fast', 'general'];
+const CATEGORY_COLOR = { chat: 'blue', code: 'grape', fast: 'teal', general: 'gray' };
+
+// The category of a model: the measured one (alias classification, once the model ran) before the stated one.
+export function CategoryBadge({ stated, measured, reason }) {
+    const { t } = useTranslation();
+    const cat = measured || stated;
+    if (!cat) return null;
+    const label = t(`llm.models.categories.${cat}`);
+    return (
+        <Tooltip label={measured ? `${t('llm.models.measured')}${reason ? `: ${reason}` : ''}` : t('llm.models.stated')} openDelay={300}>
+            <Badge size="sm" variant={measured ? 'filled' : 'light'} color={CATEGORY_COLOR[cat] || 'gray'}>{label}</Badge>
+        </Tooltip>
+    );
+}
 
 function ModelState({ state }) {
     const { t } = useTranslation();
@@ -33,9 +49,11 @@ function ModelForm({ initial, onSave, onClose, saving, error }) {
         <Modal opened onClose={onClose} title={editing ? t('llm.models.edit', { key: initial.key }) : t('llm.models.add')} size="lg">
             <Stack gap="sm">
                 {error && <Alert color="red" variant="light">{error}</Alert>}
-                <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+                <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
                     <TextInput label={t('llm.models.key')} description={t('llm.models.keyHint')} value={m.key} disabled={editing} onChange={e => setM({ ...m, key: e.currentTarget.value.toLowerCase() })} />
                     <TextInput label={t('llm.models.repo')} description={t('llm.models.repoHint')} value={m.model} onChange={set('model')} />
+                    <Select label={t('llm.models.category')} description={t('llm.models.categoryHint')} allowDeselect={false} value={m.category || 'general'}
+                        data={MODEL_CATEGORIES.map(c => ({ value: c, label: t(`llm.models.categories.${c}`) }))} onChange={v => setM({ ...m, category: v })} />
                 </SimpleGrid>
                 <Textarea label={t('llm.models.args')} description={t('llm.models.argsHint')} autosize minRows={2} ff="monospace" value={args} onChange={e => setArgs(e.currentTarget.value)} />
                 <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm">
@@ -89,7 +107,7 @@ export function LlmModels() {
                         <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
                             {tiers.map(tr => (
                                 <Select key={tr.id} label={tr.name} allowDeselect={false} disabled={!enabled} value={tierModels[tr.id] ?? ''}
-                                    data={[{ value: '', label: t('llm.models.none') }, ...models.map(m => ({ value: m.key, label: m.key }))]}
+                                    data={[{ value: '', label: t('llm.models.none') }, ...models.map(m => ({ value: m.key, label: `${m.key} · ${t(`llm.models.categories.${states[m.key]?.category || m.category || 'general'}`)}` }))]}
                                     onChange={v => tier.mutate({ tier: tr.id, model: v ?? '' })} />
                             ))}
                         </SimpleGrid>
@@ -110,7 +128,11 @@ export function LlmModels() {
                                 {models.map(m => (
                                     <Table.Tr key={m.key}>
                                         <Table.Td>
-                                            <Group gap={6}><Badge variant="light" color="gray" tt="none">{m.key}</Badge><Text size="sm">{m.model}</Text></Group>
+                                            <Group gap={6}>
+                                                <Badge variant="light" color="gray" tt="none">{m.key}</Badge>
+                                                <CategoryBadge stated={m.category} measured={states[m.key]?.category} reason={states[m.key]?.reason} />
+                                                <Text size="sm">{m.model}</Text>
+                                            </Group>
                                             {m.args?.length > 0 && <Code fz="xs" mt={4} block style={{ whiteSpace: 'pre-wrap' }}>{m.args.join(' ')}</Code>}
                                         </Table.Td>
                                         <Table.Td>
