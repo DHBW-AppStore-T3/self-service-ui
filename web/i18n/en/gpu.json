@@ -6,7 +6,7 @@
     },
     "servers": {
         "title": "Running servers",
-        "intro": "All own servers in JupyterHub, including those started there directly. Idle servers end by themselves: without GPU after 2 hours, with GPU after 30 minutes.",
+        "intro": "Your servers in JupyterHub. Idle servers end by themselves: without GPU after 2 hours, with GPU after 30 minutes.",
         "name": "Server",
         "profile": "Kind",
         "state": "State",
@@ -205,7 +205,7 @@
         "gpus_one": "{{count}} GPU",
         "gpus_other": "{{count}} GPUs",
         "pools": "Pools",
-        "poolsHint": "“allgemein” is for everybody; a pool of its own is for GPUs only certain budgets should get (grant them in the tree only there). The id becomes part of the tree resources and is fixed then. A pool that lends gives idle GPUs to the other pools of the same tier and takes them back as soon as it needs them.",
+        "poolsHint": "“general” is for everybody; a pool of its own is for GPUs only certain budgets should get (grant them in the tree only there). The id becomes part of the tree resources and is fixed then. A pool that lends gives idle GPUs to the other pools of the same tier and takes them back as soon as it needs them.",
         "poolId": "Id",
         "poolIdHint": "e.g. wi",
         "poolName": "Name",
@@ -218,5 +218,37 @@
         "poolKeptDefault": "always exists",
         "poolKeptClasses": "cannot be deleted: has {{classes}}",
         "poolKeptClassesTip": "A GPU class comes into being as soon as a node is assigned to the pool. It is a resource of the budget tree and projects may hold budget for it; that is why classes and their pool stay, even without nodes."
+    },
+    "start": {
+        "title": "Start server",
+        "intro": "Choose project and environment. The choice is in this page's address: a link with project and environment can go to all members of the project.",
+        "project": "Project",
+        "booked": "Computing time is booked to this project.",
+        "image": "Project environment: {{image}}.",
+        "storage": "The home directory belongs to the project ({{gb}} GB for all members together) and is the same in every environment; its folder project-shared is for all members. Deleting the project deletes these files too.",
+        "noStorage": "This project has no workspace storage: files are lost when the server ends. Storage is requested at the project.",
+        "ends": "The project ends on {{date}}.",
+        "deletes": "On {{date}} its workspaces are deleted with all files; save what matters before or have the project extended.",
+        "env": "Environment",
+        "envs": {
+            "cpu": "Server on the CPU with JupyterLab and VS Code. Up to 4 CPU cores and 8 GB RAM. Ends after 2 h without activity, after 12 h at the latest.",
+            "cpu-gpukernel": "Notebook on the CPU; the kernel “Python 3 (GPU)” starts on a GPU when needed. GPU kernels end after 5 min without execution, losing their variables.",
+            "gpu": "Whole server on a GPU with JupyterLab and VS Code. Waits until a GPU is free. Ends after 30 min without activity, after 4 h at the latest."
+        },
+        "noEnv": "This project allows no environment. The project's managers set its environments.",
+        "gpuClass": "GPU class",
+        "noGpuNow": "{{name}} – no GPU right now",
+        "start": "Start",
+        "copyLink": "Copy link",
+        "copied": "Copied",
+        "linkHint": "The link opens this page with the current choice; nothing starts before “Start”.",
+        "unknownProject": "The project “{{project}}” from the link is not one of your active projects with workspaces. The project's managers add members.",
+        "unknownEnv": "The environment “{{env}}” from the link is not allowed in this project.",
+        "noProject": "No active project with workspaces.",
+        "startingTitle": "Server “{{name}}” is starting",
+        "waiting": "The server is starting, usually in less than a minute. It opens here once it is ready.",
+        "waitingGpu": "The server waits for a free GPU, then starts. It opens here once it is ready.",
+        "gone": "The server could not start. The server list shows what is running; starting again reports the reason.",
+        "toServers": "To the server list"
     }
 }

@@ -5,6 +5,7 @@ import { LoadError, Loading } from '/helper/query-state.jsx';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { hasWorkspaces } from '/gpu/access.js';
 import { GpuServers } from '/gpu/servers.jsx';
+import { GpuStart } from '/gpu/start.jsx';
 import { GpuUsage } from '/gpu/usage.jsx';
 import { GpuFleet } from '/gpu/fleet.jsx';
 import { NoProject } from '/projects/no-project.jsx';
@@ -30,6 +31,7 @@ export function GpuManagement() {
     return (
         <Switch>
             {projects}
+            <Route path="/servers/start" component={GpuStart} />
             <Route path="/servers" component={GpuServers} />
             <Route path="/usage" component={GpuUsage} />
             <Route path="/gpus" component={GpuFleet} />

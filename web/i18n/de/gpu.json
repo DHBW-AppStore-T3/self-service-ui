@@ -6,7 +6,7 @@
     },
     "servers": {
         "title": "Laufende Server",
-        "intro": "Alle eigenen Server in JupyterHub, auch die direkt dort gestarteten. Server ohne Aktivität enden von selbst: ohne GPU nach 2 Stunden, mit GPU nach 30 Minuten.",
+        "intro": "Die eigenen Server in JupyterHub. Server ohne Aktivität enden von selbst: ohne GPU nach 2 Stunden, mit GPU nach 30 Minuten.",
         "name": "Server",
         "profile": "Art",
         "state": "Zustand",
@@ -205,7 +205,7 @@
         "gpus_one": "{{count}} GPU",
         "gpus_other": "{{count}} GPUs",
         "pools": "Pools",
-        "poolsHint": "„allgemein“ ist für alle; ein eigener Pool ist für GPUs, die nur bestimmte Budgets bekommen sollen (im Baum nur dort freigeben). Das Kürzel wird Teil der Ressourcen im Baum und ist danach fest. Ein Pool, der verleiht, gibt freie GPUs an die anderen Pools derselben Stufe und holt sie sofort zurück, sobald er sie selbst braucht.",
+        "poolsHint": "„general“ ist für alle; ein eigener Pool ist für GPUs, die nur bestimmte Budgets bekommen sollen (im Baum nur dort freigeben). Das Kürzel wird Teil der Ressourcen im Baum und ist danach fest. Ein Pool, der verleiht, gibt freie GPUs an die anderen Pools derselben Stufe und holt sie sofort zurück, sobald er sie selbst braucht.",
         "poolId": "Kürzel",
         "poolIdHint": "z. B. wi",
         "poolName": "Name",
@@ -218,5 +218,37 @@
         "poolKeptDefault": "gibt es immer",
         "poolKeptClasses": "nicht löschbar: hat {{classes}}",
         "poolKeptClassesTip": "Eine GPU-Klasse entsteht, sobald dem Pool ein Knoten zugeordnet wird. Sie ist eine Ressource im Budget-Baum, Projekte können Budget darauf halten; deshalb bleiben Klassen und ihr Pool auch ohne Knoten bestehen."
+    },
+    "start": {
+        "title": "Server starten",
+        "intro": "Projekt und Umgebung wählen. Die Auswahl steht in der Adresse dieser Seite: ein Link mit Projekt und Umgebung lässt sich an alle Mitglieder des Projekts weitergeben.",
+        "project": "Projekt",
+        "booked": "Die Rechenzeit wird diesem Projekt angerechnet.",
+        "image": "Umgebung des Projekts: {{image}}.",
+        "storage": "Das Home-Verzeichnis gehört zum Projekt ({{gb}} GB für alle Mitglieder zusammen) und ist in allen Umgebungen dasselbe; der Ordner project-shared darin ist für alle Mitglieder. Wird das Projekt gelöscht, werden auch diese Dateien gelöscht.",
+        "noStorage": "Dieses Projekt hat keinen Workspace-Speicher: Dateien gehen beim Beenden des Servers verloren. Speicher wird am Projekt beantragt.",
+        "ends": "Das Projekt endet am {{date}}.",
+        "deletes": "Am {{date}} werden seine Workspaces mit allen Dateien gelöscht; Wichtiges vorher sichern oder das Projekt verlängern lassen.",
+        "env": "Umgebung",
+        "envs": {
+            "cpu": "Server auf der CPU mit JupyterLab und VS Code. Bis 4 CPU-Kerne und 8 GB RAM. Endet nach 2 h ohne Aktivität, spätestens nach 12 h.",
+            "cpu-gpukernel": "Notebook auf der CPU; der Kernel „Python 3 (GPU)“ startet bei Bedarf auf einer GPU. GPU-Kernel enden nach 5 min ohne Ausführung, Variablen gehen dann verloren.",
+            "gpu": "Ganzer Server auf einer GPU mit JupyterLab und VS Code. Wartet, bis eine GPU frei ist. Endet nach 30 min ohne Aktivität, spätestens nach 4 h."
+        },
+        "noEnv": "Dieses Projekt erlaubt keine Umgebung. Die Umgebungen legen die Verwaltenden des Projekts fest.",
+        "gpuClass": "GPU-Klasse",
+        "noGpuNow": "{{name}} – derzeit keine GPU",
+        "start": "Starten",
+        "copyLink": "Link kopieren",
+        "copied": "Kopiert",
+        "linkHint": "Der Link öffnet diese Seite mit der aktuellen Auswahl; gestartet wird erst mit „Starten“.",
+        "unknownProject": "Das Projekt „{{project}}“ aus dem Link ist keines der eigenen aktiven Projekte mit Workspaces. Mitglied wird man über die Verwaltenden des Projekts.",
+        "unknownEnv": "Die Umgebung „{{env}}“ aus dem Link ist in diesem Projekt nicht freigegeben.",
+        "noProject": "Kein aktives Projekt mit Workspaces.",
+        "startingTitle": "Server „{{name}}“ startet",
+        "waiting": "Der Server startet, das dauert meist unter einer Minute. Sobald er bereit ist, öffnet er sich hier.",
+        "waitingGpu": "Der Server wartet auf eine freie GPU und startet dann. Sobald er bereit ist, öffnet er sich hier.",
+        "gone": "Der Server konnte nicht starten. Die Serverliste zeigt, was läuft; ein erneuter Start meldet den Grund.",
+        "toServers": "Zur Serverliste"
     }
 }
