@@ -88,8 +88,9 @@ export function useNodesApi() {
             // The filters narrow and order on the server (see ChildFilter in
             // the API): the browser only ever holds the page it shows. Empty
             // values are left out of the query rather than sent as "".
-            listChildren: async (id, { limit = PAGE_SIZE, offset = 0, kind, q, status, group, groupMode, sort, order, allocated, deep } = {}) => {
+            listChildren: async (id, { limit = PAGE_SIZE, offset = 0, kind, q, status, group, groupMode, sort, order, allocated, deep, provider } = {}) => {
                 const query = { limit, offset };
+                if (provider) query.provider = provider;
                 if (allocated) query.allocated = true;
                 if (deep) query.deep = true;
                 if (kind) query.kind = kind;

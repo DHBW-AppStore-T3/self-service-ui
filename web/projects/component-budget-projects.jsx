@@ -1,18 +1,19 @@
 import { useState } from 'react';
-import { Activity, ArrowDown, ArrowUp, ArrowUpDown, Eye, Gift, LogOut, Package, Pencil, Rocket, Scale, Search, Trash2, X } from 'lucide-react';
+import { Activity, ArrowDown, ArrowUp, ArrowUpDown, Eye, Gift, LogOut, Package, Pencil, Rocket, Scale, Search, Server, Sparkles, Trash2, X } from 'lucide-react';
 import { ActionIcon, Badge, Box, Group, Loader, MultiSelect, Pagination, Paper, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
 import { useDebouncedValue, useElementSize, useLocalStorage } from '@mantine/hooks';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQueries, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { InfoPopover, NodeStatusBadge } from './component-common.jsx';
 import { ProjectsPrincipalAutocomplete } from './principal-search.jsx';
-import { COLOR, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, expiryTone, expiryValue, hasAllocations, isAvailability, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel, USAGE_COLOR, usageLevel, measuredUse, openstackSide, pollWhileDeleting } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, budgetKinds, resourcesOfKinds, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, expiryTone, expiryValue, hasAllocations, isAvailability, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel, USAGE_COLOR, usageLevel, measuredUse, openstackSide, pollWhileDeleting } from './util-project.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { LoadError } from '/helper/query-state.jsx';
 import { budgetPathText } from './component-budget-path.jsx';
 import { formatDate } from '../format-date.js';
+import { shortName } from './component-quota-inputs.jsx';
 
 // Rows per page. A table, unlike the tree it replaces for projects, pages
 // instead of growing: a budget for all students of a location holds hundreds.
@@ -64,16 +65,25 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
         getInitialValueInEffect: false,
     });
     const [q] = useDebouncedValue(search.trim(), SEARCH_DEBOUNCE_MS);
+    // Cloud or Lab/KI projects only, where the budget offers both: the table then shows that kind's resources as columns instead of everything behind the (i). Remembered per browser, like the sort.
+    const kinds = budgetKinds(budget, resources);
+    const [storedKind, setStoredKind] = useLocalStorage({
+        key: 'self-service.budget-projects.kind',
+        defaultValue: 'all',
+        getInitialValueInEffect: false,
+    });
+    const kind = kinds.length > 1 && kinds.includes(storedKind) ? storedKind : 'all';
+    const provider = kind === 'all' ? '' : kind;
 
     // Every filter change starts over at the first page: page 7 of the old
     // result means nothing for the new one.
     const refilter = (apply) => (value) => { apply(value); setPage(1); };
 
-    const params = { q, status: statuses, group, groupMode, sort: sort.key, order: sort.order, page, allocated: allocatedOnly, deep };
+    const params = { q, status: statuses, group, groupMode, sort: sort.key, order: sort.order, page, allocated: allocatedOnly, deep, provider };
     const query = useQuery({
         queryKey: projectKeys.budgetProjects(budget.id, params),
         queryFn: () => api.listChildren(budget.id, {
-            kind: 'project', q, status: statuses, group, groupMode, allocated: allocatedOnly, deep: deep && !allocatedOnly,
+            kind: 'project', q, status: statuses, group, groupMode, allocated: allocatedOnly, deep: deep && !allocatedOnly, provider,
             sort: sort.key, order: sort.order,
             limit: TABLE_PAGE_SIZE, offset: (page - 1) * TABLE_PAGE_SIZE,
         }),
@@ -84,8 +94,22 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
         refetchInterval: pollWhileDeleting,
     });
 
+    // How many projects each kind has under the same filters, for the switch.
+    const counts = useQueries({
+        queries: (kinds.length > 1 ? ['all', ...kinds] : []).map(k => {
+            const p = { ...params, page: 1, provider: k === 'all' ? '' : k, count: true };
+            return {
+                queryKey: projectKeys.budgetProjects(budget.id, p),
+                queryFn: () => api.listChildren(budget.id, { kind: 'project', q, status: statuses, group, groupMode, allocated: allocatedOnly, deep: deep && !allocatedOnly, provider: p.provider, limit: 1 }),
+                enabled: !!api,
+                placeholderData: keepPreviousData,
+            };
+        }),
+    });
+    const countOf = (k) => counts[['all', ...kinds].indexOf(k)]?.data?.total ?? '…';
+
     const items = query.data?.items ?? [];
-    const columns = resourceColumns(t, resources, items);
+    const columns = resourceColumns(t, kind === 'all' ? resources : resourcesOfKinds(resources, [kind]), items, kind === 'aiaas');
     // Too narrow for a column per resource, each row shows an (i) with them
     // instead. Measured, not guessed from the screen: the panel's width depends
     // on the layout around it as much as on the window.
@@ -123,6 +147,26 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                             : t('projects.budgetProjects.title', { count: total })}</Title>
                     {query.isFetching && <Loader size="xs" />}
                 </Group>
+
+                {kinds.length > 1 && (
+                    <SegmentedControl
+                        size="xs"
+                        style={{ alignSelf: 'flex-start' }}
+                        aria-label={t('projects.kind.label')}
+                        value={kind}
+                        onChange={(k) => { setStoredKind(k); setPage(1); }}
+                        data={['all', ...kinds].map(k => ({
+                            value: k,
+                            label: (
+                                <Group gap={6} wrap="nowrap">
+                                    {k === 'openstack' && <Server size={13} />}
+                                    {k === 'aiaas' && <Sparkles size={13} />}
+                                    <span>{t(`projects.kind.filter_${k}`, { count: countOf(k) })}</span>
+                                </Group>
+                            ),
+                        }))}
+                    />
+                )}
 
                 <Group gap="lg">
                     {/* Only where there are sub-budgets to look into. The
@@ -341,11 +385,12 @@ function SortButton({ label, sortKey, sort, onSort, dimmed = false }) {
 // resourceColumns are the quantities shown as columns: those any listed project
 // holds, in catalogue order, plus the VM count once anything has been measured.
 // Availabilities have no amount and go under the project's name instead.
-function resourceColumns(t, resources, items) {
+// short: the Lab/KI view, where "Workspace CPU" says no more than "CPU".
+function resourceColumns(t, resources, items, short = false) {
     const quotaOf = (n) => effectiveLimit(n, n.pending?.limit || n.limit) || {};
     const cols = (resources || [])
         .filter(r => !isAvailability(r) && items.some(n => (quotaOf(n)[r.id] ?? 0) !== 0))
-        .map(r => ({ id: r.id, label: r.name, unit: r.unit, window: r.window }));
+        .map(r => ({ id: r.id, label: short ? shortName(r.name) : r.name, unit: r.unit, window: r.window }));
     if (items.some(n => openstackSide(n).facts?.servers != null)) {
         cols.push({ id: VMS, label: t('projects.resources.vms') });
     }
