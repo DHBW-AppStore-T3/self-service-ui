@@ -727,9 +727,18 @@ export function normalizeObjectResponse(res, fallback = {}) {
     return fallback;
 }
 
-export function formatRoleLabel(roleId) {
+// The role of a project member: in OpenStack member or reader; in the workspaces of
+// the AI service the same role decides whether the shared folder is writable.
+// kinds (kindsFor) says what the project is, so a Lab/AI project names the
+// workspace meaning and a project with both names both.
+const WORKSPACE_ROLE_LABELS = { member: 'Shared Workspace Writer', reader: 'Shared Workspace Reader' };
+
+export function formatRoleLabel(roleId, kinds) {
     if (!roleId) return '';
-    return roleId.charAt(0).toUpperCase() + roleId.slice(1);
+    const openstack = roleId.charAt(0).toUpperCase() + roleId.slice(1);
+    if (!kinds?.includes('aiaas')) return openstack;
+    const workspace = WORKSPACE_ROLE_LABELS[roleId] || openstack;
+    return kinds.includes('openstack') ? `${openstack} · ${workspace}` : workspace;
 }
 
 export function getAuthUserEmail(user) {

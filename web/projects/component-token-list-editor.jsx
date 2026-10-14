@@ -28,7 +28,7 @@ export function EditorHeading({ label, description }) {
 // entries: [{ token, role? }]
 function PrincipalListEditor({
     label, description, entries, onChange, roles = null, defaultRole = 'member',
-    placeholder, error, listAs = 'rows', emptyMessage,
+    placeholder, error, listAs = 'rows', emptyMessage, roleLabel = formatRoleLabel,
 }) {
     const { t } = useTranslation();
     const [draft, setDraft] = useState('');
@@ -74,6 +74,7 @@ function PrincipalListEditor({
                 <PrincipalImportModal
                     existing={tokens}
                     roles={withRoles ? roles : undefined}
+                    roleLabel={roleLabel}
                     defaultRole={withRoles ? defaultRole : undefined}
                     onImport={importEntries}
                     onClose={() => setImporting(false)}
@@ -91,12 +92,12 @@ function PrincipalListEditor({
                                     {withRoles && (
                                         <Select
                                             size="xs"
-                                            w={130}
+                                            w={roleLabel('member').length > 12 ? 260 : 130}
                                             aria-label={t('projects.memberEditor.openstackRole')}
                                             value={e.role}
                                             allowDeselect={false}
                                             onChange={(role) => { if (role) setRole(e.token, role); }}
-                                            data={roles.map(role => ({ value: role, label: formatRoleLabel(role) }))}
+                                            data={roles.map(role => ({ value: role, label: roleLabel(role) }))}
                                         />
                                     )}
                                     <Button size="xs" color={COLOR.negative} variant="light" onClick={() => remove(e.token)}>
@@ -143,7 +144,7 @@ export function TokenListEditor({ tokens, onChange, listAs = 'badges', ...props 
 // whether the shared folder is writable (reader only reads). withRoles=false
 // hides the role picker; every entry still carries one (the one it had, else
 // defaultRole), because the API asks for it.
-export function MemberRoleEditor({ members, onChange, roles, defaultRole = 'member', withRoles = true, ...props }) {
+export function MemberRoleEditor({ members, onChange, roles, defaultRole = 'member', withRoles = true, kinds, ...props }) {
     const { t } = useTranslation();
     const roleOf = new Map((members || []).map(m => [m.token, m.openstack_role]));
     return (
@@ -152,6 +153,7 @@ export function MemberRoleEditor({ members, onChange, roles, defaultRole = 'memb
             placeholder={t('projects.memberEditor.placeholder')}
             {...props}
             roles={withRoles ? (roles || []) : null}
+            roleLabel={(role) => formatRoleLabel(role, kinds)}
             defaultRole={defaultRole}
             entries={(members || []).map(m => ({ token: m.token, role: m.openstack_role }))}
             onChange={(entries) => onChange(entries.map(e => ({ token: e.token, openstack_role: e.role || roleOf.get(e.token) || defaultRole })))}

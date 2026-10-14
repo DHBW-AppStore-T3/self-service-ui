@@ -671,6 +671,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     members={authorizedUsers}
                     onChange={(members) => form.setFieldValue('authorizedUsers', members)}
                     roles={openstackRoles || []}
+                    kinds={memberKinds}
                     emptyMessage={t('projects.projectForm.membersEmpty')}
                 />
             </Paper>

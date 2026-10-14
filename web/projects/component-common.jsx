@@ -199,7 +199,7 @@ export function QuotaBadges({ resources, quota, size = 'sm' }) {
 }
 
 // UserRoleBadgeList renders authorized users with their OpenStack role.
-export function UserRoleBadgeList({ users, label, labelColor, size = 'sm' }) {
+export function UserRoleBadgeList({ users, label, labelColor, size = 'sm', kinds }) {
     if (!users || users.length === 0) return null;
     return (
         <div>
@@ -207,7 +207,7 @@ export function UserRoleBadgeList({ users, label, labelColor, size = 'sm' }) {
             <Group gap="md" rowGap={2} wrap="wrap">
                 {users.map(u => (
                     <PersonBadge key={`${u.token}:${u.openstack_role}`} email={tokenEmail(u.token)} size={size}>
-                        {u.token} <Text span inherit c="dimmed">({formatRoleLabel(u.openstack_role)})</Text>
+                        {u.token} <Text span inherit c="dimmed">({formatRoleLabel(u.openstack_role, kinds)})</Text>
                     </PersonBadge>
                 ))}
             </Group>

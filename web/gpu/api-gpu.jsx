@@ -5,7 +5,7 @@ import { useClient } from '/providers/client.jsx';
 // URL as the LLM section), under /v1/gpu. Named imports, as in llm/api-llm.jsx:
 // an operation missing from the client fails the build, not the browser.
 import {
-    deleteWorkspaceProject, getMyWorkspaceUsage, getGpuHours, getProjectImageLog, getWorkspaceCatalog, getWorkspaceStorage, getWorkspaceUsage,
+    deleteGpuPool, deleteWorkspaceProject, getGpuFleet, getMyWorkspaceUsage, getGpuHours, putGpuNode, putGpuPool, getProjectImageLog, getWorkspaceCatalog, getWorkspaceStorage, getWorkspaceUsage,
     listGpuServers, listWorkspaceProjects, rebuildProjectImage, stopGpuServer, updateWorkspaceProject,
 } from '@dhbw-cloud/llm-client';
 
@@ -38,6 +38,11 @@ export function useGpuApi() {
             projectImageLog: async (slug) => (await call(getProjectImageLog, { path: { slug } }))?.log ?? '',
             // Admins: how full the workspace storage and its metadata are.
             storage: () => call(getWorkspaceStorage),
+            // Admins: the GPU administration — nodes with pool and tier, pools, tiers, classes (docs/bauplan.md 10.13). Every change answers with the whole picture.
+            fleet: () => call(getGpuFleet),
+            assignNode: (name, body) => call(putGpuNode, { path: { name }, body, headers: JSON_HEADERS }),
+            savePool: (id, body) => call(putGpuPool, { path: { id }, body, headers: JSON_HEADERS }),
+            deletePool: (id) => call(deleteGpuPool, { path: { id } }),
             // GPU use per hour; period = { from, to }, project for a project's managers.
             gpuHours: (period, project) => call(getGpuHours, { query: project ? { ...period, project } : period }),
         };

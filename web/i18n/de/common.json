@@ -23,6 +23,7 @@
         "gpu": "GPU",
         "gpuServers": "Laufend",
         "gpuUsage": "Nutzung",
+        "gpuFleet": "GPUs",
         "workspaces": "Workspaces"
     },
     "account": {

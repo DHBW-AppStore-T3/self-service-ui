@@ -6,6 +6,7 @@ import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { hasWorkspaces } from '/gpu/access.js';
 import { GpuServers } from '/gpu/servers.jsx';
 import { GpuUsage } from '/gpu/usage.jsx';
+import { GpuFleet } from '/gpu/fleet.jsx';
 import { NoProject } from '/projects/no-project.jsx';
 
 // Workspaces (docs/plan-workspaces.md): running servers and usage. A project's workspace settings open from its card under Projects (gpu/workspace-settings.jsx). Served by llm-management-api; who may use it is its decision: a member of a project (workspace_projects in /v1/me); admins always, they manage the projects. Without a project it offers the way to one.
@@ -24,6 +25,7 @@ export function GpuManagement() {
             <Route path="/projects"><Redirect to="~/projects/projects?kind=aiaas" replace /></Route>
             <Route path="/servers" component={GpuServers} />
             <Route path="/usage" component={GpuUsage} />
+            <Route path="/gpus" component={GpuFleet} />
             <Route path="/"><Redirect to="/servers" replace /></Route>
             <Route>
                 <Container size="md" py="md">

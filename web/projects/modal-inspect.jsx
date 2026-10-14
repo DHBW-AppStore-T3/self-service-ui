@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { NodeChangesDiff, NodeStatusBadge, QuotaBadges, TokenBadgeList, UserRoleBadgeList } from './component-common.jsx';
-import { autoApproveFacts, effectiveLimit, formatRelativeDate, isBudget, nodeTitle, ownerEmail, statusLabel, measuredUse, openstackSide } from './util-project.jsx';
+import { autoApproveFacts, effectiveLimit, formatRelativeDate, isBudget, nodeTitle, ownerEmail, statusLabel, measuredUse, openstackSide, projectKinds } from './util-project.jsx';
 import { ProjectResources } from './component-project-resources.jsx';
 import { formatDateTime } from '../format-date.js';
 import { UsagePanel } from './component-usage.jsx';
@@ -117,14 +117,14 @@ function ResourcesTab({ node, resources }) {
 
 // AccessTab: on a budget who runs it and who may ask; on a project who works
 // in it.
-function AccessTab({ node }) {
+function AccessTab({ node, resources }) {
     const { t } = useTranslation();
     if (!isBudget(node)) {
         return (
             <Stack>
                 {/* The order of the edit dialog: access first, then admins. */}
                 <Section label={t('projects.projectForm.access')}>
-                    <UserRoleBadgeList users={node.authorized_users} />
+                    <UserRoleBadgeList users={node.authorized_users} kinds={projectKinds(node, resources)} />
                     {(!node.authorized_users || node.authorized_users.length === 0) && (
                         <Text size="xs" c="dimmed">{t('projects.inspect.ownerOnly')}</Text>
                     )}
@@ -317,7 +317,7 @@ export function NodeInspectModal({ opened, onClose, node, resources, initialTab 
         { value: TAB_RESOURCES, label: t('projects.fact.resources'), content: <ResourcesTab node={node} resources={resources} /> },
         {
             value: TAB_ACCESS, label: budget ? t('projects.budgetForm.tabAccess') : t('projects.fact.members'),
-            content: <AccessTab node={node} />,
+            content: <AccessTab node={node} resources={resources} />,
         },
         ...(budget ? [{ value: TAB_AUTO_APPROVE, label: t('projects.budgetForm.tabAutoApprove'), content: <AutoApproveTab node={node} resources={resources} /> }] : []),
         // Sent only to those who look after the node; read-only here.

@@ -49,7 +49,7 @@ const STATUS_COLOR = {
  *   roles?: string[]        OpenStack roles; without them there is no role column
  *   defaultRole?: string    preset for rows when the input names no roles
  */
-export function PrincipalImportModal({ onClose, onImport, existing = [], roles = null, defaultRole = 'member' }) {
+export function PrincipalImportModal({ onClose, onImport, existing = [], roles = null, defaultRole = 'member', roleLabel = formatRoleLabel }) {
     const { t } = useTranslation();
     const withRole = Array.isArray(roles) && roles.length > 0;
     const fallbackRole = withRole ? (roles.includes(defaultRole) ? defaultRole : roles[0]) : null;
@@ -152,7 +152,7 @@ export function PrincipalImportModal({ onClose, onImport, existing = [], roles =
                 : t('projects.principalImport.columnN', { n: i + 1, sample: sample.slice(0, 30) }),
         };
     }) : [];
-    const roleOptions = withRole ? roles.map(r => ({ value: r, label: formatRoleLabel(r) })) : [];
+    const roleOptions = withRole ? roles.map(r => ({ value: r, label: roleLabel(r) })) : [];
 
     const inputStep = (
         <Stack>

@@ -85,7 +85,8 @@ export function useNav() {
             items: [
                 { label: t('nav.gpuServers'), href: '/workspaces/servers' },
                 { label: t('nav.gpuUsage'), href: '/workspaces/usage' },
-            ],
+                llm.isAdmin && { label: t('nav.gpuFleet'), href: '/workspaces/gpus' },
+            ].filter(Boolean),
         } : aiOffered && { id: 'workspaces', label: t('nav.workspaces'), base: '/workspaces', items: [{ label: t('nav.gpuServers'), href: '/workspaces/servers' }] }),
         // Last, and a category of its own with nothing under it: tokens belong
         // to the account rather than to one of the domains above — both APIs

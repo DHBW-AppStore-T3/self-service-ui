@@ -15,21 +15,23 @@ const UNITS = ['vcpu_hours', 'ram_gb_hours', 'gpu_hours', 'server_hours'];
 const WINDOWS = ['24h', '7d', '30d', 'total'];
 const DEFAULT_LIMITS = { servers_per_person: 2, cpu_per_person: 4, ram_gb_per_person: 16, gpus_per_person: 0 };
 
-export function budgetText(t, b) {
-    const unit = t(`gpu.projects.budget.units.${b.unit}`) + (b.unit === 'gpu_hours' && b.gpu_class ? ` (${b.gpu_class})` : '');
+// classes: the GPU classes of the catalogue, to name a budget's class ("Allgemein · mittel") instead of its id.
+export function budgetText(t, b, classes = []) {
+    const cls = classes.find(c => c.id === b.gpu_class)?.name || b.gpu_class;
+    const unit = t(`gpu.projects.budget.units.${b.unit}`) + (b.unit === 'gpu_hours' && b.gpu_class ? ` (${cls})` : '');
     return t('gpu.projects.budget.line', { amount: b.amount, unit, window: t(`gpu.projects.budget.windows.${b.window}`),
         who: t(b.per_person ? 'gpu.projects.budget.perPerson' : 'gpu.projects.budget.wholeProject') });
 }
 
 // One budget with what is used of it — the person's own use for a budget per person. Orange from 80 %, red when used up: the warning before servers are ended.
-function BudgetBar({ b }) {
+function BudgetBar({ b, classes }) {
     const { t } = useTranslation();
     const ratio = b.amount > 0 ? b.used / b.amount : 0;
     const color = b.exhausted ? 'red' : ratio >= 0.8 ? 'orange' : 'teal';
     return (
         <div>
             <Group justify="space-between" gap="xs" wrap="nowrap">
-                <Text size="xs">{budgetText(t, b)}</Text>
+                <Text size="xs">{budgetText(t, b, classes)}</Text>
                 <Text size="xs" c={b.exhausted ? 'red' : 'dimmed'} style={{ whiteSpace: 'nowrap' }}>
                     {t('gpu.projects.budget.used', { used: Math.round(b.used * 10) / 10, amount: b.amount })}
                 </Text>
@@ -199,7 +201,7 @@ export function WorkspaceSettingsPanel({ draft }) {
         <Stack gap="md">
             <Box title={t('gpu.projects.environments')}>
                 <MultiSelect label={t('gpu.projects.profiles')} description={t('gpu.projects.profilesHint')} value={p.profiles ?? []} onChange={v => set('profiles', v)}
-                    data={(catalog.data?.profiles ?? []).map(x => ({ value: x.slug, label: x.gpu_class ? `${x.name} · ${x.gpu_class}` : x.name }))} />
+                    data={(catalog.data?.profiles ?? []).map(x => ({ value: x.slug, label: x.name }))} />
                 <ProjectImage draft={draft} set={set} bases={catalog.data?.bases ?? []} />
             </Box>
 
@@ -213,7 +215,7 @@ export function WorkspaceSettingsPanel({ draft }) {
             </Box>
 
             <Box title={t('gpu.projects.budgets')} hint={t('gpu.projects.budgetsHint')}>
-                {status.length > 0 && <Stack gap={6}>{status.map((b, i) => <BudgetBar key={i} b={b} />)}</Stack>}
+                {status.length > 0 && <Stack gap={6}>{status.map((b, i) => <BudgetBar key={i} b={b} classes={catalog.data?.gpuClasses ?? []} />)}</Stack>}
                 {/* The project's own quotas arrive here as budgets too (tree); they are edited in the quotas tab, so only the limits set here are listed — the others are kept and sent back as they are. */}
                 {budgets.map((b, i) => (b.tree ? null : (
                     <Group key={i} gap="xs" wrap="nowrap" align="flex-end">
@@ -222,8 +224,8 @@ export function WorkspaceSettingsPanel({ draft }) {
                         <Select w={170} allowDeselect={false} label={i === firstOwn ? t('gpu.projects.budget.unit') : undefined} value={b.unit}
                             data={UNITS.map(u => ({ value: u, label: t(`gpu.projects.budget.units.${u}`) }))} onChange={v => setBudget(i, { unit: v })} />
                         {b.unit === 'gpu_hours' && (
-                            <Select w={110} clearable label={i === firstOwn ? t('gpu.projects.budget.class') : undefined} value={b.gpu_class || null}
-                                placeholder={t('gpu.projects.budget.allClasses')} data={catalog.data?.gpuClasses ?? []} onChange={v => setBudget(i, { gpu_class: v || '' })} />
+                            <Select w={170} clearable label={i === firstOwn ? t('gpu.projects.budget.class') : undefined} value={b.gpu_class || null}
+                                placeholder={t('gpu.projects.budget.allClasses')} data={(catalog.data?.gpuClasses ?? []).map(c => ({ value: c.id, label: c.name }))} onChange={v => setBudget(i, { gpu_class: v || '' })} />
                         )}
                         <Select w={130} allowDeselect={false} label={i === firstOwn ? t('gpu.projects.budget.window') : undefined} value={b.window}
                             data={WINDOWS.map(w => ({ value: w, label: t(`gpu.projects.budget.windows.${w}`) }))} onChange={v => setBudget(i, { window: v })} />
