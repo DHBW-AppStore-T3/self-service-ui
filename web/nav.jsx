@@ -74,6 +74,7 @@ export function useNav() {
                 { label: t('nav.llmKeys'), href: '/llm/keys' },
                 { label: t('nav.llmUsage'), href: '/llm/usage' },
                 llm.isFleetAdmin && { label: t('nav.llmFleet'), href: '/llm/fleet' },
+                llm.isAdmin && { label: t('nav.llmModels'), href: '/llm/models' },
                 { label: t('nav.apiDocumentation'), href: '/llm/api-doc' },
             ].filter(Boolean),
         } : aiOffered && { id: 'llm', label: t('nav.llm'), base: '/llm', items: [{ label: t('nav.llmOverview'), href: '/llm/overview' }] }),

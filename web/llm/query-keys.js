@@ -7,6 +7,7 @@ export const llmKeys = {
     fleet: () => ['llm', 'fleet'],
     fleetInference: () => ['llm', 'fleet', 'inference'],
     tiers: () => ['llm', 'tiers'],
+    models: () => ['llm', 'models'],
     // Prefix only; the autocomplete appends the search term and limit.
     principals: () => ['llm', 'principals'],
 };

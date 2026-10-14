@@ -4,9 +4,9 @@ import { useClient } from '/providers/client.jsx';
 // Named imports for the same reason as in dyndns/api-zones.jsx: an operation
 // missing from the client fails the build, not the browser.
 import {
-    blockMachine, createKey, deleteFleetPackage,
-    deleteKey, forgetMachine, getFleet, getFleetInference, getMe, getUsage,
-    setDefaultProject, unblockMachine,
+    blockMachine, createKey, deleteCatalogModel, deleteFleetPackage,
+    deleteKey, forgetMachine, getFleet, getFleetInference, getMe, getModelCatalog, getUsage,
+    putCatalogModel, putTierModel, setDefaultProject, unblockMachine,
 } from '@dhbw-cloud/llm-client';
 
 // useLlmApi is the one place that knows the transport of the LLM section.
@@ -38,6 +38,12 @@ export function useLlmApi() {
             unblockMachine: (serial) => call(unblockMachine, { path: { serial } }),
             forgetMachine: (serial) => call(forgetMachine, { path: { serial } }),
             deletePackage: () => call(deleteFleetPackage),
+
+            // Admins: the platform's own models (docs/bauplan.md 10.16). Every change answers with the whole catalogue.
+            getModels: () => call(getModelCatalog),
+            saveModel: (m) => call(putCatalogModel, { path: { key: m.key }, body: m, headers: JSON_HEADERS }),
+            deleteModel: (key) => call(deleteCatalogModel, { path: { key } }),
+            setTierModel: (tier, model) => call(putTierModel, { path: { tier }, body: { model }, headers: JSON_HEADERS }),
         };
     }, [client]);
 }

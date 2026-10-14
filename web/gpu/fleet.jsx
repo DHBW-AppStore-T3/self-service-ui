@@ -64,7 +64,8 @@ function NodeRow({ node, pools, tiers, models, tierModels, onSave, saving }) {
                 <Select size="xs" w={190} allowDeselect={false} disabled={!draft.pool} value={draft.model} aria-label={t('gpu.fleet.gapModel')}
                     data={[
                         { value: '', label: t('gpu.fleet.gapDefault', { model: tierModels?.[draft.tier] || '—' }) },
-                        ...models.map(m => ({ value: m, label: m })),
+                        // Only what fits the node's GPU memory (the catalogue's "from GB"); the one chosen before stays listed.
+                        ...models.filter(m => !node.memory_gb || (m.min_gb || 0) <= node.memory_gb || m.key === draft.model).map(m => ({ value: m.key, label: m.key })),
                         { value: '-', label: t('gpu.fleet.gapNone') },
                     ]}
                     onChange={v => setDraft({ ...draft, model: v ?? '' })} />
