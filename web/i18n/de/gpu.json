@@ -24,12 +24,15 @@
     },
     "profiles": {
         "cpu": "CPU",
+        "cpu-gpukernel": "CPU + GPU-Kernel",
+        "gpu": "GPU",
         "pytorch": "PyTorch (GPU)",
         "tensorflow": "TensorFlow (GPU)",
-        "cpu-gpukernel": "CPU + GPU-Kernel",
         "project-gpu": "Projekt-Image (GPU)",
         "free": "Freies Image (CPU)",
-        "free-gpu": "Freies Image (GPU)"
+        "free-gpu": "Freies Image (GPU)",
+        "git-cpu": "Git-Umgebung (CPU)",
+        "git-gpu": "Git-Umgebung (GPU)"
     },
     "usage": {
         "title": "Nutzung",
@@ -61,18 +64,10 @@
         "remove": "Entfernen",
         "environments": "Umgebungen",
         "profiles": "Server-Arten in JupyterHub",
-        "freeImagesLabel": "Freie Images erlauben",
-        "freeImagesHint": "Beliebiges Image, mit oder ohne GPU, mit Home-Verzeichnis und Projektordner. Es läuft ohne root-Rechte und muss jupyterhub-singleuser enthalten.",
         "image": {
-            "label": "Projekt-Image",
-            "hint": "Läuft in „CPU + GPU-Kernel“ (Notebook und GPU-Kernel) und in „Projekt-Image (GPU)“ statt des Standard-Images (PyTorch mit CUDA, JupyterLab, VS Code).",
-            "sourceBase": "Standard",
-            "sourceGit": "Aus Git bauen",
-            "sourceImage": "Fertiges Image",
             "gitUrl": "Öffentliches Git-Repository (GitHub, GitLab)",
             "gitRef": "Branch, Tag oder Commit",
             "gitRefPlaceholder": "Standard-Branch",
-            "gitHint": "Gebaut wird wie bei Binder aus requirements.txt, environment.yml, apt.txt und postBuild (im Hauptverzeichnis, binder/ oder .binder/) auf dem Standard-Image. Das Repository liegt beim Start unter ~/projekte. Bei einer neuen Version des Standard-Images wird neu gebaut; bis ein Build fertig ist, bleibt das bisherige Image.",
             "buildOnSave": "Der Build startet beim Speichern (meist 5–15 Minuten).",
             "status": {
                 "building": "wird gebaut",
@@ -82,10 +77,17 @@
             "log": "Build-Log",
             "logEmpty": "(noch keine Ausgabe)",
             "rebuild": "Neu bauen",
-            "finished": "Image",
-            "finishedHint": "Muss von registry.gpu.services.dhbw.cloud/platform/notebook-base abgeleitet und öffentlich abrufbar sein; geprüft wird beim Speichern.",
             "current": "Aktuell im Einsatz:",
-            "currentBase": "Standard-Image"
+            "label": "Umgebung",
+            "hint": "Was auf den Servern des Projekts installiert ist, für alle Server-Arten gleich. Die Server-Art wählt nur die Hardware (CPU, CPU mit GPU-Kernel, GPU).",
+            "sourceBase": "Basis",
+            "sourceGit": "Basis + Git",
+            "sourceImage": "Vorhandenes Image",
+            "base": "Basis",
+            "finished": "Image",
+            "finishedHint": "Ein öffentlich abrufbares Image. Auf einer unserer Basen aufgebaut (FROM registry.gpu.services.dhbw.cloud/platform/base-…) läuft es mit allem; jedes andere läuft so, wie es ist (es braucht jupyterhub-singleuser), ohne „CPU + GPU-Kernel“.",
+            "notDerived": "Dieses Image baut auf keiner unserer Basen auf: Es läuft so, wie es ist, ohne „CPU + GPU-Kernel“ und ohne die DHBW-Erweiterungen.",
+            "gitHint": "Gebaut wird wie bei Binder aus requirements.txt, environment.yml, apt.txt und postBuild (im Hauptverzeichnis, binder/ oder .binder/) auf der gewählten Basis. Das Repository liegt beim Start unter ~/projekte. Bei einer neuen Version der Basis wird neu gebaut; bis ein Build fertig ist, bleibt das bisherige Image."
         },
         "limits": "Grenzen pro Person (gleichzeitig)",
         "limitsHint": "Gezählt wird, was eine Person in diesem Projekt gleichzeitig laufen hat. 0 heißt: keine Grenze – außer bei GPUs, dort heißt 0: keine GPU.",

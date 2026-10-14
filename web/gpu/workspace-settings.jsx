@@ -79,7 +79,7 @@ function editable(project) {
 // Box is one part of the tab, with its title and an optional hint below the fields.
 function Box({ title, hint, children }) {
     return (
-        <Paper withBorder radius="md" p="sm" bg="var(--mantine-color-gray-light)">
+        <Paper withBorder radius="md" p="md">
             <Text size="sm" fw={700} mb="xs">{title}</Text>
             <Stack gap="xs">{children}</Stack>
             {hint && <Text size="xs" c="dimmed" mt="xs">{hint}</Text>}
@@ -89,21 +89,22 @@ function Box({ title, hint, children }) {
 
 const BUILD_COLOUR = { building: 'blue', ready: 'teal', failed: 'red' };
 
-// ProjectImage is where the project image comes from: notebook-base itself, a Git repository built on it, or a finished image derived from it (docs/bauplan.md 10.12). The image is used by "CPU + GPU-Kernel" and "Projekt-Image (GPU)".
-function ProjectImage({ draft, set }) {
+// ProjectImage is the project's environment, run by every server type (docs/bauplan.md 10.12): a base of the catalogue, a Git repository built on it, or an existing image — one not built on a base runs as it is, without the GPU kernel.
+function ProjectImage({ draft, set, bases }) {
     const { t } = useTranslation();
     const api = useGpuApi();
     const queryClient = useQueryClient();
     const p = draft.value;
     const saved = draft.project;
     const [source, setSource] = useState(p.image_git_url ? 'git' : p.project_image ? 'image' : 'base');
+    const defaultBase = (bases.find(b => b.default) ?? bases[0])?.id ?? '';
     const [log, setLog] = useState(null);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
     const build = saved?.image_git_url && saved.image_git_url === p.image_git_url ? saved.image_build : null;
     const choose = (v) => {
         setSource(v);
-        draft.update(cur => ({ ...cur, image_git_url: '', image_git_ref: '', project_image: v === 'image' && !cur.image_git_url ? cur.project_image : '' }));
+        draft.update(cur => ({ ...cur, image_git_url: '', image_git_ref: '', image_base: v === 'image' ? '' : cur.image_base, project_image: v === 'image' && !cur.image_git_url ? cur.project_image : '' }));
     };
     const rebuild = async () => {
         setBusy(true); setError('');
@@ -132,6 +133,10 @@ function ProjectImage({ draft, set }) {
                 { value: 'git', label: t('gpu.projects.image.sourceGit') },
                 { value: 'image', label: t('gpu.projects.image.sourceImage') },
             ]} />
+            {source !== 'image' && bases.length > 0 && (
+                <Select label={t('gpu.projects.image.base')} allowDeselect={false} value={p.image_base || defaultBase}
+                    onChange={v => set('image_base', v === defaultBase ? '' : v)} data={bases.map(b => ({ value: b.id, label: b.name }))} />
+            )}
             {source === 'git' && (
                 <>
                     <Group gap="xs" wrap="nowrap" align="flex-end">
@@ -158,12 +163,15 @@ function ProjectImage({ draft, set }) {
                 </>
             )}
             {source === 'image' && (
-                <TextInput label={t('gpu.projects.image.finished')} description={t('gpu.projects.image.finishedHint')} placeholder="ghcr.io/…/kurs:2026"
+                <TextInput label={t('gpu.projects.image.finished')} description={t('gpu.projects.image.finishedHint')} placeholder="quay.io/jupyter/datascience-notebook:2026-10-01"
                     value={p.project_image ?? ''} onChange={e => set('project_image', e.currentTarget.value.trim())} />
+            )}
+            {source === 'image' && saved?.project_image && saved.project_image === p.project_image && !saved.image_derived && (
+                <Text size="xs" c="orange">{t('gpu.projects.image.notDerived')}</Text>
             )}
             <Text size="xs">
                 {t('gpu.projects.image.current')}{' '}
-                {saved?.project_image ? <Code>{saved.project_image}</Code> : t('gpu.projects.image.currentBase')}
+                {saved?.project_image ? <Code>{saved.project_image}</Code> : (bases.find(b => b.id === (saved?.image_base || defaultBase))?.name ?? '—')}
             </Text>
             <Modal opened={log !== null} onClose={() => setLog(null)} title={t('gpu.projects.image.log')} size={1000} centered>
                 <CodeBlock language="plaintext" code={log ?? ''} />
@@ -192,9 +200,7 @@ export function WorkspaceSettingsPanel({ draft }) {
             <Box title={t('gpu.projects.environments')}>
                 <MultiSelect label={t('gpu.projects.profiles')} description={t('gpu.projects.profilesHint')} value={p.profiles ?? []} onChange={v => set('profiles', v)}
                     data={(catalog.data?.profiles ?? []).map(x => ({ value: x.slug, label: x.gpu_class ? `${x.name} · ${x.gpu_class}` : x.name }))} />
-                <Checkbox label={t('gpu.projects.freeImagesLabel')} description={t('gpu.projects.freeImagesHint')}
-                    checked={!!p.free_images} onChange={e => set('free_images', e.currentTarget.checked)} />
-                <ProjectImage draft={draft} set={set} />
+                <ProjectImage draft={draft} set={set} bases={catalog.data?.bases ?? []} />
             </Box>
 
             <Box title={t('gpu.projects.limits')} hint={t('gpu.projects.limitsHint')}>

@@ -21,7 +21,7 @@ vi.mock('/gpu/api-gpu.jsx', async (importOriginal) => {
 
 const SERVERS = [
     { name: '', ready: true, url: 'https://jupyter.example/user/a/', profile: 'cpu-gpukernel' },
-    { name: 'kurs-gpu', ready: false, pending: 'spawn', url: 'https://jupyter.example/user/a/kurs-gpu/', profile: 'project-gpu' },
+    { name: 'kurs-gpu', ready: false, pending: 'spawn', url: 'https://jupyter.example/user/a/kurs-gpu/', profile: 'gpu' },
 ];
 
 const USAGE = {
@@ -36,8 +36,8 @@ const USAGE = {
 };
 
 const PROJECTS = [
-    { slug: 'wwi23seb-ml', tree_node: 'p_ml', name: 'Machine Learning WWI23SEB', description: 'Übungen', role: 'manager', profiles: ['cpu', 'pytorch'], gpu_classes: ['l4-3q'],
-      members: [{ token: 'group:wwi23seb', role: 'member' }], free_images: false,
+    { slug: 'wwi23seb-ml', tree_node: 'p_ml', name: 'Machine Learning WWI23SEB', description: 'Übungen', role: 'manager', profiles: ['cpu', 'gpu'], gpu_classes: ['l4-3q'],
+      members: [{ token: 'group:wwi23seb', role: 'member' }], image_base: 'tensorflow',
       image_git_url: 'https://github.com/o/ml-kurs', project_image: 'reg/envs/github-com-o-ml-kurs:0123456789ab-v1.1.0',
       image_build: { status: 'building', image: 'reg/envs/github-com-o-ml-kurs:89abcdef0123-v1.1.0', commit: '89abcdef0123456', branch: 'main', updated_at: '2026-10-14T08:00:00Z' },
       limits: { servers_per_person: 2, cpu_per_person: 4, ram_gb_per_person: 16, gpus_per_person: 1 }, gpus_by_class: { "l4-3q": 4 },
@@ -46,7 +46,8 @@ const PROJECTS = [
     { slug: 'statistik', name: 'Statistik', role: 'member', profiles: ['cpu'], gpu_classes: [], members: [],
       limits: { servers_per_person: 1 }, budgets: [], ends_at: '2027-03-31T00:00:00Z' },
 ];
-const CATALOG = { profiles: [{ slug: 'cpu', name: 'CPU' }, { slug: 'pytorch', name: 'PyTorch (GPU)', gpu_class: 'l4-3q' }, { slug: 'project-gpu', name: 'Projekt-Image (GPU)', gpu_class: 'l4-3q' }], gpuClasses: ['l4-3q'] };
+const CATALOG = { profiles: [{ slug: 'cpu', name: 'CPU' }, { slug: 'gpu', name: 'GPU', gpu_class: 'l4-3q' }], gpuClasses: ['l4-3q'],
+    bases: [{ id: 'python', name: 'Python', image: 'reg/platform/base-python:v2' }, { id: 'pytorch', name: 'PyTorch', image: 'reg/platform/base-pytorch:v2', default: true }, { id: 'tensorflow', name: 'TensorFlow / Keras', image: 'reg/platform/base-tensorflow:v2' }] };
 
 const { GpuServers } = await import('/gpu/servers.jsx');
 const { GpuUsage, groupUsage } = await import('/gpu/usage.jsx');

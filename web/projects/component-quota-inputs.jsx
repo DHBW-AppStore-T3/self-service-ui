@@ -69,8 +69,7 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
 
             {/* A named group (Workspaces, LLM, …) is a box of its own, so it is clear at a glance which fields belong together. */}
             {groups.map(([groupName, groupResourcesList]) => (
-                <Paper key={groupName || '__ungrouped'} withBorder={!!groupName} radius="md" p={groupName ? 'sm' : 0}
-                    bg={groupName ? 'var(--mantine-color-gray-light)' : undefined}>
+                <Paper key={groupName || '__ungrouped'} withBorder={!!groupName} radius="md" p={groupName ? 'md' : 0}>
                     {groupName && (
                         <Text size="sm" fw={700} mb="xs">{groupName}</Text>
                     )}
