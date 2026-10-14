@@ -160,9 +160,9 @@ export function shortName(name) {
     return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : name;
 }
 
-const TIER_ORDER = ['klein', 'mittel', 'gross'];
+const TIER_ORDER = ['small', 'medium', 'large'];
 
-// gpuPools pairs the GPU resources of a group by class (ws-gpus-<class>, ws-gpu-hours-<class>) and arranges the classes by pool, a row per tier in tier order. Pool and tier come from the resource's gpu_class; without it the name says them ("Allgemein · mittel: GPU hours"). GPU types lose the vendor ("NVIDIA-L40S-12Q" → "L40S-12Q"). null when the group holds anything else.
+// gpuPools pairs the GPU resources of a group by class (ws-gpus-<class>, ws-gpu-hours-<class>) and arranges the classes by pool (general first), a row per tier in tier order. Pool and tier come from the resource's gpu_class; without it the name says them ("General · medium: GPU hours"). GPU types lose the vendor ("NVIDIA-L40S-12Q" → "L40S-12Q"). null when the group holds anything else.
 export function gpuPools(resources) {
     const pools = new Map();
     for (const r of resources) {
@@ -180,7 +180,8 @@ export function gpuPools(resources) {
     if (!pools.size) return null;
     const rank = (tier) => { const i = TIER_ORDER.indexOf(tier); return i < 0 ? TIER_ORDER.length : i; };
     return [...pools.values()]
-        .sort((a, b) => a.name.localeCompare(b.name))
+        // The pool for everybody first, then the others by name.
+        .sort((a, b) => (b.id === 'general') - (a.id === 'general') || a.name.localeCompare(b.name))
         .map(p => ({ ...p, rows: [...p.rows.values()].sort((a, b) => rank(a.tier) - rank(b.tier) || a.name.localeCompare(b.name)) }));
 }
 

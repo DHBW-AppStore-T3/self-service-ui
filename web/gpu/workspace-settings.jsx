@@ -15,7 +15,7 @@ const UNITS = ['vcpu_hours', 'ram_gb_hours', 'gpu_hours', 'server_hours'];
 const WINDOWS = ['24h', '7d', '30d', 'total'];
 const DEFAULT_LIMITS = { servers_per_person: 2, cpu_per_person: 4, ram_gb_per_person: 16, gpus_per_person: 0 };
 
-// classes: the GPU classes of the catalogue, to name a budget's class ("Allgemein · mittel") instead of its id.
+// classes: the GPU classes of the catalogue, to name a budget's class ("General · medium") instead of its id.
 export function budgetText(t, b, classes = []) {
     const cls = classes.find(c => c.id === b.gpu_class)?.name || b.gpu_class;
     const unit = t(`gpu.projects.budget.units.${b.unit}`) + (b.unit === 'gpu_hours' && b.gpu_class ? ` (${cls})` : '');

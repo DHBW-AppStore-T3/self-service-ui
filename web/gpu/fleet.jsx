@@ -167,7 +167,7 @@ export function GpuFleet() {
                                             onChange={e => savePool.mutate({ id: p.id, body: { name: p.name, lend: e.currentTarget.checked } })} />
                                     </Table.Td>
                                     <Table.Td align="right">
-                                        {p.id === 'allgemein' ? (
+                                        {p.id === 'general' ? (
                                             <Text size="xs" c="dimmed">{t('gpu.fleet.poolKeptDefault')}</Text>
                                         ) : usedPools.has(p.id) ? (
                                             <Tooltip multiline w={320} withArrow label={t('gpu.fleet.poolKeptClassesTip')}>
