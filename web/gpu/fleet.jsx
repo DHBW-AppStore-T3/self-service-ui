@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Badge, Button, Container, Group, Paper, Select, Stack, Switch, Table, Text, TextInput, Title, Tooltip } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
+import { validPoolId } from '/gpu/pool-id.js';
 import { useTranslation } from 'react-i18next';
 import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
@@ -77,17 +78,26 @@ function NodeRow({ node, pools, tiers, models, tierModels, onSave, saving }) {
     );
 }
 
+// PoolForm shows what is wrong next to the field it is about: the id while typing, and a refusal of the server below the form instead of at the top of the page.
 function PoolForm({ onSave, saving }) {
     const { t } = useTranslation();
     const [id, setId] = useState('');
     const [name, setName] = useState('');
+    const [error, setError] = useState('');
+    const idError = id && !validPoolId(id) ? t('gpu.fleet.poolIdInvalid') : null;
+    const save = () => onSave(id, { name, lend: false })
+        .then(() => { setId(''); setName(''); setError(''); })
+        .catch(e => setError(e?.message || String(e)));
     return (
-        <Group gap="xs" align="flex-end">
-            <TextInput size="xs" w={140} label={t('gpu.fleet.poolId')} description={t('gpu.fleet.poolIdHint')} value={id} onChange={e => setId(e.currentTarget.value.toLowerCase())} />
-            <TextInput size="xs" w={240} label={t('gpu.fleet.poolName')} value={name} onChange={e => setName(e.currentTarget.value)} />
-            <Button size="xs" variant="light" disabled={!id || !name} loading={saving}
-                onClick={() => onSave(id, { name, lend: false }).then(() => { setId(''); setName(''); })}>{t('gpu.fleet.addPool')}</Button>
-        </Group>
+        <Stack gap={4}>
+            <Group gap="xs" align="flex-end">
+                <TextInput size="xs" w={180} label={t('gpu.fleet.poolId')} description={t('gpu.fleet.poolIdHint')} value={id} error={idError}
+                    onChange={e => { setId(e.currentTarget.value.toLowerCase()); setError(''); }} />
+                <TextInput size="xs" w={240} label={t('gpu.fleet.poolName')} value={name} onChange={e => { setName(e.currentTarget.value); setError(''); }} />
+                <Button size="xs" variant="light" disabled={!id || !name || !!idError} loading={saving} onClick={save}>{t('gpu.fleet.addPool')}</Button>
+            </Group>
+            {error && <Text size="xs" c="red">{error}</Text>}
+        </Stack>
     );
 }
 
@@ -103,6 +113,8 @@ export function GpuFleet() {
     const assign = useMutation({ mutationFn: ({ name, body }) => api.assignNode(name, body), onSuccess: done, onError: fail });
     const savePool = useMutation({ mutationFn: ({ id, body }) => api.savePool(id, body), onSuccess: done, onError: fail });
     const deletePool = useMutation({ mutationFn: (id) => api.deletePool(id), onSuccess: done, onError: fail });
+    // A new pool reports its refusal at the form (PoolForm), not at the top of the page.
+    const addPool = useMutation({ mutationFn: ({ id, body }) => api.savePool(id, body), onSuccess: done });
 
     if (!isAdmin) return <Container size="md" py="md"><Alert color="gray" variant="light">{t('gpu.noAccess.page')}</Alert></Container>;
     if (query.isPending) return <Container size="lg" py="md"><Loading /></Container>;
@@ -182,7 +194,7 @@ export function GpuFleet() {
                             ))}
                         </Table.Tbody>
                     </Table>
-                    <PoolForm saving={savePool.isPending} onSave={(id, body) => savePool.mutateAsync({ id, body })} />
+                    <PoolForm saving={addPool.isPending} onSave={(id, body) => addPool.mutateAsync({ id, body })} />
                 </Section>
             </Stack>
         </Container>
