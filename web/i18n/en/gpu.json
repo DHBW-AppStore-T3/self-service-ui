@@ -127,7 +127,8 @@
             },
             "fromTree": "from the project"
         },
-        "profilesHint": "What members can choose when starting a server in JupyterHub. The platform sets the list; GPU types count against the project's GPU quotas."
+        "profilesHint": "What members can choose when starting a server in JupyterHub. The platform sets the list; GPU types count against the project's GPU quotas.",
+        "adminOnlyHint": "Server types, limits and usage limits are set by admins. The environment (base, project image, Git) can be changed here."
     },
     "storage": {
         "title": "Storage (admins)",

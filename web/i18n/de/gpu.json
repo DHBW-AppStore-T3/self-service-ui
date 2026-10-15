@@ -127,7 +127,8 @@
             },
             "fromTree": "aus dem Projekt"
         },
-        "profilesHint": "Was Mitglieder beim Start eines Servers in JupyterHub wählen können. Die Liste gibt die Plattform vor; GPU-Arten zählen gegen die GPU-Kontingente des Projekts."
+        "profilesHint": "Was Mitglieder beim Start eines Servers in JupyterHub wählen können. Die Liste gibt die Plattform vor; GPU-Arten zählen gegen die GPU-Kontingente des Projekts.",
+        "adminOnlyHint": "Server-Arten, Grenzen und Verbrauchsgrenzen legen Admins fest. Die Umgebung (Basis, Projekt-Image, Git) lässt sich hier ändern."
     },
     "storage": {
         "title": "Speicher (Admins)",

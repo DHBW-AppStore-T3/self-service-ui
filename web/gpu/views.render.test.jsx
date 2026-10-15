@@ -11,8 +11,9 @@ const ME = {
 
 // The workspace settings ask the AI service only where this deployment has it.
 vi.mock('/features.js', async (importOriginal) => ({ ...(await importOriginal()), llmEnabled: true }));
+// A test switches to a project manager who is not an admin with globalThis.__llmIsAdmin = false.
 vi.mock('/llm/use-llm-me.jsx', () => ({
-    useLlmMe: () => ({ query: { isPending: false, isError: false }, me: ME, hasAccess: true, isFleetAdmin: true, isAdmin: true }),
+    useLlmMe: () => ({ query: { isPending: false, isError: false }, me: ME, hasAccess: true, isFleetAdmin: true, isAdmin: globalThis.__llmIsAdmin ?? true }),
 }));
 vi.mock('/gpu/api-gpu.jsx', async (importOriginal) => {
     const actual = await importOriginal();
@@ -69,6 +70,7 @@ beforeEach(() => {
         catalog: async () => CATALOG,
         workspaceUsage: async () => USAGE,
     };
+    globalThis.__llmIsAdmin = true;
     consoleErrors = [];
     vi.spyOn(console, 'error').mockImplementation((...args) => { consoleErrors.push(args.join(' ')); });
 });
@@ -95,6 +97,22 @@ describe('the GPU views render', () => {
         expect(await screen.findByText(/34.5 (von|of) 40/)).toBeTruthy();
         // The project image from Git: its build and the image in use until the build is ready.
         expect(screen.getByText('reg/envs/github-com-o-ml-kurs:0123456789ab-v1.1.0')).toBeTruthy();
+        expect(screen.getByText('89abcdef0123 (main)')).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('the workspace settings tab lets an admin add budgets', async () => {
+        renderView(<SettingsTab nodeId="p_ml" />);
+        expect(await screen.findByText(/Grenze hinzufügen|Add a limit/)).toBeTruthy();
+        expect(screen.queryByText(/legen Admins fest|set by admins/)).toBeNull();
+    });
+
+    it('the workspace settings tab shows a manager the settings of the admins without offering to change them', async () => {
+        globalThis.__llmIsAdmin = false;
+        renderView(<SettingsTab nodeId="p_ml" />);
+        expect(await screen.findByText(/legen Admins fest|set by admins/)).toBeTruthy();
+        expect(screen.queryByText(/Grenze hinzufügen|Add a limit/)).toBeNull();
+        // The environment stays editable.
         expect(screen.getByText('89abcdef0123 (main)')).toBeTruthy();
         expectNoRenderFailure();
     });

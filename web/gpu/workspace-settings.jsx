@@ -186,6 +186,9 @@ function ProjectImage({ draft, set, bases }) {
 export function WorkspaceSettingsPanel({ draft }) {
     const { t } = useTranslation();
     const api = useGpuApi();
+    // A project's managers change only its description, members and environment; profiles, limits and budgets are the admins' — the server keeps them as they are for anybody else, so they are shown, not offered for editing.
+    const { isAdmin } = useLlmMe();
+    const locked = !isAdmin;
     const catalog = useQuery({ queryKey: gpuKeys.catalog(), queryFn: () => api.catalog(), staleTime: 10 * 60 * 1000 });
     const p = draft.value;
     if (!p) return null;
@@ -199,25 +202,28 @@ export function WorkspaceSettingsPanel({ draft }) {
     const setBudget = (i, patch) => set('budgets', budgets.map((x, j) => (j === i ? { ...x, ...patch } : x)));
     return (
         <Stack gap="md">
+            {locked && <Text size="xs" c="dimmed">{t('gpu.projects.adminOnlyHint')}</Text>}
             <Box title={t('gpu.projects.environments')}>
-                <MultiSelect label={t('gpu.projects.profiles')} description={t('gpu.projects.profilesHint')} value={p.profiles ?? []} onChange={v => set('profiles', v)}
+                <MultiSelect label={t('gpu.projects.profiles')} description={t('gpu.projects.profilesHint')} value={p.profiles ?? []} onChange={v => set('profiles', v)} readOnly={locked}
                     data={(catalog.data?.profiles ?? []).map(x => ({ value: x.slug, label: x.name }))} />
                 <ProjectImage draft={draft} set={set} bases={catalog.data?.bases ?? []} />
             </Box>
 
             <Box title={t('gpu.projects.limits')} hint={t('gpu.projects.limitsHint')}>
                 <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
-                    <NumberInput label={t('gpu.projects.limit.serversShort')} min={0} value={p.limits.servers_per_person} onChange={v => setLimit('servers_per_person', v)} />
-                    <NumberInput label={t('gpu.projects.limit.cpuShort')} min={0} decimalScale={1} value={p.limits.cpu_per_person} onChange={v => setLimit('cpu_per_person', v)} />
-                    <NumberInput label={t('gpu.projects.limit.ramShort')} min={0} value={p.limits.ram_gb_per_person} onChange={v => setLimit('ram_gb_per_person', v)} />
-                    <NumberInput label={t('gpu.projects.limit.gpusShort')} min={0} value={p.limits.gpus_per_person} onChange={v => setLimit('gpus_per_person', v)} />
+                    <NumberInput label={t('gpu.projects.limit.serversShort')} min={0} value={p.limits.servers_per_person} onChange={v => setLimit('servers_per_person', v)} readOnly={locked} />
+                    <NumberInput label={t('gpu.projects.limit.cpuShort')} min={0} decimalScale={1} value={p.limits.cpu_per_person} onChange={v => setLimit('cpu_per_person', v)} readOnly={locked} />
+                    <NumberInput label={t('gpu.projects.limit.ramShort')} min={0} value={p.limits.ram_gb_per_person} onChange={v => setLimit('ram_gb_per_person', v)} readOnly={locked} />
+                    <NumberInput label={t('gpu.projects.limit.gpusShort')} min={0} value={p.limits.gpus_per_person} onChange={v => setLimit('gpus_per_person', v)} readOnly={locked} />
                 </SimpleGrid>
             </Box>
 
             <Box title={t('gpu.projects.budgets')} hint={t('gpu.projects.budgetsHint')}>
                 {status.length > 0 && <Stack gap={6}>{status.map((b, i) => <BudgetBar key={i} b={b} classes={catalog.data?.gpuClasses ?? []} />)}</Stack>}
                 {/* The project's own quotas arrive here as budgets too (tree); they are edited in the quotas tab, so only the limits set here are listed — the others are kept and sent back as they are. */}
-                {budgets.map((b, i) => (b.tree ? null : (
+                {/* Without their use (status) the budgets are at least named. */}
+                {locked && status.length === 0 && budgets.filter(b => !b.tree).map((b, i) => <Text key={i} size="xs">{budgetText(t, b, catalog.data?.gpuClasses ?? [])}</Text>)}
+                {!locked && budgets.map((b, i) => (b.tree ? null : (
                     <Group key={i} gap="xs" wrap="nowrap" align="flex-end">
                         <NumberInput w={110} min={0} label={i === firstOwn ? t('gpu.projects.budget.amount') : undefined} value={b.amount}
                             onChange={v => setBudget(i, { amount: Number(v) || 0 })} />
@@ -234,8 +240,10 @@ export function WorkspaceSettingsPanel({ draft }) {
                         <ActionIcon variant="subtle" color="red" mb={4} aria-label={t('gpu.projects.remove')} onClick={() => set('budgets', budgets.filter((_, j) => j !== i))}><X size={16} /></ActionIcon>
                     </Group>
                 )))}
-                <Button size="xs" variant="subtle" leftSection={<Plus size={14} />} w="fit-content"
-                    onClick={() => set('budgets', [...budgets, { unit: 'vcpu_hours', window: '30d', amount: 40, per_person: true }])}>{t('gpu.projects.addBudget')}</Button>
+                {!locked && (
+                    <Button size="xs" variant="subtle" leftSection={<Plus size={14} />} w="fit-content"
+                        onClick={() => set('budgets', [...budgets, { unit: 'vcpu_hours', window: '30d', amount: 40, per_person: true }])}>{t('gpu.projects.addBudget')}</Button>
+                )}
             </Box>
         </Stack>
     );
