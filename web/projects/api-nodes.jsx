@@ -130,10 +130,11 @@ export function useNodesApi() {
                 unwrapObject(await requestNodeChange({ client, path: { id }, body, headers: JSON_HEADERS })),
 
             // ── Lifecycle decisions ──────────────────────────────────────
-            approve: async (id, modifiedLimit = null) =>
+            // expectedRevision is the revision of the node the approver saw: the server refuses (409) when the request changed since.
+            approve: async (id, expectedRevision, modifiedLimit = null) =>
                 unwrapObject(await approveNode({
                     client, path: { id },
-                    body: modifiedLimit ? { modified_limit: modifiedLimit } : {},
+                    body: { expected_revision: expectedRevision, ...(modifiedLimit ? { modified_limit: modifiedLimit } : {}) },
                     headers: JSON_HEADERS,
                 })),
             reject: async (id, reason) =>

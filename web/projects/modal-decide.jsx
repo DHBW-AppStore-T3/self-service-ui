@@ -75,7 +75,7 @@ export function DecisionModal({ opened, onClose, onDone, resources, node }) {
             // A modified limit only where it differs from what was asked.
             const changed = values.adjust
                 && (resources || []).some(r => (values.quota[r.id] ?? 0) !== (requested?.[r.id] ?? 0));
-            return api.approve(node.id, changed ? values.quota : null);
+            return api.approve(node.id, node.revision, changed ? values.quota : null);
         },
     });
     const reject = useNodeMutation({
