@@ -89,7 +89,7 @@
             "finished": "Image",
             "finishedHint": "Ein öffentlich abrufbares Image. Auf einer unserer Basen aufgebaut (FROM registry.gpu.services.dhbw.cloud/platform/base-…) läuft es mit allem; jedes andere läuft so, wie es ist (es braucht jupyterhub-singleuser), ohne „CPU + GPU-Kernel“.",
             "notDerived": "Dieses Image baut auf keiner unserer Basen auf: Es läuft so, wie es ist, ohne „CPU + GPU-Kernel“ und ohne die DHBW-Erweiterungen.",
-            "gitHint": "Gebaut wird wie bei Binder aus requirements.txt, environment.yml, apt.txt und postBuild (im Hauptverzeichnis, binder/ oder .binder/) auf der gewählten Basis. Das Repository liegt beim Start unter ~/projekte. Bei einer neuen Version der Basis wird neu gebaut; bis ein Build fertig ist, bleibt das bisherige Image."
+            "gitHint": "Gebaut wird wie bei Binder aus requirements.txt, environment.yml, apt.txt und postBuild (im Hauptverzeichnis, binder/ oder .binder/) auf der gewählten Basis. Das Repository liegt beim Start unter ~/projects. Bei einer neuen Version der Basis wird neu gebaut; bis ein Build fertig ist, bleibt das bisherige Image."
         },
         "limits": "Grenzen pro Person (gleichzeitig)",
         "limitsHint": "Gezählt wird, was eine Person in diesem Projekt gleichzeitig laufen hat. 0 heißt: keine Grenze – außer bei GPUs, dort heißt 0: keine GPU.",
@@ -257,6 +257,11 @@
         "hideLog": "Protokoll ausblenden",
         "noEvents": "Noch keine Meldungen.",
         "failedTitle": "Der Start ist gescheitert",
-        "limits": "Endet nach {{idle}} ohne Aktivität, spätestens nach {{max}} h."
+        "limits": "Endet nach {{idle}} ohne Aktivität, spätestens nach {{max}} h.",
+        "buildingTitle": "Die Umgebung wird gebaut",
+        "building": "Das Image der Umgebung wird aus dem Git-Repository gebaut. Gestartet werden kann, sobald der Bau fertig ist; diese Seite aktualisiert sich von selbst.",
+        "buildFailedTitle": "Die Umgebung konnte nicht gebaut werden",
+        "buildFailed": "Ohne gebautes Image kann in diesem Projekt kein Server starten. Das Projekt verwalten können das Repository in den Projekteinstellungen (Workspaces) korrigieren und neu bauen.",
+        "buildLog": "Bau-Protokoll"
     }
 }
