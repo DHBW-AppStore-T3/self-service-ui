@@ -21,7 +21,7 @@
         "stopConfirm": "Beenden",
         "stopMessage": "„{{name}}“ wird beendet. Dateien im Home bleiben erhalten, nicht gespeicherte Änderungen in offenen Notebooks gehen verloren.",
         "startServer": "Server starten",
-        "ends": "Endet nach {{idle}} ohne Aktivität, spätestens um {{time}}."
+        "ends": "Endet nach {{idle}} ohne Aktivität, spätestens in {{left}}."
     },
     "profiles": {
         "cpu": "CPU",
@@ -260,7 +260,7 @@
         "hideLog": "Protokoll ausblenden",
         "noEvents": "Noch keine Meldungen.",
         "failedTitle": "Der Start ist gescheitert",
-        "limits": "Endet nach {{idle}} ohne Aktivität, spätestens nach {{max}} h.",
+        "limits": "Endet nach {{idle}} ohne Aktivität, spätestens nach {{max}}.",
         "buildingTitle": "Die Umgebung wird gebaut",
         "building": "Das Image der Umgebung wird aus dem Git-Repository gebaut. Gestartet werden kann, sobald der Bau fertig ist; diese Seite aktualisiert sich von selbst.",
         "buildFailedTitle": "Die Umgebung konnte nicht gebaut werden",

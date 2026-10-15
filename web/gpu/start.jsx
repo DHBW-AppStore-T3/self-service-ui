@@ -10,6 +10,7 @@ import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
 import { profileLabel } from '/gpu/profiles.js';
 import { BuildLogBody, useBuildLog } from '/gpu/build-log.jsx';
+import { formatDuration } from '/helper/duration.js';
 
 // Starting a server (Workspaces → Server → Server starten): the hub has no start form of its own any more, its start page leads here. The choice is in the URL (?project=<slug>&env=<profile>&gpu_class=<class>), so a link to this page with a project and an environment can go out to a course; the page offers only what the person's projects allow and starts through llm-management-api, where the hub checks the start as every start. While the server starts the page waits, then opens it in this tab.
 
@@ -33,10 +34,9 @@ export function envsOf(project, profiles) {
 }
 
 // limitsText are the runtime limits of a profile (what JupyterHub enforces), after its description.
-function limitsText(p, t) {
+function limitsText(p, t, lang) {
     if (!p.idle_minutes || !p.max_hours) return '';
-    const idle = p.idle_minutes % 60 === 0 ? `${p.idle_minutes / 60} h` : `${p.idle_minutes} min`;
-    return ' ' + t('gpu.start.limits', { idle, max: p.max_hours });
+    return ' ' + t('gpu.start.limits', { idle: formatDuration(p.idle_minutes * 60000, lang), max: formatDuration(p.max_hours * 3600000, lang) });
 }
 
 function day(iso) {
@@ -44,7 +44,7 @@ function day(iso) {
 }
 
 export function GpuStart() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const api = useGpuApi();
     const params = new URLSearchParams(useSearch());
     const clipboard = useClipboard({ timeout: 1500 });
@@ -180,7 +180,7 @@ export function GpuStart() {
                                                                 <Text fw={600}>{profileLabel(p.slug, t)}</Text>
                                                                 {p.gpu && <Badge size="xs" variant="light" color="grape">GPU</Badge>}
                                                             </Group>
-                                                            <Text size="xs" c="dimmed" mt={4}>{t(`gpu.start.envs.${p.slug}`, { defaultValue: '' })}{limitsText(p, t)}</Text>
+                                                            <Text size="xs" c="dimmed" mt={4}>{t(`gpu.start.envs.${p.slug}`, { defaultValue: '' })}{limitsText(p, t, i18n.language)}</Text>
                                                         </div>
                                                     </Group>
                                                 </Radio.Card>

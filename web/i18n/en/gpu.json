@@ -21,7 +21,7 @@
         "stopConfirm": "Stop",
         "stopMessage": "“{{name}}” is stopped. Files in the home stay, unsaved changes in open notebooks are lost.",
         "startServer": "Start server",
-        "ends": "Ends after {{idle}} without activity, at {{time}} at the latest."
+        "ends": "Ends after {{idle}} without activity, in {{left}} at the latest."
     },
     "profiles": {
         "cpu": "CPU",
@@ -260,7 +260,7 @@
         "hideLog": "Hide log",
         "noEvents": "No messages yet.",
         "failedTitle": "The start failed",
-        "limits": "Ends after {{idle}} without activity, after {{max}} h at the latest.",
+        "limits": "Ends after {{idle}} without activity, after {{max}} at the latest.",
         "buildingTitle": "The environment is being built",
         "building": "The environment's image is being built from the Git repository. Servers can start once the build is done; this page updates by itself.",
         "buildFailedTitle": "The environment could not be built",

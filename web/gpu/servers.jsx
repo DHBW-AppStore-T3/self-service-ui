@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, Container, Group, Paper, Stack, Table, Text, Title } from '@mantine/core';
+import { Badge, Button, Container, Group, Paper, Stack, Table, Text, Title, Tooltip } from '@mantine/core';
 import { Link } from 'wouter';
 import { ArrowRight, Play, Square } from 'lucide-react';
 import { LoadError, Loading, useApiMutation } from '/helper/query-state.jsx';
@@ -8,10 +8,11 @@ import { useConfirm } from '/providers/confirm.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
 import { profileLabel, usesGpu } from '/gpu/profiles.js';
+import { formatDuration } from '/helper/duration.js';
 
 // The person's JupyterHub servers (also those started on the hub page itself).
 export function GpuServers() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const api = useGpuApi();
     const confirm = useConfirm();
 
@@ -20,12 +21,15 @@ export function GpuServers() {
     const options = useQuery({ queryKey: gpuKeys.startOptions(), queryFn: () => api.startOptions() });
     const projectName = (slug) => options.data?.projects?.find(p => p.slug === slug)?.name || slug;
     // The runtime limits of the server's environment, as JupyterHub enforces them: idle time, and the latest end from its start.
+    // The runtime limits of the server's environment, as JupyterHub enforces them: the idle time, and how long until its latest end (from its start, counted from the list's last refresh every 10 s); the time of day on hover.
     const ends = (s) => {
         const p = options.data?.profiles?.find(x => x.slug === s.profile);
-        if (!p?.idle_minutes || !p?.max_hours || !s.started) return '';
-        const idle = p.idle_minutes % 60 === 0 ? `${p.idle_minutes / 60} h` : `${p.idle_minutes} min`;
-        const time = new Date(new Date(s.started).getTime() + p.max_hours * 3600 * 1000).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-        return t('gpu.servers.ends', { idle, time });
+        if (!p?.idle_minutes || !p?.max_hours || !s.started) return null;
+        const end = new Date(s.started).getTime() + p.max_hours * 3600 * 1000;
+        return {
+            text: t('gpu.servers.ends', { idle: formatDuration(p.idle_minutes * 60000, i18n.language), left: formatDuration(end - servers.dataUpdatedAt, i18n.language) }),
+            at: new Date(end).toLocaleString(i18n.language, { weekday: 'short', hour: '2-digit', minute: '2-digit' }),
+        };
     };
     const stop = useApiMutation({ mutationFn: (name) => api.stopServer(name), invalidates: [gpuKeys.servers()] });
 
@@ -82,7 +86,7 @@ export function GpuServers() {
                                     </Table.Td>
                                     <Table.Td>
                                         <Text size="sm">{s.ready ? t('gpu.servers.ready') : s.pending === 'stop' ? t('gpu.servers.stopping') : t('gpu.servers.starting')}</Text>
-                                        {s.ready && ends(s) && <Text size="xs" c="dimmed">{ends(s)}</Text>}
+                                        {s.ready && ends(s) && <Tooltip label={ends(s).at} withArrow><Text size="xs" c="dimmed">{ends(s).text}</Text></Tooltip>}
                                     </Table.Td>
                                     <Table.Td align="right">
                                         <Group gap={4} justify="flex-end" wrap="nowrap">
