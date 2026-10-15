@@ -189,7 +189,7 @@ function OneShotPanel({ zone }) {
                 </Grid>
             </Paper>
 
-            {zone.zone_keys.map(key => (
+            {(zone.zone_keys ?? []).map(key => (
                 <Paper key={key.keyname} withBorder radius="md" p="md">
                     <Title order={5} mb="sm">{t('dyndns.oneShot.keyHeading', { keyname: key.keyname })}</Title>
                     <CodeBlock code={generateNsUpdate({ name: form.name, type: form.type, ttl: Number(form.ttl), value: form.value }, zone.zone, key, dynDnsConfig)} />

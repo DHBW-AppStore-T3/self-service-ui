@@ -4,7 +4,7 @@ import { useDebouncedValue } from '@mantine/hooks';
 import { cloudProjectsEnabled, dnsZonesEnabled, llmEnabled } from '/features.js';
 import { useAuth } from '/providers/auth.jsx';
 import { useNodesApi } from '/projects/api-nodes.jsx';
-import { useZonesApi } from '/dyndns/api-zones.jsx';
+import { useDnsMeQuery } from '/dyndns/use-dns-me.jsx';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 
 // Acting on behalf of another person: an admin, working on a ticket, sees and does what that person would — in every service at once. The browser sends the person's address as X-Act-As with every request (providers/client.jsx); each service checks on its own that the signed-in person is one of its admins, and refuses otherwise. Nothing is stored on a server: the choice lives in this tab (sessionStorage), so it ends with the tab and cannot linger unnoticed in another one. ?act_as=<email> in a link starts a tab acting for that person.
@@ -53,7 +53,6 @@ export const useActAs = () => useContext(ActAsContext);
 export function ActAsProvider({ children }) {
     const { user } = useAuth();
     const nodesApi = useNodesApi();
-    const zonesApi = useZonesApi();
     const { query: llmQuery } = useLlmMe();
     const actingAs = actingAsAtLoad;
 
@@ -65,13 +64,7 @@ export function ActAsProvider({ children }) {
         retry: false,
         staleTime: 5 * 60 * 1000,
     });
-    const dnsQuery = useQuery({
-        queryKey: ['act-as', 'dns'],
-        queryFn: () => zonesApi.getMe(),
-        enabled: dnsZonesEnabled && !!user,
-        retry: false,
-        staleTime: 5 * 60 * 1000,
-    });
+    const dnsQuery = useDnsMeQuery({ enabled: dnsZonesEnabled });
     const services = [
         cloudProjectsEnabled && { id: 'cloud', query: cloudQuery },
         dnsZonesEnabled && { id: 'dns', query: dnsQuery },

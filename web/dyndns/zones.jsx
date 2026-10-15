@@ -12,12 +12,14 @@ import { DynamicDnsKubernetes } from '/dyndns/zones/dynamic-dns-kubernetes.jsx';
 import { DynamicDns } from '/dyndns/zones/dynamic-dns.jsx';
 import { DnsRecordsList } from '/dyndns/zones/dns-record-list.jsx';
 import { TlsCertificates } from '/dyndns/zones/tls-certificates.jsx';
-import { Container, Title, Paper, Stack, NavLink, Tabs, Button, Text, Loader, Alert, Group, TextInput, Modal, Box, Flex, Tooltip } from '@mantine/core';
+import { Container, Title, Paper, Stack, NavLink, Tabs, Button, Text, Loader, Alert, Group, TextInput, Modal, Box, Flex, Tooltip, Badge } from '@mantine/core';
 import { AlertCircle, Globe, CornerDownRight, Plus, Users, RefreshCw, LogOut } from 'lucide-react';
 import { subzoneLabelError } from '/helper/dns-validation.js';
 import { CopyableText } from '/helper/copyable-text.jsx';
 import { useZoneEvents, ZoneEventIndicator, ZoneEventsBanner } from '/dyndns/zones/zone-events-banner.jsx';
 import { subzonesUnder } from '/dyndns/zone-tree.js';
+import { zoneAuthority } from '/dyndns/zone-authority.js';
+import { useDnsMeQuery } from '/dyndns/use-dns-me.jsx';
 
 
 // ----------------------------------------
@@ -290,7 +292,7 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
     const api = useZonesApi();
     const [currentLocation, navigate] = useLocation()
     const confirm = useConfirm();
-    const { user } = useAuth();
+    const me = useZoneIdentity();
     const [shareOpen, setShareOpen] = useState(false);
 
     // `id` is what the code compares on and what the URL maps to; `label` is
@@ -333,7 +335,7 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
     });
 
     const leaveZone = useApiMutation({
-        mutationFn: () => api.leaveZone(zone.zoneData.zone, (user?.profile?.email || '').toLowerCase()),
+        mutationFn: () => api.leaveZone(zone.zoneData.zone, me.email),
         invalidates: zoneKeys,
         onSuccess: () => onDeleted?.(),
     });
@@ -362,7 +364,7 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
         const ok = await confirm({
             title: t('dyndns.zoneDetail.rotateTitle'),
             confirmLabel: t('dyndns.zoneDetail.rotateConfirm'),
-            message: t('dyndns.zoneDetail.rotateMessage'),
+            message: t(authority.rotatesAll ? 'dyndns.zoneDetail.rotateMessage' : 'dyndns.zoneDetail.rotateOwnMessage'),
         });
         if (ok) rotateKeys.mutate();
     }
@@ -388,6 +390,7 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
     if (!zone || !zone.zoneData) return (<Alert icon={<AlertCircle size="16" />} color="red">{t('dyndns.zoneDetail.corrupted')}</Alert>);
 
     const activeTab = tabs.find(tab => currentLocation === tab.path)?.id || "manage";
+    const authority = zoneAuthority(zone, me.email, me.superAdmin);
 
     return (
         <Stack gap="md">
@@ -405,6 +408,11 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
                                 {t('dyndns.zoneDetail.managedBy', { owners: zone.owners.join(', ') })}
                             </Text>
                         )}
+                        {zone.creator && zone.owners?.length > 1 && (
+                            <Text size="sm" c="dimmed" style={{ wordBreak: 'break-word' }}>
+                                {t('dyndns.zoneDetail.createdBy', { creator: zone.creator })}
+                            </Text>
+                        )}
                     </div>
                     <Group gap="sm" wrap="wrap">
                         {zone.sharing_allowed && (
@@ -412,19 +420,21 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
                                 {t('dyndns.zoneDetail.share')}
                             </Button>
                         )}
-                        <Tooltip label={t('dyndns.zoneDetail.rotateTooltip')}>
-                            <Button variant="light" color="orange" size="sm" leftSection={<RefreshCw size={16} />} onClick={handleRotateKeys}>
-                                {t('dyndns.zoneDetail.rotate')}
+                        <Tooltip multiline w={320} label={t(authority.rotatesAll ? 'dyndns.zoneDetail.rotateTooltip' : 'dyndns.zoneDetail.rotateOwnTooltip')}>
+                            <Button variant="light" color="orange" size="sm" leftSection={<RefreshCw size={16} />} onClick={handleRotateKeys} loading={rotateKeys.isPending}>
+                                {t(authority.rotatesAll ? 'dyndns.zoneDetail.rotateAll' : zone.owners?.length > 1 ? 'dyndns.zoneDetail.rotateOwn' : 'dyndns.zoneDetail.rotate')}
                             </Button>
                         </Tooltip>
-                        {zone.owners?.length > 1 && (
+                        {authority.canLeave && (
                             <Tooltip label={t('dyndns.zoneDetail.leaveTooltip')}>
                                 <Button variant="light" color="red" size="sm" leftSection={<LogOut size={16} />} onClick={handleLeave}>
                                     {t('dyndns.zoneDetail.leave')}
                                 </Button>
                             </Tooltip>
                         )}
-                        <Button color="red" size="sm" onClick={handleDeleteClick}>{t('dyndns.zoneDetail.delete')}</Button>
+                        {authority.manages && (
+                            <Button color="red" size="sm" onClick={handleDeleteClick} loading={deleteZone.isPending}>{t('dyndns.zoneDetail.delete')}</Button>
+                        )}
                     </Group>
                 </Flex>
             </Paper>
@@ -434,6 +444,9 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
                 onClose={() => setShareOpen(false)}
                 zoneName={zone.zoneData.zone}
                 owners={zone.owners || []}
+                creator={zone.creator}
+                me={me.email}
+                authority={authority}
             />
 
             <ZoneEventsBanner events={eventsByZone[zoneName]} />
@@ -472,17 +485,14 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
 }
 
 // ----------------------------------------
-// Share Zone Modal — manage co-owners (equal rights) and rotate keys.
+// Share Zone Modal — add co-owners; the creator (or a super admin) also removes them.
 // Each owner has their own TSIG key; removing an owner deletes only their key.
 // ----------------------------------------
-function ShareZoneModal({ opened, onClose, zoneName, owners }) {
+function ShareZoneModal({ opened, onClose, zoneName, owners, creator, me, authority }) {
     const { t } = useTranslation();
     const api = useZonesApi();
     const confirm = useConfirm();
-    const { user } = useAuth();
     const [email, setEmail] = useState('');
-
-    const me = (user?.profile?.email || '').toLowerCase();
     // Both writes invalidate the zone, so the owner list this modal renders
     // comes back through the parent's query. It used to be mirrored into local
     // state and patched from each response — two sources for one list.
@@ -519,15 +529,24 @@ function ShareZoneModal({ opened, onClose, zoneName, owners }) {
         <Modal opened={opened} onClose={onClose} title={t('dyndns.share.title', { zone: zoneName })} centered size="lg">
             <Stack gap="lg">
                 <Text size="sm" c="dimmed">{t('dyndns.share.intro')}</Text>
+                {!authority.manages && <Text size="sm" c="dimmed">{t('dyndns.share.coOwnerHint')}</Text>}
 
                 <Stack gap="xs">
                     {owners.map(o => (
                         <Group key={o} justify="space-between" wrap="nowrap">
-                            <Text size="sm">{o}{o === me && <Text span c="dimmed"> {t('dyndns.share.you')}</Text>}</Text>
-                            <Button size="compact-xs" color="red" variant="light" disabled={busy || owners.length <= 1}
-                                onClick={() => handleRemove(o)} title={owners.length <= 1 ? t('dyndns.share.lastOwner') : undefined}>
-                                {t('dyndns.actions.remove')}
-                            </Button>
+                            <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
+                                <Text size="sm" style={{ wordBreak: 'break-word' }}>{o}{o === me && <Text span c="dimmed"> {t('dyndns.share.you')}</Text>}</Text>
+                                {creator && o.toLowerCase() === creator.toLowerCase() && (
+                                    <Tooltip multiline w={280} label={t('dyndns.share.creatorTooltip')}>
+                                        <Badge size="xs" variant="light" color="blue">{t('dyndns.share.creator')}</Badge>
+                                    </Tooltip>
+                                )}
+                            </Group>
+                            {authority.canRemove(o) && (
+                                <Button size="compact-xs" color="red" variant="light" disabled={busy} onClick={() => handleRemove(o)}>
+                                    {t('dyndns.actions.remove')}
+                                </Button>
+                            )}
                         </Group>
                     ))}
                     {owners.length === 0 && <Text size="sm" c="dimmed">{t('dyndns.share.noOwners')}</Text>}
@@ -545,4 +564,14 @@ function ShareZoneModal({ opened, onClose, zoneName, owners }) {
             </Stack>
         </Modal>
     );
+}
+
+// The identity the zone requests act as, and whether it is a super admin there: from GET /v1/me, so acting for somebody (X-Act-As) shows that person's view. Until the answer is in — or if the service cannot say — the signed-in address stands in and nobody is a super admin; the server decides either way.
+function useZoneIdentity() {
+    const { user } = useAuth();
+    const meQuery = useDnsMeQuery();
+    return {
+        email: (meQuery.data?.email || user?.profile?.email || '').toLowerCase(),
+        superAdmin: !!meQuery.data?.super_admin,
+    };
 }

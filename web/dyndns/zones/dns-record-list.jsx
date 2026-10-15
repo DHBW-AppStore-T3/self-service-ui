@@ -263,9 +263,11 @@ export function DnsRecordsList({ zone, tsigKey }) {
             // Names are shown relative to the zone everywhere in this table.
             return records.map(record => ({ ...record, name: stripZone(record.name, zone) }));
         },
-        enabled: !!api,
+        // Without a key (a read-only token gets none) there is nothing to authenticate the DNS read with.
+        enabled: !!api && !!tsigKey,
     });
 
+    if (!tsigKey) return <Text size="sm" c="dimmed">{t('dyndns.records.noKey')}</Text>;
     if (!api || recordsQuery.isPending) return <Loading size="sm" />;
     if (recordsQuery.isError) return <LoadError query={recordsQuery} title={t('dyndns.records.loadError')} />;
 

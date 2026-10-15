@@ -49,12 +49,12 @@
         "rotate": "Schlüssel erneuern",
         "rotateTooltip": "Die Schlüssel erneuern, wenn einer in einer geteilten Umgebung benutzt wurde oder kompromittiert sein könnte — das erzeugt den Schlüssel jedes Eigentümers neu.",
         "leave": "Zone verlassen",
-        "leaveTooltip": "Entfernt nur das eigene Konto als Eigentümer — die Zone und die anderen Eigentümer bleiben.",
+        "leaveTooltip": "Entfernt nur das eigene Konto als Eigentümer — die Zone und die anderen Eigentümer bleiben. Löschen kann die Zone nur, wer sie angelegt hat.",
         "delete": "Zone löschen",
         "deleteTitle": "⚠️ Zone löschen?",
         "deleteConfirm": "Zone löschen",
-        "deleteMessageShared": "Damit werden die Zone <1>{{zone}}</1>, alle ihre DNS-Einträge und der Zugriff jedes Eigentümers dauerhaft gelöscht. Das lässt sich nicht rückgängig machen. Um nur das eigene Konto zu entfernen, gibt es „Zone verlassen“.",
-        "deleteMessageSole": "Damit werden die Zone <1>{{zone}}</1> und alle ihre DNS-Einträge dauerhaft gelöscht. Das lässt sich nicht rückgängig machen.",
+        "deleteMessageShared": "Damit werden die Zone <1>{{zone}}</1>, alle ihre DNS-Einträge und der Zugriff jedes Eigentümers dauerhaft gelöscht. Das lässt sich nicht rückgängig machen. Eine Zone mit Subzonen lässt sich erst löschen, wenn die Subzonen gelöscht sind.",
+        "deleteMessageSole": "Damit werden die Zone <1>{{zone}}</1> und alle ihre DNS-Einträge dauerhaft gelöscht. Das lässt sich nicht rückgängig machen. Eine Zone mit Subzonen lässt sich erst löschen, wenn die Subzonen gelöscht sind.",
         "rotateTitle": "⚠️ Schlüssel erneuern?",
         "rotateConfirm": "Schlüssel erneuern",
         "rotateMessage": "Das erzeugt den TSIG-Schlüssel jedes Eigentümers dieser Zone neu. Sinnvoll, wenn ein Schlüssel in einer geteilten oder nicht vertrauenswürdigen Umgebung benutzt wurde oder kompromittiert sein könnte. Alle Eigentümer (external-dns-Secrets, Skripte, nsupdate) müssen ihren Schlüssel danach neu holen.",
@@ -67,7 +67,12 @@
             "dynamicDns": "Dynamic DNS",
             "kubernetes": "Dynamic DNS (Kubernetes)",
             "tls": "TLS-Zertifikate"
-        }
+        },
+        "createdBy": "Angelegt von: {{creator}}",
+        "rotateAll": "Schlüssel aller Eigentümer erneuern",
+        "rotateOwn": "Eigenen Schlüssel erneuern",
+        "rotateOwnTooltip": "Erzeugt nur den eigenen TSIG-Schlüssel neu, die Schlüssel der anderen Eigentümer bleiben gültig. Alle Schlüssel erneuern kann nur, wer die Zone angelegt hat.",
+        "rotateOwnMessage": "Das erzeugt den eigenen TSIG-Schlüssel dieser Zone neu; die Schlüssel der anderen Eigentümer bleiben unverändert. Alles, was den bisherigen Schlüssel benutzt (external-dns-Secrets, Skripte, nsupdate), braucht danach den neuen."
     },
     "joinZone": {
         "intro": "Das ist eine geteilte Zone. Nach dem Beitritt lassen sich ihre DNS-Einträge mitverwalten, mit einem eigenen TSIG-Schlüssel.",
@@ -76,14 +81,16 @@
     },
     "share": {
         "title": "{{zone}} teilen",
-        "intro": "Alle hier aufgeführten Personen verwalten diese Zone mit gleichen Rechten. Jeder Eigentümer bekommt einen eigenen TSIG-Schlüssel; beim Entfernen wird nur dessen Schlüssel gelöscht, die anderen funktionieren weiter.",
+        "intro": "Alle hier aufgeführten Personen verwalten die DNS-Einträge dieser Zone und können weitere Eigentümer hinzufügen. Jeder Eigentümer bekommt einen eigenen TSIG-Schlüssel; beim Entfernen wird nur dessen Schlüssel gelöscht, die anderen funktionieren weiter.",
         "you": "(Sie)",
-        "lastOwner": "Der letzte Eigentümer lässt sich nicht entfernen — stattdessen die Zone löschen.",
         "noOwners": "Keine Eigentümer.",
         "addLabel": "Eigentümer hinzufügen (E-Mail)",
         "removeTitle": "Eigentümer entfernen?",
         "removeConfirm": "Eigentümer entfernen",
-        "removeMessage": "{{owner}} aus dieser Zone entfernen? Der TSIG-Schlüssel dieser Person wird gelöscht und sie verliert sofort den Zugriff. Die anderen Eigentümer bleiben unverändert."
+        "removeMessage": "{{owner}} aus dieser Zone entfernen? Der TSIG-Schlüssel dieser Person wird gelöscht und sie verliert sofort den Zugriff. Die anderen Eigentümer bleiben unverändert.",
+        "coOwnerHint": "Andere Eigentümer entfernen und die Zone löschen kann nur, wer sie angelegt hat. Das eigene Konto lässt sich über „Zone verlassen“ entfernen.",
+        "creator": "Ersteller",
+        "creatorTooltip": "Hat die Zone angelegt: darf sie löschen, andere Eigentümer entfernen und alle Schlüssel erneuern. Kann die Zone nicht verlassen, nur löschen."
     },
     "keys": {
         "title": "TSIG-Schlüssel für {{zone}}",
@@ -123,7 +130,8 @@
         "deleteMessage": "Den {{type}}-Eintrag „{{name}}“ ({{value}}) löschen? Das wirkt sofort.",
         "bulkDeleteTitle": "Die ausgewählten DNS-Einträge löschen?",
         "bulkDeleteConfirm": "Auswahl löschen",
-        "bulkDeleteMessage": "Ausgewählte Einträge: {{selected}}. Das Löschen wirkt sofort."
+        "bulkDeleteMessage": "Ausgewählte Einträge: {{selected}}. Das Löschen wirkt sofort.",
+        "noKey": "Für diese Zone ist kein TSIG-Schlüssel verfügbar, deshalb lassen sich die DNS-Einträge hier nicht anzeigen."
     },
     "prefilled": {
         "nameserver": "Nameserver",
@@ -167,7 +175,8 @@
         "step1": "1. Das Helm-Repository von external-dns hinzufügen (nur einmal nötig):",
         "step2": "2. Diese Werte als <1>external-dns-values.yaml</1> speichern — sie enthalten den TSIG-Schlüssel dieser Zone, die Datei also privat halten:",
         "step3": "3. Installieren:",
-        "ansibleIntro": "Die Ansible-Rolle <2>k3s-dhbw-cloud-role</2> macht aus einem oder mehreren frischen Linux-Hosts einen <1>k3s</1>-Cluster. Sie installiert external-dns und cert-manager, sodass jeder Ingress unter dieser Zone automatisch einen DNS-Eintrag und ein Wildcard-HTTPS-Zertifikat bekommt. Der Block unten gehört ins Inventory — mehr muss die Rolle über diese Zone nicht wissen. Die Datei privat halten: Der TSIG-Schlüssel erlaubt Schreibzugriff auf die Zone."
+        "ansibleIntro": "Die Ansible-Rolle <2>k3s-dhbw-cloud-role</2> macht aus einem oder mehreren frischen Linux-Hosts einen <1>k3s</1>-Cluster. Sie installiert external-dns und cert-manager, sodass jeder Ingress unter dieser Zone automatisch einen DNS-Eintrag und ein Wildcard-HTTPS-Zertifikat bekommt. Der Block unten gehört ins Inventory — mehr muss die Rolle über diese Zone nicht wissen. Die Datei privat halten: Der TSIG-Schlüssel erlaubt Schreibzugriff auf die Zone.",
+        "noValues": "Die external-dns-Werte enthalten den TSIG-Schlüssel und sind deshalb nur mit einem Schlüssel für diese Zone verfügbar."
     },
     "tls": {
         "title": "TLS-Zertifikate für {{zone}}",

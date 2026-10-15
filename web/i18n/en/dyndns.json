@@ -49,12 +49,12 @@
         "rotate": "Rotate keys",
         "rotateTooltip": "Consider rotating if a key was used in a shared environment or may be compromised — regenerates every owner's key.",
         "leave": "Leave zone",
-        "leaveTooltip": "Remove only yourself as an owner — the zone and the other owners stay.",
+        "leaveTooltip": "Remove only yourself as an owner — the zone and the other owners stay. Only whoever created the zone can delete it.",
         "delete": "Delete Zone",
         "deleteTitle": "⚠️ Delete zone?",
         "deleteConfirm": "Delete zone",
-        "deleteMessageShared": "This permanently deletes the zone <1>{{zone}}</1>, all of its DNS records and every owner's access to it. This cannot be undone. To remove only yourself, use “Leave zone” instead.",
-        "deleteMessageSole": "This permanently deletes the zone <1>{{zone}}</1> and all of its DNS records. This cannot be undone.",
+        "deleteMessageShared": "This permanently deletes the zone <1>{{zone}}</1>, all of its DNS records and every owner’s access to it. This cannot be undone. A zone with subzones can only be deleted once its subzones are gone.",
+        "deleteMessageSole": "This permanently deletes the zone <1>{{zone}}</1> and all of its DNS records. This cannot be undone. A zone with subzones can only be deleted once its subzones are gone.",
         "rotateTitle": "⚠️ Rotate keys?",
         "rotateConfirm": "Rotate keys",
         "rotateMessage": "This regenerates the TSIG key of every owner of this zone. Consider it if a key was used in a shared/untrusted environment or may be compromised. All owners (external-dns secrets, scripts, nsupdate) must re-fetch their key afterwards.",
@@ -67,7 +67,12 @@
             "dynamicDns": "Dynamic DNS",
             "kubernetes": "Dynamic DNS (Kubernetes)",
             "tls": "TLS Certificates"
-        }
+        },
+        "createdBy": "Created by: {{creator}}",
+        "rotateAll": "Rotate all owners’ keys",
+        "rotateOwn": "Rotate own key",
+        "rotateOwnTooltip": "Regenerates only your own TSIG key; the other owners’ keys stay valid. Only whoever created the zone can rotate all keys.",
+        "rotateOwnMessage": "This regenerates your own TSIG key for this zone; the other owners’ keys are unaffected. Everything that uses the old key (external-dns secrets, scripts, nsupdate) needs the new one afterwards."
     },
     "joinZone": {
         "intro": "This is a shared zone. Join it to co-manage its DNS records — you'll get your own TSIG key.",
@@ -76,14 +81,16 @@
     },
     "share": {
         "title": "Share {{zone}}",
-        "intro": "Everyone listed here manages this zone with equal rights. Each owner gets their own TSIG key; removing an owner deletes only their key, so the others keep working.",
+        "intro": "Everyone listed here manages this zone’s DNS records and can add further owners. Each owner gets their own TSIG key; removing an owner deletes only their key, so the others keep working.",
         "you": "(you)",
-        "lastOwner": "The last owner cannot be removed — delete the zone instead.",
         "noOwners": "No owners.",
         "addLabel": "Add owner (email)",
         "removeTitle": "Remove owner?",
         "removeConfirm": "Remove owner",
-        "removeMessage": "Remove {{owner}} from this zone? Their TSIG key is deleted and they lose access immediately. Other owners are unaffected."
+        "removeMessage": "Remove {{owner}} from this zone? Their TSIG key is deleted and they lose access immediately. Other owners are unaffected.",
+        "coOwnerHint": "Only whoever created the zone can remove other owners or delete it. You can remove yourself with “Leave zone”.",
+        "creator": "creator",
+        "creatorTooltip": "Created the zone: may delete it, remove other owners and rotate all keys. Cannot leave the zone, only delete it."
     },
     "keys": {
         "title": "TSIG keys for {{zone}}",
@@ -123,7 +130,8 @@
         "deleteMessage": "Delete the {{type}} record “{{name}}” ({{value}})? This takes effect immediately.",
         "bulkDeleteTitle": "Delete the selected DNS records?",
         "bulkDeleteConfirm": "Delete selected",
-        "bulkDeleteMessage": "Selected records: {{selected}}. Deleting takes effect immediately."
+        "bulkDeleteMessage": "Selected records: {{selected}}. Deleting takes effect immediately.",
+        "noKey": "No TSIG key is available for this zone, so its DNS records cannot be shown here."
     },
     "prefilled": {
         "nameserver": "Nameserver",
@@ -167,7 +175,8 @@
         "step1": "1. Add the external-dns Helm repository (only once):",
         "step2": "2. Save these values as <1>external-dns-values.yaml</1> — they carry this zone's TSIG key, so keep the file private:",
         "step3": "3. Install:",
-        "ansibleIntro": "Turn one or more fresh Linux hosts into a <1>k3s</1> cluster with the <2>k3s-dhbw-cloud-role</2> Ansible role. It installs external-dns and cert-manager for you, so every Ingress under this zone automatically gets a DNS record and a wildcard HTTPS certificate. Add the block below to your inventory — it is everything the role needs to know about this zone. Keep that file private: the TSIG key grants write access to the zone."
+        "ansibleIntro": "Turn one or more fresh Linux hosts into a <1>k3s</1> cluster with the <2>k3s-dhbw-cloud-role</2> Ansible role. It installs external-dns and cert-manager for you, so every Ingress under this zone automatically gets a DNS record and a wildcard HTTPS certificate. Add the block below to your inventory — it is everything the role needs to know about this zone. Keep that file private: the TSIG key grants write access to the zone.",
+        "noValues": "The external-dns values contain the TSIG key and are therefore only available with a key for this zone."
     },
     "tls": {
         "title": "TLS certificates for {{zone}}",

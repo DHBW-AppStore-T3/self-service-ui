@@ -48,7 +48,9 @@ function ExternalDnsPanel({ externalDnsValuesYaml }) {
                 <Text component="p" mb="md" size="sm" c="dimmed">
                     <Trans i18nKey="dyndns.kubernetes.step2" components={{ 1: <code /> }} />
                 </Text>
-                <CodeBlock code={externalDnsValuesYaml} />
+                {externalDnsValuesYaml
+                    ? <CodeBlock code={externalDnsValuesYaml} />
+                    : <Text size="sm" c="dimmed">{t('dyndns.kubernetes.noValues')}</Text>}
             </div>
 
             <div>

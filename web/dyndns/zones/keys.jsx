@@ -10,7 +10,8 @@ import { TabIntro } from './tab-intro.jsx';
 // ----------------------------------------
 export function ShowKeys({ zone }) {
     const { t } = useTranslation();
-    const { zone_keys } = zone;
+    // Empty for a read-only token: the server leaves the key material out.
+    const zone_keys = zone.zone_keys ?? [];
 
     return (
         <Stack gap="lg">
