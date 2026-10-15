@@ -17,7 +17,7 @@ import { useLlmMe } from '/llm/use-llm-me.jsx';
 // The API reports states as the German words the old portal showed. They are
 // mapped to translation keys here — one table per column, so a value the API
 // adds later shows up as itself instead of as a missing key.
-const STATE = { aktiv: ['active', 'teal'], 'ohne Rückmeldung': ['silent', 'orange'], gesperrt: ['blocked', 'gray'] };
+const STATE = { aktiv: ['active', 'teal'], 'ohne Rückmeldung': ['silent', 'orange'], gesperrt: ['blocked', 'gray'], 'wartet auf Freigabe': ['pending', 'yellow'] };
 const INFERENCE = {
     erreichbar: ['reachable', 'teal'], 'gestört': ['failing', 'red'], teilweise: ['partial', 'orange'],
     angehalten: ['paused', 'blue'], 'nicht registriert': ['unregistered', 'gray'], unbekannt: ['unknown', 'gray'],
@@ -346,13 +346,14 @@ function Machines({ f }) {
     // What the machines actually serve, assignment only as a fallback. A
     // machine with several models counts for each; the base stays the number
     // of machines.
-    const active = peers.filter(p => !p.blocked && p.enabled !== false && !p.busy);
+    const active = peers.filter(p => !p.blocked && !p.pending && p.enabled !== false && !p.busy);
     const spread = {};
     for (const p of active) {
         for (const m of (p.models?.length ? p.models : [p.model].filter(Boolean))) spread[m] = (spread[m] || 0) + 1;
     }
 
-    const stateTip = (p) => p.blocked ? t('llm.fleet.stateTip.blocked')
+    const stateTip = (p) => p.pending ? t('llm.fleet.stateTip.pending')
+        : p.blocked ? t('llm.fleet.stateTip.blocked')
         : p.quiet_seconds ? t('llm.fleet.stateTip.silent', { since: duration(p.quiet_seconds, t) })
             : t('llm.fleet.stateTip.active');
     const infTip = (p) => {
@@ -442,7 +443,7 @@ function Machines({ f }) {
                                                 <Text size="xs" c="dimmed" ff="monospace">{p.api_base}</Text>
                                             </div>
                                         </Tooltip>
-                                    ) : <Text size="sm" ff="monospace">{p.address}</Text>}
+                                    ) : <Text size="sm" ff="monospace">{p.pending ? '—' : p.address}</Text>}
                                     {p.primary_ip && (
                                         <Tooltip multiline w={300} withArrow label={t('llm.fleet.primaryIpTip')}>
                                             <Text size="xs" c="dimmed" ff="monospace">{p.primary_ip}</Text>
@@ -492,16 +493,32 @@ function Machines({ f }) {
                                     {p.pkg_version && <Text size="xs" c="dimmed" ff="monospace">{t('llm.fleet.pkg', { version: p.pkg_version })}</Text>}
                                     {p.canary && <Text size="xs" c="blue">{t('llm.fleet.canary')}</Text>}
                                 </Table.Td>
-                                <Table.Td><StateBadge table={STATE} value={p.state} group="state" tooltip={stateTip(p)} /></Table.Td>
+                                <Table.Td>
+                                    <StateBadge table={STATE} value={p.state} group="state" tooltip={stateTip(p)} />
+                                    {p.has_secret === false && (
+                                        <Tooltip multiline w={300} withArrow label={t('llm.fleet.noSecretTip')}>
+                                            <Text size="xs" c="dimmed">{t('llm.fleet.noSecret')}</Text>
+                                        </Tooltip>
+                                    )}
+                                </Table.Td>
                                 <Table.Td><StateBadge table={INFERENCE} value={p.inference} group="inference" tooltip={infTip(p)} /></Table.Td>
                                 <Table.Td align="right">
                                     <Group gap={4} justify="flex-end" wrap="nowrap">
-                                        <Tooltip multiline w={300} withArrow label={t(p.blocked ? 'llm.fleet.unblockTip' : 'llm.fleet.blockTip')}>
-                                            <Button size="xs" variant="subtle" loading={busy(p.serial)}
-                                                onClick={() => act.mutate({ action: p.blocked ? 'unblock' : 'block', serial: p.serial })}>
-                                                {t(p.blocked ? 'llm.fleet.unblock' : 'llm.fleet.block')}
-                                            </Button>
-                                        </Tooltip>
+                                        {p.pending ? (
+                                            <Tooltip multiline w={300} withArrow label={t('llm.fleet.approveTip')}>
+                                                <Button size="xs" variant="subtle" color="yellow" loading={busy(p.serial)}
+                                                    onClick={() => act.mutate({ action: 'unblock', serial: p.serial })}>
+                                                    {t('llm.fleet.approve')}
+                                                </Button>
+                                            </Tooltip>
+                                        ) : (
+                                            <Tooltip multiline w={300} withArrow label={t(p.blocked ? 'llm.fleet.unblockTip' : 'llm.fleet.blockTip')}>
+                                                <Button size="xs" variant="subtle" loading={busy(p.serial)}
+                                                    onClick={() => act.mutate({ action: p.blocked ? 'unblock' : 'block', serial: p.serial })}>
+                                                    {t(p.blocked ? 'llm.fleet.unblock' : 'llm.fleet.block')}
+                                                </Button>
+                                            </Tooltip>
+                                        )}
                                         <Tooltip multiline w={300} withArrow label={t('llm.fleet.forgetTip')}>
                                             <Button size="xs" variant="subtle" color="red" loading={busy(p.serial)} onClick={() => forget(p)}>
                                                 {t('llm.fleet.forget')}

@@ -92,7 +92,8 @@
         "state": {
             "active": "aktiv",
             "silent": "ohne Rückmeldung",
-            "blocked": "gesperrt"
+            "blocked": "gesperrt",
+            "pending": "wartet auf Freigabe"
         },
         "inference": {
             "reachable": "erreichbar",
@@ -209,7 +210,8 @@
         "stateTip": {
             "blocked": "Zentral gesperrt: die Maschine wird abgewiesen und ist nicht im Verbund.",
             "silent": "Seit {{since}} kein Abgleich über den Anmeldepunkt. Sagt nichts über den Tunnel aus — das zeigt die Spalte Inferenz.",
-            "active": "Die Maschine meldet sich stündlich und hat das zuletzt planmäßig getan."
+            "active": "Die Maschine meldet sich stündlich und hat das zuletzt planmäßig getan.",
+            "pending": "Die Maschine hat sich angemeldet, ist aber noch nicht freigegeben: sie bekommt weder Adresse noch Tunnel, bis jemand sie hier freigibt."
         },
         "inferenceTip": {
             "reachable": "LiteLLM hat diese Maschine beim letzten Gesundheitscheck durch den Tunnel erreicht.",
@@ -237,10 +239,10 @@
         "blockTip": "Die Maschine wird abgewiesen und bleibt es — auch wenn sie sich neu anmeldet. Der Eintrag und die Adresse bleiben erhalten. Das ist der Weg für ein gestohlenes oder auffälliges Gerät.",
         "unblockTip": "Sperre aufheben: die Maschine wird beim nächsten Abgleich wieder aufgenommen und behält ihre Adresse.",
         "forget": "entfernen",
-        "forgetTip": "Eintrag löschen und Adresse freigeben. Das hält die Maschine NICHT fern — meldet sie sich wieder, wird sie mit neuer Adresse aufgenommen. Zum Fernhalten: sperren.",
+        "forgetTip": "Zurücksetzen: Eintrag löschen und Adresse freigeben. Meldet sich die Maschine wieder, erscheint sie als „wartet auf Freigabe“ und muss erneut freigegeben werden. Nötig nach verlorenem Maschinengeheimnis oder bei geändertem Schlüssel, Transport oder apiBase. Zum Fernhalten: sperren.",
         "forgetTitle": "Maschine entfernen?",
         "forgetConfirm": "Entfernen",
-        "forgetMessage": "{{name}} ({{serial}}) wird aus der Flotte entfernt und die Adresse frei. Meldet sich die Maschine erneut, wird sie neu aufgenommen — zum Fernhalten stattdessen sperren.",
+        "forgetMessage": "{{name}} ({{serial}}) wird aus der Flotte entfernt und die Adresse frei. Meldet sich die Maschine erneut, erscheint sie als „wartet auf Freigabe“ und muss wieder freigegeben werden — so wird eine Maschine nach verlorenem Maschinengeheimnis oder geändertem Schlüssel, Transport oder apiBase zurückgesetzt. Zum Fernhalten stattdessen sperren.",
         "page": {
             "machines": "Rechner",
             "gpu": "GPU-Cluster",
@@ -290,7 +292,11 @@
             "hint": "Gilt vor dem Modell der Klasse (nach Arbeitsspeicher); Kontext und Speichergrenze bleiben die der Klasse. Ein Modell, das es nicht gibt oder das grob nicht in die Speichergrenze passt, wird abgelehnt. Die Maschinen laden das Modell beim nächsten Abgleich, spätestens nach {{minutes}} Minuten, probieren es einmal aus und entfernen dann die übrigen Modelle; scheitert das, steht der Fehler bei der Maschine und das alte Modell bleibt. Fremdverwaltete Rechner sind nicht wählbar.",
             "override": "gesetzt",
             "overrideTip": "Von Hand gesetzt. Das Modell der Klasse wäre {{model}}."
-        }
+        },
+        "approve": "freigeben",
+        "approveTip": "Maschine in die Flotte aufnehmen. Den Tunnel bekommt sie mit ihrem nächsten stündlichen Lauf.",
+        "noSecret": "nur per Schlüssel erkannt",
+        "noSecretTip": "Für diese Maschine ist kein Maschinengeheimnis hinterlegt — sie wird nur über ihren Tunnelschlüssel wiedererkannt."
     },
     "roles": {
         "user": "Nutzung",

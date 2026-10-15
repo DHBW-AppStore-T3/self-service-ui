@@ -41,6 +41,8 @@ const FLEET = {
         { serial: 'S2', name: 'wimac02', address: '10.90.4.3', profile: 'm4-16', ram_gb: 16, model: 'qwen3:8b', models: ['gemma3'],
           model_state: 'abweichend', state: 'ohne Rückmeldung', quiet_seconds: 20000, inference: 'gestört',
           inference_error: 'timeout', script_state: 'veraltet', blocked: false },
+        { serial: 'S3', name: 'wimac03', address: '10.90.4.4', profile: 'm4-16', ram_gb: 16, model: 'qwen3:8b', models: [],
+          state: 'wartet auf Freigabe', pending: true, has_secret: false, inference: 'nicht registriert' },
     ],
 };
 
@@ -104,6 +106,16 @@ describe('the LLM views render', () => {
         expect(await screen.findByText('wimac02')).toBeTruthy();
         // The machine's own address under the tunnel address.
         expect(screen.getByText('141.72.16.101')).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('Fleet offers a machine waiting for approval to be approved, without an address yet', async () => {
+        renderView(<LlmFleet params={{ page: 'machines' }} />);
+        expect(await screen.findByText('wimac03')).toBeTruthy();
+        expect(screen.getByText(/wartet auf Freigabe|awaiting approval/)).toBeTruthy();
+        expect(screen.getByText(/nur per Schlüssel erkannt|recognised by key only/)).toBeTruthy();
+        // Its address is not handed out before the approval.
+        expect(screen.queryByText('10.90.4.4')).toBeNull();
         expectNoRenderFailure();
     });
 

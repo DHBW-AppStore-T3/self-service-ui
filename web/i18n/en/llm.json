@@ -92,7 +92,8 @@
         "state": {
             "active": "active",
             "silent": "silent",
-            "blocked": "blocked"
+            "blocked": "blocked",
+            "pending": "awaiting approval"
         },
         "inference": {
             "reachable": "reachable",
@@ -209,7 +210,8 @@
         "stateTip": {
             "blocked": "Blocked centrally: the machine is refused and not part of the pool.",
             "silent": "No check-in at the enrolment endpoint for {{since}}. Says nothing about the tunnel — the Inference column does.",
-            "active": "The machine checks in hourly and last did so on schedule."
+            "active": "The machine checks in hourly and last did so on schedule.",
+            "pending": "The machine has enrolled but is not approved yet: it gets neither an address nor a tunnel until someone approves it here."
         },
         "inferenceTip": {
             "reachable": "LiteLLM reached this machine through the tunnel at the last health check.",
@@ -237,10 +239,10 @@
         "blockTip": "The machine is refused and stays refused — even if it enrols again. Its entry and address are kept. This is the way for a stolen or misbehaving device.",
         "unblockTip": "Lift the block: the machine is admitted again at its next check-in and keeps its address.",
         "forget": "remove",
-        "forgetTip": "Delete the entry and free the address. This does NOT keep the machine out — if it checks in again it is enrolled with a new address. To keep it out: block it.",
+        "forgetTip": "Reset: delete the entry and free the address. If the machine checks in again it shows up as \"awaiting approval\" and has to be approved again. Needed after a lost machine secret or a change of key, transport or apiBase. To keep it out: block it.",
         "forgetTitle": "Remove machine?",
         "forgetConfirm": "Remove",
-        "forgetMessage": "{{name}} ({{serial}}) is removed from the fleet and its address freed. If the machine checks in again it is enrolled anew — block it instead to keep it out.",
+        "forgetMessage": "{{name}} ({{serial}}) is removed from the fleet and its address freed. If the machine checks in again it shows up as \"awaiting approval\" and has to be approved again — this is how a machine is reset after a lost machine secret or a change of key, transport or apiBase. Block it instead to keep it out.",
         "page": {
             "machines": "Machines",
             "gpu": "GPU cluster",
@@ -290,7 +292,11 @@
             "hint": "Takes precedence over the class model (by memory); context and memory limit stay the class's. A model that does not exist or clearly exceeds the memory limit is refused. The machines pull the model at their next enrolment, within {{minutes}} minutes, try it once and then remove their other models; if that fails, the error shows at the machine and the old model stays. Externally managed machines cannot be chosen.",
             "override": "set",
             "overrideTip": "Set by hand. The class model would be {{model}}."
-        }
+        },
+        "approve": "approve",
+        "approveTip": "Admit the machine to the fleet. It gets its tunnel with its next hourly run.",
+        "noSecret": "recognised by key only",
+        "noSecretTip": "No machine secret is stored for this machine — it is recognised by its tunnel key alone."
     },
     "roles": {
         "user": "Use",
