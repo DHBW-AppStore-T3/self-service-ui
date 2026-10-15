@@ -9,6 +9,7 @@ import { LoadError, Loading } from '/helper/query-state.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
 import { profileLabel } from '/gpu/profiles.js';
+import { BuildLogBody, useBuildLog } from '/gpu/build-log.jsx';
 
 // Starting a server (Workspaces → Server → Server starten): the hub has no start form of its own any more, its start page leads here. The choice is in the URL (?project=<slug>&env=<profile>&gpu_class=<class>), so a link to this page with a project and an environment can go out to a course; the page offers only what the person's projects allow and starts through llm-management-api, where the hub checks the start as every start. While the server starts the page waits, then opens it in this tab.
 
@@ -214,7 +215,7 @@ export function GpuStart() {
 }
 
 // StartLog is the hub's event log of a start, folded away until asked for; open from the start when the start failed.
-export function StartLog({ events, open: openFromStart, title }) {
+export function StartLog({ events, open: openFromStart }) {
     const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     // A click flips what the start chose, so a failed start's open log can be folded too.
@@ -224,7 +225,7 @@ export function StartLog({ events, open: openFromStart, title }) {
             <UnstyledButton onClick={() => setOpen(o => !o)}>
                 <Group gap={4}>
                     {shown ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    <Text size="sm" c="dimmed">{title ? `${title}: ` : ''}{shown ? t('gpu.start.hideLog') : t('gpu.start.showLog')}</Text>
+                    <Text size="sm" c="dimmed">{shown ? t('gpu.start.hideLog') : t('gpu.start.showLog')}</Text>
                 </Group>
             </UnstyledButton>
             <Collapse in={shown}>
@@ -232,7 +233,7 @@ export function StartLog({ events, open: openFromStart, title }) {
                     <Text size="xs" c="dimmed" mt={6}>{t('gpu.start.noEvents')}</Text>
                 ) : (
                     <Code block mt={6} style={{ maxHeight: 300, overflow: 'auto' }}>
-                        {events.map(e => (e.progress == null ? e.message : `${String(e.progress).padStart(3)} %  ${e.message}`)).join('\n')}
+                        {events.map(e => `${String(e.progress).padStart(3)} %  ${e.message}`).join('\n')}
                     </Code>
                 )}
             </Collapse>
@@ -240,18 +241,11 @@ export function StartLog({ events, open: openFromStart, title }) {
     );
 }
 
-// BuildState says why a project cannot start yet: its environment is being built from Git, or the build failed. The build log is there for those who may read it (managers, admins); for the others the request is refused and nothing is shown.
+// BuildState says why a project cannot start yet: its environment is being built from Git, or the build failed. The build's state and log are there for those who may read them (managers, admins); for the others the request is refused and only the status shows.
 function BuildState({ project }) {
     const { t } = useTranslation();
-    const api = useGpuApi();
     const building = project.image_build?.status !== 'failed';
-    const log = useQuery({
-        queryKey: [...gpuKeys.startOptions(), 'build-log', project.slug],
-        queryFn: () => api.projectImageLog(project.slug),
-        retry: false,
-        refetchInterval: building ? 5000 : false,
-    });
-    const lines = log.data ? log.data.split('\n') : [];
+    const log = useBuildLog(project.slug, building);
     return (
         <Alert color={building ? 'blue' : 'red'} variant="light" title={building ? t('gpu.start.buildingTitle') : t('gpu.start.buildFailedTitle')}>
             <Stack gap={6}>
@@ -259,8 +253,7 @@ function BuildState({ project }) {
                     {building && <Loader size="xs" mt={2} />}
                     <Text size="sm">{building ? t('gpu.start.building') : t('gpu.start.buildFailed')}</Text>
                 </Group>
-                {!building && project.image_build?.message && <Text size="sm" fw={500}>{project.image_build.message}</Text>}
-                {log.data && <StartLog events={lines.map(l => ({ progress: null, message: l }))} open={!building} title={t('gpu.start.buildLog')} />}
+                {log.data ? <BuildLogBody build={project.image_build} data={log.data} /> : (!building && project.image_build?.message && <Text size="sm" fw={500}>{project.image_build.message}</Text>)}
             </Stack>
         </Alert>
     );

@@ -1,5 +1,6 @@
 import { Badge, Button, Group, Modal, Stack, Tabs, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
+import { BarChart3, CheckCheck, Gauge, History, Info, KeyRound, Settings2, Tags, Users } from 'lucide-react';
 import { COLOR } from './util-project.jsx';
 
 // The shell every create/change dialog in this section shares: a modal holding a
@@ -36,6 +37,24 @@ export function tabHasError(fieldsByTab, tab, errors) {
  *
  * tabs: [{ value, label, hasError?, content }]
  */
+// TAB_ICONS gives every tab of the project and budget dialogs its symbol, by the tab's value (resources-<kind> counts as resources), so the strip reads at a glance and looks the same in every dialog.
+const TAB_ICONS = {
+    details: Info,
+    resources: Gauge,
+    workspaces: Settings2,
+    members: Users,
+    attributes: Tags,
+    access: KeyRound,
+    'auto-approve': CheckCheck,
+    usage: BarChart3,
+    history: History,
+};
+
+function tabIcon(value) {
+    const Icon = TAB_ICONS[value] ?? TAB_ICONS[String(value).split('-')[0]];
+    return Icon ? <Icon size={16} /> : null;
+}
+
 export function FormTabs({ value, onChange, tabs }) {
     return (
         <Tabs value={value} onChange={onChange}>
@@ -43,7 +62,7 @@ export function FormTabs({ value, onChange, tabs }) {
                 scrolls, spanning the dialog's width over what passes behind. */}
             <Tabs.List mb="md" style={STICKY_TABS}>
                 {tabs.map(t => (
-                    <Tabs.Tab key={t.value} value={t.value}>
+                    <Tabs.Tab key={t.value} value={t.value} leftSection={tabIcon(t.value)} fw={500}>
                         <TabLabel label={t.label} hasError={!!t.hasError} />
                     </Tabs.Tab>
                 ))}

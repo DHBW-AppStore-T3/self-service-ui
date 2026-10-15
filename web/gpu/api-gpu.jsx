@@ -40,7 +40,8 @@ export function useGpuApi() {
             deleteProject: (slug) => call(deleteWorkspaceProject, { path: { slug } }),
             // The project image from Git (docs/bauplan.md 10.12): build again, and the build's log.
             rebuildProjectImage: (slug) => call(rebuildProjectImage, { path: { slug } }),
-            projectImageLog: async (slug) => (await call(getProjectImageLog, { path: { slug } }))?.log ?? '',
+            // The build's log and what its pod is doing: { log, state, since }.
+            projectImageLog: async (slug) => (await call(getProjectImageLog, { path: { slug } })) ?? { log: '' },
             // Admins: how full the workspace storage and its metadata are.
             storage: () => call(getWorkspaceStorage),
             // Admins: the GPU administration — nodes with pool and tier, pools, tiers, classes (docs/bauplan.md 10.13). Every change answers with the whole picture.

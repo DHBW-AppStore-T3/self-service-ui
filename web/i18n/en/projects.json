@@ -882,7 +882,7 @@
         "quota": "Quotas",
         "quotaHintChange": "What the project gets from its budget. Depending on the budget, an increase is granted at once or requested and approved.",
         "quotaHintNew": "What the project gets from the chosen budget. Depending on the budget it is granted at once or requested and approved.",
-        "workspaces": "Workspace use",
+        "workspaces": "Workspace settings",
         "workspacesHint": "How the quotas are used inside the project: profiles, images, limits and shares per person. Applies at once, without approval."
     }
 }

@@ -89,7 +89,10 @@
             "finished": "Image",
             "finishedHint": "A publicly pullable image. Built on one of our bases (FROM registry.gpu.services.dhbw.cloud/platform/base-…) it runs with everything; any other runs as it is (it needs jupyterhub-singleuser), without “CPU + GPU kernel”.",
             "notDerived": "This image is not built on one of our bases: it runs as it is, without “CPU + GPU kernel” and without the DHBW extensions.",
-            "gitHint": "Built like Binder from requirements.txt, environment.yml, apt.txt and postBuild (top level, binder/ or .binder/) on the chosen base. The repository is in ~/projects on start. A new version of the base triggers a rebuild; until a build is ready, the previous image stays."
+            "gitHint": "Built like Binder from requirements.txt, environment.yml, apt.txt and postBuild (top level, binder/ or .binder/) on the chosen base. The repository is in ~/projects on start. A new version of the base triggers a rebuild; until a build is ready, the previous image stays.",
+            "state": "State",
+            "since": "running since {{time}}",
+            "live": "updates every 3 s"
         },
         "limits": "Limits per person (at the same time)",
         "limitsHint": "Counted is what one person runs in this project at the same time. 0 means no limit – except for GPUs, where 0 means no GPU.",

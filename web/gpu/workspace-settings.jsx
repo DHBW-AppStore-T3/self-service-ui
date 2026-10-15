@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ActionIcon, Badge, Button, Checkbox, Code, Group, Loader, Modal, MultiSelect, NumberInput, Paper, Progress, SegmentedControl, Select, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
 import { FileText, Plus, RotateCcw, X } from 'lucide-react';
-import { CodeBlock } from '/helper/codeblock.jsx';
+import { BUILD_COLOUR, BuildLogModal } from '/gpu/build-log.jsx';
 import { llmEnabled } from '/features.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
@@ -89,7 +89,6 @@ function Box({ title, hint, children }) {
     );
 }
 
-const BUILD_COLOUR = { building: 'blue', ready: 'teal', failed: 'red' };
 
 // ProjectImage is the project's environment, run by every server type (docs/bauplan.md 10.12): a base of the catalogue, a Git repository built on it, or an existing image — one not built on a base runs as it is, without the GPU kernel.
 function ProjectImage({ draft, set, bases }) {
@@ -100,7 +99,7 @@ function ProjectImage({ draft, set, bases }) {
     const saved = draft.project;
     const [source, setSource] = useState(p.image_git_url ? 'git' : p.project_image ? 'image' : 'base');
     const defaultBase = (bases.find(b => b.default) ?? bases[0])?.id ?? '';
-    const [log, setLog] = useState(null);
+    const [logOpen, setLogOpen] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
     const build = saved?.image_git_url && saved.image_git_url === p.image_git_url ? saved.image_build : null;
@@ -119,13 +118,7 @@ function ProjectImage({ draft, set, bases }) {
             setBusy(false);
         }
     };
-    const showLog = async () => {
-        try {
-            setLog(await api.projectImageLog(saved.slug) || t('gpu.projects.image.logEmpty'));
-        } catch (e) {
-            setLog(e.message);
-        }
-    };
+    const showLog = () => setLogOpen(true);
     return (
         <Stack gap={6}>
             <Text size="sm" fw={500}>{t('gpu.projects.image.label')}</Text>
@@ -175,9 +168,7 @@ function ProjectImage({ draft, set, bases }) {
                 {t('gpu.projects.image.current')}{' '}
                 {saved?.project_image ? <Code>{saved.project_image}</Code> : (bases.find(b => b.id === (saved?.image_base || defaultBase))?.name ?? '—')}
             </Text>
-            <Modal opened={log !== null} onClose={() => setLog(null)} title={t('gpu.projects.image.log')} size={1000} centered>
-                <CodeBlock language="plaintext" code={log ?? ''} />
-            </Modal>
+            <BuildLogModal slug={saved?.slug} build={build} opened={logOpen} onClose={() => setLogOpen(false)} />
         </Stack>
     );
 }
