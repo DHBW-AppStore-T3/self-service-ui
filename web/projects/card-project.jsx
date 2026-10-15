@@ -1,5 +1,5 @@
 import { AlertTriangle, ExternalLink, Eye, Gift, Pencil, Rocket, Scale, Trash2, Users, X } from 'lucide-react';
-import { Alert, Anchor, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
+import { Alert, Anchor, Badge, Box, Button, Card, Group, Loader, Stack, Text, Tooltip } from '@mantine/core';
 import { CopyLinkButton, DeletingBadge, FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, PurgeProgress, TokenBadgeList } from './component-common.jsx';
 import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, scheduledDeletion, labDeletion, openstackSide, catalogKinds, projectKinds } from './util-project.jsx';
 import { useAuth } from '/providers/auth.jsx';
@@ -22,7 +22,8 @@ const MEMBERS_SHOWN = 5;
 
 //
 // link: when set, a button next to the date copies this link to the project.
-export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction, link }) {
+// envBuild: the build of the project's workspace environment from Git while it builds or after it failed ({status, message, hasImage}), else null.
+export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction, link, envBuild }) {
     const { t } = useTranslation();
     const act = (action) => onAction?.(action, node);
     const config = useProjectConfig();
@@ -88,6 +89,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                             <Badge key={k} color={COLOR.identity} variant="light">{t(`projects.kind.${k}`)}</Badge>
                         ))}
                         {deletionRequested(node) && <DeletingBadge size="sm" purge={openstackSide(node).purge} />}
+                        {envBuild && <EnvBuildBadge build={envBuild} />}
                         {/* Who shared it says it all, so it stands on the badge rather
                             than behind a hover nobody finds. Not uppercased: an
                             address in capitals is hard to read. */}
@@ -310,5 +312,23 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                 </Group>
             </Card.Section>
         </Card>
+    );
+}
+
+// EnvBuildBadge says that the project's environment is being built (servers wait for it, or start with the previous one) or that its build failed, with the reason on hover.
+function EnvBuildBadge({ build }) {
+    const { t } = useTranslation();
+    if (build.status === 'failed') {
+        return (
+            <Tooltip label={t('projects.projectCard.envFailedTip', { message: build.message })} multiline w={320} withArrow>
+                <Badge color="red" variant="light" leftSection={<AlertTriangle size="11" />}>{t('projects.projectCard.envFailed')}</Badge>
+            </Tooltip>
+        );
+    }
+    const key = build.hasImage ? 'envRebuilding' : 'envBuilding';
+    return (
+        <Tooltip label={t(`projects.projectCard.${key}Tip`)} multiline w={320} withArrow>
+            <Badge color="blue" variant="light" leftSection={<Loader size={10} color="blue" />}>{t(`projects.projectCard.${key}`)}</Badge>
+        </Tooltip>
     );
 }

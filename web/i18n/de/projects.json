@@ -303,7 +303,13 @@
         "sharedBy": "Geteilt von {{owner}}",
         "membersMore": "+{{count}} weitere",
         "deleting": "Wird gelöscht",
-        "deletingHint": "Alles im OpenStack-Projekt wird in den nächsten Minuten gelöscht; danach verschwindet das Projekt aus dieser Liste."
+        "deletingHint": "Alles im OpenStack-Projekt wird in den nächsten Minuten gelöscht; danach verschwindet das Projekt aus dieser Liste.",
+        "envBuilding": "Umgebung wird gebaut",
+        "envBuildingTip": "Das Image der Umgebung wird aus dem Git-Repository gebaut; Server starten, sobald es fertig ist.",
+        "envRebuilding": "Umgebung wird neu gebaut",
+        "envRebuildingTip": "Eine neue Version der Umgebung wird gebaut; bis dahin starten Server mit der bisherigen.",
+        "envFailed": "Umgebung fehlgeschlagen",
+        "envFailedTip": "Der Bau der Umgebung ist gescheitert: {{message}} Protokoll und neuer Bau in den Projekteinstellungen (Workspaces)."
     },
     "projectForm": {
         "titleNew": "Neues Projekt",

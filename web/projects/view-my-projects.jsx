@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQueries } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { ArrowUpDown } from 'lucide-react';
 import { useLocalStorage } from '@mantine/hooks';
 import { Alert, Divider, Group, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core';
@@ -18,6 +18,9 @@ import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 import { useTranslation } from 'react-i18next';
+import { llmEnabled } from '/features.js';
+import { useGpuApi } from '/gpu/api-gpu.jsx';
+import { gpuKeys } from '/gpu/query-keys.js';
 import { COLOR, PROJECT_SORTS, budgetKinds, getAuthUserEmail, ownerEmail, projectKinds, resourcesOfKinds, sortProjects, pollWhileDeleting } from './util-project.jsx';
 
 // MyProjectsView lists the projects of one area (cloud, workspaces, llm) the
@@ -50,6 +53,21 @@ export function MyProjectsView({ area = 'cloud' }) {
     // Three lists, one screen. useQueries keeps them independent (a failing
     // eligible-budget lookup does not blank out the projects) while still
     // giving one place to ask "are we still loading".
+    // Workspaces: how the build of each project's environment from Git stands (llm-management-api), shown on its card; followed while one builds.
+    const gpuApi = useGpuApi();
+    const workspaceProjects = useQuery({
+        queryKey: gpuKeys.projects(false),
+        queryFn: () => gpuApi.listProjects(false),
+        enabled: llmEnabled && area === 'workspaces',
+        refetchInterval: (q) => ((q.state.data ?? []).some(p => p.image_build?.status === 'building') ? 10 * 1000 : false),
+    });
+    const envBuildOf = (node) => {
+        const p = (workspaceProjects.data ?? []).find(x => x.tree_node === node.id);
+        const status = p?.image_build?.status;
+        if (!p?.image_git_url || (status !== 'building' && status !== 'failed')) return null;
+        return { status, message: p.image_build?.message || '', hasImage: !!p.project_image };
+    };
+
     const [projectsQuery, myBudgetsQuery, eligibleQuery] = useQueries({
         queries: [
             { queryKey: projectKeys.mine(), queryFn: () => api.listMine(), enabled: !!api, refetchInterval: pollWhileDeleting },
@@ -148,6 +166,7 @@ export function MyProjectsView({ area = 'cloud' }) {
                         resources={areaResources}
                         parentName={node.parent_name}
                         perspective="owner"
+                        envBuild={envBuildOf(node)}
                         onAction={handleAction}
                     />
                 ))}
