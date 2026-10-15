@@ -101,6 +101,37 @@ function PoolForm({ onSave, saving }) {
     );
 }
 
+// PoolId shows a pool's id and lets an admin change it: the pool's classes get new ids, and the tree, the projects and the booked GPU hours follow. Refusals show here, not at the top of the page.
+function PoolId({ pool, onRename, saving }) {
+    const { t } = useTranslation();
+    const [draft, setDraft] = useState(null);
+    const [error, setError] = useState('');
+    if (draft === null) {
+        return (
+            <Group gap={4} wrap="nowrap">
+                <Text size="xs" c="dimmed" ff="monospace">{pool.id}</Text>
+                {pool.id !== 'general' && (
+                    <Button size="compact-xs" variant="subtle" onClick={() => { setDraft(pool.id); setError(''); }}>{t('gpu.fleet.renamePool')}</Button>
+                )}
+            </Group>
+        );
+    }
+    const invalid = draft && !validPoolId(draft) ? t('gpu.fleet.poolIdInvalid') : null;
+    const save = () => onRename(draft).then(() => setDraft(null)).catch(e => setError(e?.message || String(e)));
+    return (
+        <Stack gap={4}>
+            <Group gap={4} wrap="nowrap" align="flex-start">
+                <TextInput size="xs" w={160} value={draft} error={invalid} aria-label={t('gpu.fleet.poolId')} autoFocus
+                    onChange={e => { setDraft(e.currentTarget.value.toLowerCase()); setError(''); }} />
+                <Button size="xs" variant="light" loading={saving} disabled={!draft || !!invalid || draft === pool.id} onClick={save}>{t('gpu.fleet.renamePoolSave')}</Button>
+                <Button size="xs" variant="subtle" color="gray" disabled={saving} onClick={() => setDraft(null)}>{t('gpu.fleet.renamePoolCancel')}</Button>
+            </Group>
+            <Text size="xs" c="dimmed" maw={360}>{t('gpu.fleet.renamePoolHint')}</Text>
+            {error && <Text size="xs" c="red">{error}</Text>}
+        </Stack>
+    );
+}
+
 export function GpuFleet() {
     const { t } = useTranslation();
     const { isAdmin } = useLlmMe();
@@ -115,6 +146,7 @@ export function GpuFleet() {
     const deletePool = useMutation({ mutationFn: (id) => api.deletePool(id), onSuccess: done, onError: fail });
     // A new pool reports its refusal at the form (PoolForm), not at the top of the page.
     const addPool = useMutation({ mutationFn: ({ id, body }) => api.savePool(id, body), onSuccess: done });
+    const renamePool = useMutation({ mutationFn: ({ id, body }) => api.savePool(id, body), onSuccess: done });
 
     if (!isAdmin) return <Container size="md" py="md"><Alert color="gray" variant="light">{t('gpu.noAccess.page')}</Alert></Container>;
     if (query.isPending) return <Container size="lg" py="md"><Loading /></Container>;
@@ -173,7 +205,10 @@ export function GpuFleet() {
                             {pools.map(p => (
                                 <Table.Tr key={p.id}>
                                     <Table.Td><Text size="sm" fw={500}>{p.name}</Text></Table.Td>
-                                    <Table.Td><Text size="xs" c="dimmed" ff="monospace">{p.id}</Text></Table.Td>
+                                    <Table.Td>
+                                        <PoolId pool={p} saving={renamePool.isPending && renamePool.variables?.id === p.id}
+                                            onRename={to => renamePool.mutateAsync({ id: p.id, body: { name: p.name, lend: !!p.lend, rename_to: to } })} />
+                                    </Table.Td>
                                     <Table.Td>
                                         <Switch size="xs" checked={!!p.lend} label={t('gpu.fleet.lend')} disabled={savePool.isPending}
                                             onChange={e => savePool.mutate({ id: p.id, body: { name: p.name, lend: e.currentTarget.checked } })} />
