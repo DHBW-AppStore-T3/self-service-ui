@@ -31,6 +31,13 @@ export function envsOf(project, profiles) {
     return profiles.filter(p => project.profiles?.includes(p.slug) && (p.slug !== SPLIT_PROFILE || project.image_derived));
 }
 
+// limitsText are the runtime limits of a profile (what JupyterHub enforces), after its description.
+function limitsText(p, t) {
+    if (!p.idle_minutes || !p.max_hours) return '';
+    const idle = p.idle_minutes % 60 === 0 ? `${p.idle_minutes / 60} h` : `${p.idle_minutes} min`;
+    return ' ' + t('gpu.start.limits', { idle, max: p.max_hours });
+}
+
 function day(iso) {
     return iso ? new Date(iso).toLocaleDateString(undefined, { timeZone: 'UTC' }) : '';
 }
@@ -57,7 +64,9 @@ export function GpuStart() {
     const unknownProject = !!params.get('project') && !!options.data && !projects.some(p => p.slug === params.get('project'));
     const unknownEnv = !unknownProject && !!params.get('env') && !!project && !envs.some(p => p.slug === params.get('env'));
 
-    const start = useMutation({ mutationFn: (body) => api.startServer(body) });
+    // startedAt: a server list from before the start must not count as "no longer there".
+    const [startedAt, setStartedAt] = useState(0);
+    const start = useMutation({ mutationFn: (body) => api.startServer(body), onSuccess: () => setStartedAt(Date.now()) });
     const started = start.data;
     // While it starts: poll the servers, open it once it is ready.
     const servers = useQuery({ queryKey: gpuKeys.servers(), queryFn: () => api.listServers(), enabled: !!started, refetchInterval: 3000 });
@@ -81,16 +90,16 @@ export function GpuStart() {
 
     if (started) {
         const p = progress.data;
-        // Ended without becoming ready: the hub's reason when it has one, else the server is no longer in the list after the first answer.
+        // Ended without becoming ready: the hub's reason when it has one, else the hub has nothing starting and a server list fetched after the start no longer has it.
         const failed = !!p?.failed;
-        const gone = failed || (servers.data && !live);
+        const gone = failed || (!!p && !p.starting && !p.ready && servers.dataUpdatedAt > startedAt && servers.data && !live);
         const events = p?.events ?? [];
         const last = events[events.length - 1];
         return (
             <Container size="md" py="md">
                 <Paper p="lg" radius="md" withBorder>
                     <Stack gap="sm">
-                        <Title order={3}>{t('gpu.start.startingTitle', { name: started.name })}</Title>
+                        <Title order={3}>{t('gpu.start.startingTitle', { name: projects.find(x => x.slug === started.project)?.name || started.project || started.name })}</Title>
                         {gone ? (
                             <Alert color="red" variant="light" title={failed ? t('gpu.start.failedTitle') : undefined}>
                                 {failed && p.message ? p.message : t('gpu.start.gone')}
@@ -165,7 +174,7 @@ export function GpuStart() {
                                                                 <Text fw={600}>{profileLabel(p.slug, t)}</Text>
                                                                 {p.gpu && <Badge size="xs" variant="light" color="grape">GPU</Badge>}
                                                             </Group>
-                                                            <Text size="xs" c="dimmed" mt={4}>{t(`gpu.start.envs.${p.slug}`, { defaultValue: '' })}</Text>
+                                                            <Text size="xs" c="dimmed" mt={4}>{t(`gpu.start.envs.${p.slug}`, { defaultValue: '' })}{limitsText(p, t)}</Text>
                                                         </div>
                                                     </Group>
                                                 </Radio.Card>

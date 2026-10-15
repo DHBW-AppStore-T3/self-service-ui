@@ -6,7 +6,7 @@
     },
     "servers": {
         "title": "Laufende Server",
-        "intro": "Die eigenen Server in JupyterHub. Server ohne Aktivität enden von selbst: ohne GPU nach 2 Stunden, mit GPU nach 30 Minuten.",
+        "intro": "Die eigenen Server in JupyterHub. Jeder Server endet von selbst, wenn er nicht genutzt wird, und spätestens nach der Laufzeit seiner Umgebung (siehe Zustand).",
         "name": "Server",
         "profile": "Art",
         "state": "Zustand",
@@ -20,7 +20,8 @@
         "stopTitle": "Server beenden?",
         "stopConfirm": "Beenden",
         "stopMessage": "„{{name}}“ wird beendet. Dateien im Home bleiben erhalten, nicht gespeicherte Änderungen in offenen Notebooks gehen verloren.",
-        "startServer": "Server starten"
+        "startServer": "Server starten",
+        "ends": "Endet nach {{idle}} ohne Aktivität, spätestens um {{time}}."
     },
     "profiles": {
         "cpu": "CPU",
@@ -232,9 +233,9 @@
         "deletes": "Am {{date}} werden seine Workspaces mit allen Dateien gelöscht; Wichtiges vorher sichern oder das Projekt verlängern lassen.",
         "env": "Umgebung",
         "envs": {
-            "cpu": "Server auf der CPU mit JupyterLab und VS Code. Bis 4 CPU-Kerne und 8 GB RAM. Endet nach 2 h ohne Aktivität, spätestens nach 12 h.",
+            "cpu": "Server auf der CPU mit JupyterLab und VS Code. Bis 4 CPU-Kerne und 8 GB RAM.",
             "cpu-gpukernel": "Notebook auf der CPU; der Kernel „Python 3 (GPU)“ startet bei Bedarf auf einer GPU. GPU-Kernel enden nach 5 min ohne Ausführung, Variablen gehen dann verloren.",
-            "gpu": "Ganzer Server auf einer GPU mit JupyterLab und VS Code. Wartet, bis eine GPU frei ist. Endet nach 30 min ohne Aktivität, spätestens nach 4 h."
+            "gpu": "Ganzer Server auf einer GPU mit JupyterLab und VS Code. Wartet, bis eine GPU frei ist."
         },
         "noEnv": "Dieses Projekt erlaubt keine Umgebung. Die Umgebungen legen die Verwaltenden des Projekts fest.",
         "gpuClass": "GPU-Klasse",
@@ -246,7 +247,7 @@
         "unknownProject": "Das Projekt „{{project}}“ aus dem Link ist keines der eigenen aktiven Projekte mit Workspaces. Mitglied wird man über die Verwaltenden des Projekts.",
         "unknownEnv": "Die Umgebung „{{env}}“ aus dem Link ist in diesem Projekt nicht freigegeben.",
         "noProject": "Kein aktives Projekt mit Workspaces.",
-        "startingTitle": "Server „{{name}}“ startet",
+        "startingTitle": "Server in „{{name}}“ startet",
         "waiting": "Der Server startet, das dauert meist unter einer Minute. Sobald er bereit ist, öffnet er sich hier.",
         "waitingGpu": "Der Server wartet auf eine freie GPU und startet dann. Sobald er bereit ist, öffnet er sich hier.",
         "gone": "Der Server konnte nicht starten. Die Serverliste zeigt, was läuft; ein erneuter Start meldet den Grund.",
@@ -255,6 +256,7 @@
         "showLog": "Protokoll anzeigen",
         "hideLog": "Protokoll ausblenden",
         "noEvents": "Noch keine Meldungen.",
-        "failedTitle": "Der Start ist gescheitert"
+        "failedTitle": "Der Start ist gescheitert",
+        "limits": "Endet nach {{idle}} ohne Aktivität, spätestens nach {{max}} h."
     }
 }

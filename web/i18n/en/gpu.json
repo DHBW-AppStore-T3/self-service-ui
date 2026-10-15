@@ -6,7 +6,7 @@
     },
     "servers": {
         "title": "Running servers",
-        "intro": "Your servers in JupyterHub. Idle servers end by themselves: without GPU after 2 hours, with GPU after 30 minutes.",
+        "intro": "Your servers in JupyterHub. Each server ends by itself when it is not used, and at the latest after its environment's run time (see state).",
         "name": "Server",
         "profile": "Kind",
         "state": "State",
@@ -20,7 +20,8 @@
         "stopTitle": "Stop server?",
         "stopConfirm": "Stop",
         "stopMessage": "“{{name}}” is stopped. Files in the home stay, unsaved changes in open notebooks are lost.",
-        "startServer": "Start server"
+        "startServer": "Start server",
+        "ends": "Ends after {{idle}} without activity, at {{time}} at the latest."
     },
     "profiles": {
         "cpu": "CPU",
@@ -232,9 +233,9 @@
         "deletes": "On {{date}} its workspaces are deleted with all files; save what matters before or have the project extended.",
         "env": "Environment",
         "envs": {
-            "cpu": "Server on the CPU with JupyterLab and VS Code. Up to 4 CPU cores and 8 GB RAM. Ends after 2 h without activity, after 12 h at the latest.",
+            "cpu": "Server on the CPU with JupyterLab and VS Code. Up to 4 CPU cores and 8 GB RAM.",
             "cpu-gpukernel": "Notebook on the CPU; the kernel “Python 3 (GPU)” starts on a GPU when needed. GPU kernels end after 5 min without execution, losing their variables.",
-            "gpu": "Whole server on a GPU with JupyterLab and VS Code. Waits until a GPU is free. Ends after 30 min without activity, after 4 h at the latest."
+            "gpu": "Whole server on a GPU with JupyterLab and VS Code. Waits until a GPU is free."
         },
         "noEnv": "This project allows no environment. The project's managers set its environments.",
         "gpuClass": "GPU class",
@@ -246,7 +247,7 @@
         "unknownProject": "The project “{{project}}” from the link is not one of your active projects with workspaces. The project's managers add members.",
         "unknownEnv": "The environment “{{env}}” from the link is not allowed in this project.",
         "noProject": "No active project with workspaces.",
-        "startingTitle": "Server “{{name}}” is starting",
+        "startingTitle": "Server in “{{name}}” is starting",
         "waiting": "The server is starting, usually in less than a minute. It opens here once it is ready.",
         "waitingGpu": "The server waits for a free GPU, then starts. It opens here once it is ready.",
         "gone": "The server could not start. The server list shows what is running; starting again reports the reason.",
@@ -255,6 +256,7 @@
         "showLog": "Show log",
         "hideLog": "Hide log",
         "noEvents": "No messages yet.",
-        "failedTitle": "The start failed"
+        "failedTitle": "The start failed",
+        "limits": "Ends after {{idle}} without activity, after {{max}} h at the latest."
     }
 }

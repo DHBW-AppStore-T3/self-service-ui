@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Container, Group, Paper, Stack, Table, Text, Title } from '@mantine/core';
 import { Link } from 'wouter';
-import { ExternalLink, Play, Square } from 'lucide-react';
+import { ArrowRight, Play, Square } from 'lucide-react';
 import { LoadError, Loading, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
@@ -16,6 +16,17 @@ export function GpuServers() {
     const confirm = useConfirm();
 
     const servers = useQuery({ queryKey: gpuKeys.servers(), queryFn: () => api.listServers(), refetchInterval: 10000 });
+    // The names of the person's projects, so a server shows its project instead of the generated server name.
+    const options = useQuery({ queryKey: gpuKeys.startOptions(), queryFn: () => api.startOptions() });
+    const projectName = (slug) => options.data?.projects?.find(p => p.slug === slug)?.name || slug;
+    // The runtime limits of the server's environment, as JupyterHub enforces them: idle time, and the latest end from its start.
+    const ends = (s) => {
+        const p = options.data?.profiles?.find(x => x.slug === s.profile);
+        if (!p?.idle_minutes || !p?.max_hours || !s.started) return '';
+        const idle = p.idle_minutes % 60 === 0 ? `${p.idle_minutes / 60} h` : `${p.idle_minutes} min`;
+        const time = new Date(new Date(s.started).getTime() + p.max_hours * 3600 * 1000).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+        return t('gpu.servers.ends', { idle, time });
+    };
     const stop = useApiMutation({ mutationFn: (name) => api.stopServer(name), invalidates: [gpuKeys.servers()] });
 
     async function onStop(s) {
@@ -60,7 +71,8 @@ export function GpuServers() {
                             {list.map(s => (
                                 <Table.Tr key={s.name || '-'}>
                                     <Table.Td>
-                                        <Text size="sm" fw={500}>{s.name || t('gpu.servers.default')}</Text>
+                                        <Text size="sm" fw={500}>{s.project ? projectName(s.project) : s.name || t('gpu.servers.default')}</Text>
+                                        {s.project && <Text size="xs" c="dimmed">{s.name}</Text>}
                                         {s.image && <Text size="xs" c="dimmed" ff="monospace">{s.image.split('/').pop()}</Text>}
                                     </Table.Td>
                                     <Table.Td>
@@ -70,11 +82,13 @@ export function GpuServers() {
                                     </Table.Td>
                                     <Table.Td>
                                         <Text size="sm">{s.ready ? t('gpu.servers.ready') : s.pending === 'stop' ? t('gpu.servers.stopping') : t('gpu.servers.starting')}</Text>
+                                        {s.ready && ends(s) && <Text size="xs" c="dimmed">{ends(s)}</Text>}
                                     </Table.Td>
                                     <Table.Td align="right">
                                         <Group gap={4} justify="flex-end" wrap="nowrap">
-                                            <Button size="xs" variant="light" component="a" href={s.url} target="_blank" rel="noreferrer"
-                                                rightSection={<ExternalLink size={14} />} disabled={!s.ready}>
+                                            {/* In this tab, like after a start: a new tab per click piles up, and a named tab would need the opener, which the notebook's page must not get. */}
+                                            <Button size="xs" variant="light" component="a" href={s.url}
+                                                rightSection={<ArrowRight size={14} />} disabled={!s.ready}>
                                                 {t('gpu.servers.open')}
                                             </Button>
                                             <Button size="xs" variant="subtle" color="red" leftSection={<Square size={14} />}
