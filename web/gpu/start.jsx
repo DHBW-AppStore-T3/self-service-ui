@@ -228,7 +228,7 @@ export function StartLog({ events, open: openFromStart }) {
                     <Text size="sm" c="dimmed">{shown ? t('gpu.start.hideLog') : t('gpu.start.showLog')}</Text>
                 </Group>
             </UnstyledButton>
-            <Collapse in={shown}>
+            <Collapse expanded={shown}>
                 {events.length === 0 ? (
                     <Text size="xs" c="dimmed" mt={6}>{t('gpu.start.noEvents')}</Text>
                 ) : (
