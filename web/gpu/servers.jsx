@@ -37,7 +37,7 @@ export function GpuServers() {
         const ok = await confirm({
             title: t('gpu.servers.stopTitle'),
             confirmLabel: t('gpu.servers.stopConfirm'),
-            message: t('gpu.servers.stopMessage', { name: s.name || t('gpu.servers.default') }),
+            message: t('gpu.servers.stopMessage', { name: s.project ? projectName(s.project) : s.name || t('gpu.servers.default') }),
         });
         if (ok) stop.mutate(s.name);
     }

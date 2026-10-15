@@ -21,7 +21,7 @@
         "llmFleet": "Fleet",
         "llmModels": "Models",
         "gpu": "GPU",
-        "gpuServers": "Running",
+        "gpuServers": "Active workspaces",
         "gpuUsage": "Usage",
         "gpuFleet": "GPUs",
         "workspaces": "Workspaces",

@@ -5,22 +5,22 @@
         "page": "This page does not exist."
     },
     "servers": {
-        "title": "Running servers",
-        "intro": "Your servers in JupyterHub. Each server ends by itself when it is not used, and at the latest after its environment's run time (see state).",
-        "name": "Server",
+        "title": "Active workspaces",
+        "intro": "Your active workspaces in JupyterHub. Each active workspace ends by itself when it is not used, and at the latest after its environment's run time (see state).",
+        "name": "Workspace",
         "profile": "Kind",
         "state": "State",
-        "none": "No server is running.",
-        "default": "Default server",
+        "none": "No active workspace.",
+        "default": "Default workspace",
         "ready": "ready",
         "starting": "starting",
         "stopping": "stopping",
         "open": "Open",
         "stop": "Stop",
-        "stopTitle": "Stop server?",
+        "stopTitle": "Stop workspace?",
         "stopConfirm": "Stop",
         "stopMessage": "“{{name}}” is stopped. Files in the home stay, unsaved changes in open notebooks are lost.",
-        "startServer": "Start server",
+        "startServer": "Start workspace",
         "ends": "Ends after {{idle}} without activity, in {{left}} at the latest."
     },
     "profiles": {
@@ -225,20 +225,20 @@
         "poolKeptClassesTip": "A GPU class comes into being as soon as a node is assigned to the pool. It is a resource of the budget tree and projects may hold budget for it; that is why classes and their pool stay, even without nodes."
     },
     "start": {
-        "title": "Start server",
+        "title": "Start workspace",
         "intro": "Choose project and environment. The choice is in this page's address: a link with project and environment can go to all members of the project.",
         "project": "Project",
         "booked": "Computing time is booked to this project.",
         "image": "Project environment: {{image}}.",
         "storage": "The home directory belongs to the project ({{gb}} GB for all members together) and is the same in every environment; its folder project-shared is for all members. Deleting the project deletes these files too.",
-        "noStorage": "This project has no workspace storage: files are lost when the server ends. Storage is requested at the project.",
+        "noStorage": "This project has no workspace storage: files are lost when the workspace ends. Storage is requested at the project.",
         "ends": "The project ends on {{date}}.",
         "deletes": "On {{date}} its workspaces are deleted with all files; save what matters before or have the project extended.",
         "env": "Environment",
         "envs": {
-            "cpu": "Server on the CPU with JupyterLab and VS Code. Up to 4 CPU cores and 8 GB RAM.",
+            "cpu": "Workspace on the CPU with JupyterLab and VS Code. Up to 4 CPU cores and 8 GB RAM.",
             "cpu-gpukernel": "Notebook on the CPU; the kernel “Python 3 (GPU)” starts on a GPU when needed. GPU kernels end after 5 min without execution, losing their variables.",
-            "gpu": "Whole server on a GPU with JupyterLab and VS Code. Waits until a GPU is free."
+            "gpu": "Whole workspace on a GPU with JupyterLab and VS Code. Waits until a GPU is free."
         },
         "noEnv": "This project allows no environment. The project's managers set its environments.",
         "gpuClass": "GPU class",
@@ -250,11 +250,11 @@
         "unknownProject": "The project “{{project}}” from the link is not one of your active projects with workspaces. The project's managers add members.",
         "unknownEnv": "The environment “{{env}}” from the link is not allowed in this project.",
         "noProject": "No active project with workspaces.",
-        "startingTitle": "Server in “{{name}}” is starting",
-        "waiting": "The server is starting, usually in less than a minute. It opens here once it is ready.",
-        "waitingGpu": "The server waits for a free GPU, then starts. It opens here once it is ready.",
-        "gone": "The server could not start. The server list shows what is running; starting again reports the reason.",
-        "toServers": "To the server list",
+        "startingTitle": "Workspace in “{{name}}” is starting",
+        "waiting": "The workspace is starting, usually in less than a minute. It opens here once it is ready.",
+        "waitingGpu": "The workspace waits for a free GPU, then starts. It opens here once it is ready.",
+        "gone": "The workspace could not start. The list of active workspaces shows what is running; starting again reports the reason.",
+        "toServers": "To the active workspaces",
         "progressTitle": "Start log",
         "showLog": "Show log",
         "hideLog": "Hide log",
@@ -262,9 +262,9 @@
         "failedTitle": "The start failed",
         "limits": "Ends after {{idle}} without activity, after {{max}} at the latest.",
         "buildingTitle": "The environment is being built",
-        "building": "The environment's image is being built from the Git repository. Servers can start once the build is done; this page updates by itself.",
+        "building": "The environment's image is being built from the Git repository. Workspaces can start once the build is done; this page updates by itself.",
         "buildFailedTitle": "The environment could not be built",
-        "buildFailed": "Without a built image no server can start in this project. Those who manage the project can fix the repository in the project settings (Workspaces) and build again.",
+        "buildFailed": "Without a built image no workspace can start in this project. Those who manage the project can fix the repository in the project settings (Workspaces) and build again.",
         "buildLog": "Build log"
     }
 }

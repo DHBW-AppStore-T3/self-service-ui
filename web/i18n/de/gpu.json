@@ -5,22 +5,22 @@
         "page": "Diese Seite gibt es nicht."
     },
     "servers": {
-        "title": "Laufende Server",
-        "intro": "Die eigenen Server in JupyterHub. Jeder Server endet von selbst, wenn er nicht genutzt wird, und spätestens nach der Laufzeit seiner Umgebung (siehe Zustand).",
-        "name": "Server",
+        "title": "Aktive Workspaces",
+        "intro": "Die eigenen aktiven Workspaces in JupyterHub. Jeder aktive Workspace endet von selbst, wenn er nicht genutzt wird, und spätestens nach der Laufzeit seiner Umgebung (siehe Zustand).",
+        "name": "Workspace",
         "profile": "Art",
         "state": "Zustand",
-        "none": "Kein Server läuft.",
-        "default": "Standard-Server",
+        "none": "Kein Workspace aktiv.",
+        "default": "Standard-Workspace",
         "ready": "bereit",
         "starting": "startet",
         "stopping": "wird beendet",
         "open": "Öffnen",
         "stop": "Beenden",
-        "stopTitle": "Server beenden?",
+        "stopTitle": "Workspace beenden?",
         "stopConfirm": "Beenden",
         "stopMessage": "„{{name}}“ wird beendet. Dateien im Home bleiben erhalten, nicht gespeicherte Änderungen in offenen Notebooks gehen verloren.",
-        "startServer": "Server starten",
+        "startServer": "Workspace starten",
         "ends": "Endet nach {{idle}} ohne Aktivität, spätestens in {{left}}."
     },
     "profiles": {
@@ -225,20 +225,20 @@
         "poolKeptClassesTip": "Eine GPU-Klasse entsteht, sobald dem Pool ein Knoten zugeordnet wird. Sie ist eine Ressource im Budget-Baum, Projekte können Budget darauf halten; deshalb bleiben Klassen und ihr Pool auch ohne Knoten bestehen."
     },
     "start": {
-        "title": "Server starten",
+        "title": "Workspace starten",
         "intro": "Projekt und Umgebung wählen. Die Auswahl steht in der Adresse dieser Seite: ein Link mit Projekt und Umgebung lässt sich an alle Mitglieder des Projekts weitergeben.",
         "project": "Projekt",
         "booked": "Die Rechenzeit wird diesem Projekt angerechnet.",
         "image": "Umgebung des Projekts: {{image}}.",
         "storage": "Das Home-Verzeichnis gehört zum Projekt ({{gb}} GB für alle Mitglieder zusammen) und ist in allen Umgebungen dasselbe; der Ordner project-shared darin ist für alle Mitglieder. Wird das Projekt gelöscht, werden auch diese Dateien gelöscht.",
-        "noStorage": "Dieses Projekt hat keinen Workspace-Speicher: Dateien gehen beim Beenden des Servers verloren. Speicher wird am Projekt beantragt.",
+        "noStorage": "Dieses Projekt hat keinen Workspace-Speicher: Dateien gehen beim Beenden des Workspace verloren. Speicher wird am Projekt beantragt.",
         "ends": "Das Projekt endet am {{date}}.",
         "deletes": "Am {{date}} werden seine Workspaces mit allen Dateien gelöscht; Wichtiges vorher sichern oder das Projekt verlängern lassen.",
         "env": "Umgebung",
         "envs": {
-            "cpu": "Server auf der CPU mit JupyterLab und VS Code. Bis 4 CPU-Kerne und 8 GB RAM.",
+            "cpu": "Workspace auf der CPU mit JupyterLab und VS Code. Bis 4 CPU-Kerne und 8 GB RAM.",
             "cpu-gpukernel": "Notebook auf der CPU; der Kernel „Python 3 (GPU)“ startet bei Bedarf auf einer GPU. GPU-Kernel enden nach 5 min ohne Ausführung, Variablen gehen dann verloren.",
-            "gpu": "Ganzer Server auf einer GPU mit JupyterLab und VS Code. Wartet, bis eine GPU frei ist."
+            "gpu": "Ganzer Workspace auf einer GPU mit JupyterLab und VS Code. Wartet, bis eine GPU frei ist."
         },
         "noEnv": "Dieses Projekt erlaubt keine Umgebung. Die Umgebungen legen die Verwaltenden des Projekts fest.",
         "gpuClass": "GPU-Klasse",
@@ -250,11 +250,11 @@
         "unknownProject": "Das Projekt „{{project}}“ aus dem Link ist keines der eigenen aktiven Projekte mit Workspaces. Mitglied wird man über die Verwaltenden des Projekts.",
         "unknownEnv": "Die Umgebung „{{env}}“ aus dem Link ist in diesem Projekt nicht freigegeben.",
         "noProject": "Kein aktives Projekt mit Workspaces.",
-        "startingTitle": "Server in „{{name}}“ startet",
-        "waiting": "Der Server startet, das dauert meist unter einer Minute. Sobald er bereit ist, öffnet er sich hier.",
-        "waitingGpu": "Der Server wartet auf eine freie GPU und startet dann. Sobald er bereit ist, öffnet er sich hier.",
-        "gone": "Der Server konnte nicht starten. Die Serverliste zeigt, was läuft; ein erneuter Start meldet den Grund.",
-        "toServers": "Zur Serverliste",
+        "startingTitle": "Workspace in „{{name}}“ startet",
+        "waiting": "Der Workspace startet, das dauert meist unter einer Minute. Sobald er bereit ist, öffnet er sich hier.",
+        "waitingGpu": "Der Workspace wartet auf eine freie GPU und startet dann. Sobald er bereit ist, öffnet er sich hier.",
+        "gone": "Der Workspace konnte nicht starten. Die Liste der aktiven Workspaces zeigt, was läuft; ein erneuter Start meldet den Grund.",
+        "toServers": "Zu den aktiven Workspaces",
         "progressTitle": "Startprotokoll",
         "showLog": "Protokoll anzeigen",
         "hideLog": "Protokoll ausblenden",
@@ -262,9 +262,9 @@
         "failedTitle": "Der Start ist gescheitert",
         "limits": "Endet nach {{idle}} ohne Aktivität, spätestens nach {{max}}.",
         "buildingTitle": "Die Umgebung wird gebaut",
-        "building": "Das Image der Umgebung wird aus dem Git-Repository gebaut. Gestartet werden kann, sobald der Bau fertig ist; diese Seite aktualisiert sich von selbst.",
+        "building": "Das Image der Umgebung wird aus dem Git-Repository gebaut. Workspaces können starten, sobald der Bau fertig ist; diese Seite aktualisiert sich von selbst.",
         "buildFailedTitle": "Die Umgebung konnte nicht gebaut werden",
-        "buildFailed": "Ohne gebautes Image kann in diesem Projekt kein Server starten. Das Projekt verwalten können das Repository in den Projekteinstellungen (Workspaces) korrigieren und neu bauen.",
+        "buildFailed": "Ohne gebautes Image kann in diesem Projekt kein Workspace starten. Das Projekt verwalten können das Repository in den Projekteinstellungen (Workspaces) korrigieren und neu bauen.",
         "buildLog": "Bau-Protokoll"
     }
 }
