@@ -250,6 +250,11 @@
         "waiting": "Der Server startet, das dauert meist unter einer Minute. Sobald er bereit ist, öffnet er sich hier.",
         "waitingGpu": "Der Server wartet auf eine freie GPU und startet dann. Sobald er bereit ist, öffnet er sich hier.",
         "gone": "Der Server konnte nicht starten. Die Serverliste zeigt, was läuft; ein erneuter Start meldet den Grund.",
-        "toServers": "Zur Serverliste"
+        "toServers": "Zur Serverliste",
+        "progressTitle": "Startprotokoll",
+        "showLog": "Protokoll anzeigen",
+        "hideLog": "Protokoll ausblenden",
+        "noEvents": "Noch keine Meldungen.",
+        "failedTitle": "Der Start ist gescheitert"
     }
 }

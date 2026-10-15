@@ -250,6 +250,11 @@
         "waiting": "The server is starting, usually in less than a minute. It opens here once it is ready.",
         "waitingGpu": "The server waits for a free GPU, then starts. It opens here once it is ready.",
         "gone": "The server could not start. The server list shows what is running; starting again reports the reason.",
-        "toServers": "To the server list"
+        "toServers": "To the server list",
+        "progressTitle": "Start log",
+        "showLog": "Show log",
+        "hideLog": "Hide log",
+        "noEvents": "No messages yet.",
+        "failedTitle": "The start failed"
     }
 }

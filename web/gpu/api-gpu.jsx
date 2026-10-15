@@ -6,7 +6,7 @@ import { useClient } from '/providers/client.jsx';
 // an operation missing from the client fails the build, not the browser.
 import {
     deleteGpuPool, deleteWorkspaceProject, getGpuFleet, getMyWorkspaceUsage, getGpuHours, putGpuNode, putGpuPool, getProjectImageLog, getWorkspaceCatalog, getWorkspaceStorage, getWorkspaceUsage,
-    getGpuStartOptions, listGpuServers, listWorkspaceProjects, startGpuServer, rebuildProjectImage, stopGpuServer, updateWorkspaceProject,
+    getGpuServerProgress, getGpuStartOptions, listGpuServers, listWorkspaceProjects, startGpuServer, rebuildProjectImage, stopGpuServer, updateWorkspaceProject,
 } from '@dhbw-cloud/llm-client';
 
 function unwrap(res) {
@@ -28,6 +28,8 @@ export function useGpuApi() {
             startServer: (body) => call(startGpuServer, { body, headers: JSON_HEADERS }),
             // The default server has no name; the API calls it "-".
             stopServer: (name) => call(stopGpuServer, { path: { name: name || '-' } }),
+            // How far a start got: the hub's event log, and ready or failed with the reason.
+            serverProgress: (name) => call(getGpuServerProgress, { path: { name: name || '-' } }),
             // Workspace usage (W1): own rows for everyone with access, all rows for admins. period = { from, to }.
             myWorkspaceUsage: (period) => call(getMyWorkspaceUsage, { query: period }),
             workspaceUsage: (period, project) => call(getWorkspaceUsage, { query: project ? { ...period, project } : period }),

@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useSearch } from 'wouter';
 import { useTranslation } from 'react-i18next';
-import { Alert, Anchor, Badge, Button, Container, Group, Loader, Paper, Radio, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { Alert, Anchor, Badge, Button, Code, Collapse, Container, Group, Loader, Paper, Progress, Radio, Select, SimpleGrid, Stack, Text, Title, UnstyledButton } from '@mantine/core';
 import { useClipboard } from '@mantine/hooks';
-import { Copy, Play } from 'lucide-react';
+import { ChevronDown, ChevronRight, Copy, Play } from 'lucide-react';
 import { LoadError, Loading } from '/helper/query-state.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
@@ -62,6 +62,13 @@ export function GpuStart() {
     // While it starts: poll the servers, open it once it is ready.
     const servers = useQuery({ queryKey: gpuKeys.servers(), queryFn: () => api.listServers(), enabled: !!started, refetchInterval: 3000 });
     const live = started && servers.data?.find(s => s.name === started.name);
+    // The hub's event log of the start (as on the hub's own page); asked again until it ended.
+    const progress = useQuery({
+        queryKey: gpuKeys.progress(started?.name),
+        queryFn: () => api.serverProgress(started.name),
+        enabled: !!started,
+        refetchInterval: (q) => (q.state.data?.ready || q.state.data?.failed ? false : 2500),
+    });
     useEffect(() => {
         if (live?.ready && live.url) window.location.assign(live.url);
     }, [live?.ready, live?.url]);
@@ -73,21 +80,31 @@ export function GpuStart() {
     const link = startLink(window.location.href, choice);
 
     if (started) {
-        // Ended without becoming ready (the hub refused or gave up): no longer in the list after the first answer.
-        const gone = servers.data && !live;
+        const p = progress.data;
+        // Ended without becoming ready: the hub's reason when it has one, else the server is no longer in the list after the first answer.
+        const failed = !!p?.failed;
+        const gone = failed || (servers.data && !live);
+        const events = p?.events ?? [];
+        const last = events[events.length - 1];
         return (
             <Container size="md" py="md">
                 <Paper p="lg" radius="md" withBorder>
                     <Stack gap="sm">
                         <Title order={3}>{t('gpu.start.startingTitle', { name: started.name })}</Title>
                         {gone ? (
-                            <Alert color="red" variant="light">{t('gpu.start.gone')}</Alert>
+                            <Alert color="red" variant="light" title={failed ? t('gpu.start.failedTitle') : undefined}>
+                                {failed && p.message ? p.message : t('gpu.start.gone')}
+                            </Alert>
                         ) : (
-                            <Group gap="sm" wrap="nowrap">
-                                <Loader size="sm" />
-                                <Text size="sm">{profile?.gpu ? t('gpu.start.waitingGpu') : t('gpu.start.waiting')}</Text>
-                            </Group>
+                            <>
+                                <Group gap="sm" wrap="nowrap">
+                                    <Loader size="sm" />
+                                    <Text size="sm">{last?.message || (profile?.gpu ? t('gpu.start.waitingGpu') : t('gpu.start.waiting'))}</Text>
+                                </Group>
+                                <Progress value={last?.progress ?? 0} size="sm" animated />
+                            </>
                         )}
+                        <StartLog events={events} open={failed} />
                         <Anchor component={Link} href="/servers" size="sm">{t('gpu.start.toServers')}</Anchor>
                     </Stack>
                 </Paper>
@@ -178,5 +195,32 @@ export function GpuStart() {
                 </Stack>
             </Paper>
         </Container>
+    );
+}
+
+// StartLog is the hub's event log of a start, folded away until asked for; open from the start when the start failed.
+export function StartLog({ events, open: openFromStart }) {
+    const { t } = useTranslation();
+    const [open, setOpen] = useState(false);
+    // A click flips what the start chose, so a failed start's open log can be folded too.
+    const shown = openFromStart ? !open : open;
+    return (
+        <div>
+            <UnstyledButton onClick={() => setOpen(o => !o)}>
+                <Group gap={4}>
+                    {shown ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    <Text size="sm" c="dimmed">{shown ? t('gpu.start.hideLog') : t('gpu.start.showLog')}</Text>
+                </Group>
+            </UnstyledButton>
+            <Collapse in={shown}>
+                {events.length === 0 ? (
+                    <Text size="xs" c="dimmed" mt={6}>{t('gpu.start.noEvents')}</Text>
+                ) : (
+                    <Code block mt={6} style={{ maxHeight: 300, overflow: 'auto' }}>
+                        {events.map(e => `${String(e.progress).padStart(3)} %  ${e.message}`).join('\n')}
+                    </Code>
+                )}
+            </Collapse>
+        </div>
     );
 }
