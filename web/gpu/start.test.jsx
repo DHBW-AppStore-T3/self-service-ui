@@ -14,5 +14,6 @@ describe('start page', () => {
         expect(startLink('https://ui/workspaces/servers/start?project=old', { project: 'ml', env: 'gpu', gpuClass: 'general-medium' }))
             .toBe('https://ui/workspaces/servers/start?project=ml&env=gpu&gpu_class=general-medium');
         expect(startLink('https://ui/workspaces/servers/start', { project: 'ml', env: 'cpu', gpuClass: '' })).toBe('https://ui/workspaces/servers/start?project=ml&env=cpu');
+        expect(startLink('https://ui/workspaces/servers/start', { project: 'ml', env: 'gpu', autostart: true })).toBe('https://ui/workspaces/servers/start?project=ml&env=gpu&autostart=1');
     });
 });

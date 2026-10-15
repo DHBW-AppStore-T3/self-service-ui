@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useSearch } from 'wouter';
 import { useTranslation } from 'react-i18next';
-import { Alert, Anchor, Badge, Button, Code, Collapse, Container, Group, Loader, Paper, Progress, Radio, Select, SimpleGrid, Stack, Text, Title, UnstyledButton } from '@mantine/core';
+import { Alert, Anchor, Badge, Button, Checkbox, Code, Collapse, Container, Group, Loader, Paper, Progress, Radio, Select, SimpleGrid, Stack, Text, Title, UnstyledButton } from '@mantine/core';
 import { useClipboard } from '@mantine/hooks';
 import { ChevronDown, ChevronRight, Copy, Play } from 'lucide-react';
 import { LoadError, Loading } from '/helper/query-state.jsx';
@@ -16,12 +16,13 @@ import { formatDuration } from '/helper/duration.js';
 
 const SPLIT_PROFILE = 'cpu-gpukernel';
 
-// startLink is this page with a choice, for others to follow.
-export function startLink(base, { project, env, gpuClass }) {
+// startLink is this page with a choice, for others to follow; with autostart the page starts it right away (or opens the one already running).
+export function startLink(base, { project, env, gpuClass, autostart }) {
     const q = new URLSearchParams();
     if (project) q.set('project', project);
     if (env) q.set('env', env);
     if (gpuClass) q.set('gpu_class', gpuClass);
+    if (autostart) q.set('autostart', '1');
     const url = new URL(base);
     url.search = q.toString();
     return url.toString();
@@ -74,8 +75,11 @@ export function GpuStart() {
     const [startedAt, setStartedAt] = useState(0);
     const start = useMutation({ mutationFn: (body) => api.startServer(body), onSuccess: () => setStartedAt(Date.now()) });
     const started = start.data;
+    // A link with autostart starts the choice in it as soon as the page has what it needs; the servers running already are looked at first.
+    const autostart = params.get('autostart') === '1';
+    const [linkAutostart, setLinkAutostart] = useState(false);
     // While it starts: poll the servers, open it once it is ready.
-    const servers = useQuery({ queryKey: gpuKeys.servers(), queryFn: () => api.listServers(), enabled: !!started, refetchInterval: 3000 });
+    const servers = useQuery({ queryKey: gpuKeys.servers(), queryFn: () => api.listServers(), enabled: !!started || autostart, refetchInterval: started ? 3000 : false });
     const live = started && servers.data?.find(s => s.name === started.name);
     // The hub's event log of the start (as on the hub's own page); asked again until it ended.
     const progress = useQuery({
@@ -88,10 +92,24 @@ export function GpuStart() {
         if (live?.ready && live.url) window.location.assign(live.url);
     }, [live?.ready, live?.url]);
 
+    // Autostart, once: only exactly what the link names (no fallback to another project or environment), only once the environment is built; a workspace of that project and environment already running is opened instead of a second one.
+    const autostarted = useRef(false);
+    const exact = !!project && project.slug === params.get('project') && !!profile && profile.slug === params.get('env');
+    useEffect(() => {
+        if (!autostart || autostarted.current || !exact || project.image_pending || !servers.data || start.isPending || started) return;
+        autostarted.current = true;
+        const running = servers.data.find(s => s.project === project.slug && s.profile === profile.slug && (s.ready || s.pending === 'spawn'));
+        if (running?.ready && running.url) {
+            window.location.assign(running.url);
+        } else if (!running) {
+            start.mutate({ project: project.slug, profile: profile.slug, gpu_class: profile.gpu ? chosenClass?.id ?? '' : '' });
+        }
+    }, [autostart, exact, project, profile, chosenClass, servers.data, start, started]);
+
     if (options.isPending) return <Container size="lg" py="md"><Loading /></Container>;
     if (options.isError) return <Container size="lg" py="md"><LoadError query={options} /></Container>;
 
-    const choice = { project: project?.slug, env: profile?.slug, gpuClass: classes.length > 1 ? chosenClass?.id : '' };
+    const choice = { project: project?.slug, env: profile?.slug, gpuClass: classes.length > 1 ? chosenClass?.id : '', autostart: linkAutostart };
     const link = startLink(window.location.href, choice);
 
     if (started) {
@@ -204,8 +222,9 @@ export function GpuStart() {
                                 <Button variant="subtle" leftSection={<Copy size={16} />} disabled={!profile} onClick={() => clipboard.copy(link)}>
                                     {clipboard.copied ? t('gpu.start.copied') : t('gpu.start.copyLink')}
                                 </Button>
+                                <Checkbox size="xs" label={t('gpu.start.autostart')} checked={linkAutostart} onChange={(e) => setLinkAutostart(e.currentTarget.checked)} disabled={!profile} />
                             </Group>
-                            <Text size="xs" c="dimmed">{t('gpu.start.linkHint')}</Text>
+                            <Text size="xs" c="dimmed">{t(linkAutostart ? 'gpu.start.linkHintAuto' : 'gpu.start.linkHint')}</Text>
                         </>
                     )}
                 </Stack>

@@ -265,6 +265,8 @@
         "building": "Das Image der Umgebung wird aus dem Git-Repository gebaut. Workspaces können starten, sobald der Bau fertig ist; diese Seite aktualisiert sich von selbst.",
         "buildFailedTitle": "Die Umgebung konnte nicht gebaut werden",
         "buildFailed": "Ohne gebautes Image kann in diesem Projekt kein Workspace starten. Das Projekt verwalten können das Repository in den Projekteinstellungen (Workspaces) korrigieren und neu bauen.",
-        "buildLog": "Bau-Protokoll"
+        "buildLog": "Bau-Protokoll",
+        "autostart": "Auto-Start",
+        "linkHintAuto": "Der Link startet den Workspace mit dieser Auswahl gleich beim Öffnen; läuft dort schon einer, öffnet er diesen."
     }
 }

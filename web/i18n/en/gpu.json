@@ -265,6 +265,8 @@
         "building": "The environment's image is being built from the Git repository. Workspaces can start once the build is done; this page updates by itself.",
         "buildFailedTitle": "The environment could not be built",
         "buildFailed": "Without a built image no workspace can start in this project. Those who manage the project can fix the repository in the project settings (Workspaces) and build again.",
-        "buildLog": "Build log"
+        "buildLog": "Build log",
+        "autostart": "Auto start",
+        "linkHintAuto": "The link starts the workspace with this choice as soon as it is opened; when one is already running there, it opens that one."
     }
 }
