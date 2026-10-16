@@ -67,9 +67,6 @@
         "environments": "Environments",
         "profiles": "Server types in JupyterHub",
         "image": {
-            "gitUrl": "Public Git repository (GitHub, GitLab)",
-            "gitRef": "Branch, tag or commit",
-            "gitRefPlaceholder": "default branch",
             "buildOnSave": "The build starts on saving (usually 5–15 minutes).",
             "status": {
                 "building": "building",
@@ -94,10 +91,20 @@
             "update": "Take the newer version",
             "autoUpdate": "Take new versions of the tag automatically",
             "autoUpdateHint": "Otherwise a newer version is only shown and taken at the press of a button. New servers then start with it, running ones keep theirs.",
-            "gitHint": "Built like Binder from requirements.txt, environment.yml, apt.txt and postBuild (top level, binder/ or .binder/) on the chosen base. The repository is in ~/projects on start. A new version of the base triggers a rebuild; until a build is ready, the previous image stays.",
+            "gitHint": "Built like Binder from requirements.txt, environment.yml, apt.txt and postBuild (top level, binder/ or .binder/) on the chosen base. The repository’s files reach the servers as “Material from Git” (below). A new version of the base triggers a rebuild; until a build is ready, the previous image stays.",
             "state": "State",
             "since": "running since {{time}}",
             "live": "updates every 3 s"
+        },
+        "git": {
+            "url": "Public Git repository (GitHub, GitLab)",
+            "ref": "Branch, tag or commit",
+            "refPlaceholder": "default branch"
+        },
+        "material": {
+            "title": "Material from Git",
+            "ref": "Branch",
+            "hint": "Fetched into ~/projects/<repository> and updated at every server start, without overwriting one’s own changes; JupyterLab opens that folder. Independent of the environment, so with an existing image too."
         },
         "limits": "Limits per person (at the same time)",
         "limitsHint": "Counted is what one person runs in this project at the same time. 0 means no limit – except for GPUs, where 0 means no GPU.",
@@ -137,7 +144,7 @@
             "fromTree": "from the project"
         },
         "profilesHint": "What members can choose when starting a server in JupyterHub. The platform sets the list; GPU types count against the project's GPU quotas.",
-        "adminOnlyHint": "Server types, limits and usage limits are set by admins. The environment (base, project image, Git) can be changed here."
+        "adminOnlyHint": "Server types, limits and usage limits are set by admins. The environment (base, project image, Git) and the material can be changed here."
     },
     "storage": {
         "title": "Storage (admins)",

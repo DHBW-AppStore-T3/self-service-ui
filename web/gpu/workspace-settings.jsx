@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ActionIcon, Badge, Button, Checkbox, Code, Group, Loader, Modal, MultiSelect, NumberInput, Paper, Progress, SegmentedControl, Select, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
 import { FileText, Plus, RotateCcw, X } from 'lucide-react';
 import { BUILD_COLOUR, BuildLogModal } from '/gpu/build-log.jsx';
+import { GitSource } from '/gpu/git-source.jsx';
 import { llmEnabled } from '/features.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
@@ -136,6 +137,11 @@ function ProjectImage({ draft, set, bases }) {
     // The saved finished image, as long as the field still shows it: its digest and a newer one of its tag.
     const pinnedImage = source === 'image' && saved?.project_image && saved.project_image === p.project_image && !saved.image_git_url ? saved : null;
     const showLog = () => setLogOpen(true);
+    // The repository of the build is usually the course's material too: the material follows it while it is empty or was the same.
+    const fromGit = ({ url, ref }) => draft.update(cur => ({
+        ...cur, image_git_url: url, image_git_ref: ref,
+        material_git_url: !cur.material_git_url || cur.material_git_url === cur.image_git_url ? url : cur.material_git_url,
+    }));
     return (
         <Stack gap={6}>
             <Text size="sm" fw={500}>{t('gpu.projects.image.label')}</Text>
@@ -151,12 +157,7 @@ function ProjectImage({ draft, set, bases }) {
             )}
             {source === 'git' && (
                 <>
-                    <Group gap="xs" wrap="nowrap" align="flex-end">
-                        <TextInput style={{ flex: 1 }} label={t('gpu.projects.image.gitUrl')} placeholder="https://github.com/…/kurs" value={p.image_git_url ?? ''}
-                            onChange={e => set('image_git_url', e.currentTarget.value.trim())} />
-                        <TextInput w={160} label={t('gpu.projects.image.gitRef')} placeholder={t('gpu.projects.image.gitRefPlaceholder')} value={p.image_git_ref ?? ''}
-                            onChange={e => set('image_git_ref', e.currentTarget.value.trim())} />
-                    </Group>
+                    <GitSource value={{ url: p.image_git_url, ref: p.image_git_ref }} onChange={fromGit} />
                     <Text size="xs" c="dimmed">{t('gpu.projects.image.gitHint')}</Text>
                     {build && (
                         <Group gap="xs" wrap="wrap">
@@ -229,6 +230,11 @@ export function WorkspaceSettingsPanel({ draft }) {
                 <MultiSelect label={t('gpu.projects.profiles')} description={t('gpu.projects.profilesHint')} value={p.profiles ?? []} onChange={v => set('profiles', v)} readOnly={locked}
                     data={(catalog.data?.profiles ?? []).map(x => ({ value: x.slug, label: x.name }))} />
                 <ProjectImage draft={draft} set={set} bases={catalog.data?.bases ?? []} />
+            </Box>
+
+            <Box title={t('gpu.projects.material.title')} hint={t('gpu.projects.material.hint')}>
+                <GitSource value={{ url: p.material_git_url, ref: p.material_git_ref }} refLabel={t('gpu.projects.material.ref')}
+                    onChange={({ url, ref }) => draft.update(cur => ({ ...cur, material_git_url: url, material_git_ref: ref }))} />
             </Box>
 
             <Box title={t('gpu.projects.limits')} hint={t('gpu.projects.limitsHint')}>
