@@ -32,6 +32,7 @@ import { HEADER_HEIGHT, NAV_BREAKPOINT, SUBNAV_HEIGHT, useNav } from '/nav.jsx';
 import { Footer } from '/footer.jsx';
 import { CloudStatusProvider } from './projects/cloud-status.jsx';
 import { Home } from '/home/home.jsx';
+import { Developer } from '/developer/developer.jsx';
 import { Delayed } from '/helper/delayed.jsx';
 import { ErrorBoundary } from '/helper/error-boundary.jsx';
 import { SignInOutageBanner } from '/helper/sign-in-status.jsx';
@@ -158,6 +159,7 @@ function AppRoutes() {
                     {cloudProjectsEnabled && <Route path="/projects" component={ProjectsStart} nest />}
                     {llmEnabled && <Route path="/llm" component={LlmManagement} nest />}
                     {llmEnabled && <Route path="/workspaces" component={GpuManagement} nest />}
+                    <Route path="/developer" component={Developer} />
                     <Route component={NotFound} />
                 </Switch>
             </ErrorBoundary>

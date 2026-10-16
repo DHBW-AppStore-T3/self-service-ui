@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
-import { Languages, LogOut, User } from "lucide-react";
+import { Code2, Languages, LogOut, User } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 import { LANGUAGES } from '/i18n/index.js';
 import { HEADER_HEIGHT, NAV_BREAKPOINT, SUBNAV_HEIGHT, useNav } from '/nav.jsx';
@@ -106,6 +106,7 @@ export function Header() {
     // the sign-in mask, so there is no page to explain that AFTERWARDS. The
     // honest explanation therefore lives here, before the chain starts.
     // Dev/dummy mode has no SSO chain, so no dialog there.
+    const [, navigate] = useLocation();
     const confirmLogout = async () => {
         if (useDummyAuth) return logout();
         const ok = await confirm({
@@ -226,6 +227,9 @@ export function Header() {
                                 </Menu.Target>
                                 <Menu.Dropdown>
                                     <Menu.Label>{t('account.greeting', { name: user.profile.name })}</Menu.Label>
+                                    <Menu.Divider />
+                                    {/* API tokens and documentation: for scripts, out of the areas' navigation. */}
+                                    <Menu.Item leftSection={<Code2 size={14} />} onClick={() => navigate('/developer')}>{t('account.developer')}</Menu.Item>
                                     <Menu.Divider />
                                     <Menu.Item color="red" onClick={confirmLogout}>{t('account.signOut')}</Menu.Item>
                                 </Menu.Dropdown>

@@ -44,17 +44,16 @@ export function useNav() {
     const sections = [
         { id: 'home', label: t('nav.home'), href: '/', items: [] },
         // One section per concern: Cloud, Workspaces, LLM and DNS each with their
-        // own projects (a project of several areas shows in each), the API
-        // tokens and documentation of the API that serves them, and Budgets for
-        // whoever runs them. Docs: docs/bauplan.md 8.14 in aiaas-deployment.
+        // own projects (a project of several areas shows in each), and Budgets
+        // for whoever runs them. The API tokens and documentation of the
+        // services are in the account menu (/developer, developer.jsx), not here.
+        // Docs: docs/bauplan.md 8.14 in aiaas-deployment.
         cloudProjectsEnabled && {
             id: 'cloud',
             label: t('nav.cloud'),
             base: '/cloud',
             items: [
                 { label: t('nav.projects'), href: '/cloud/projects' },
-                { label: t('nav.apiTokens'), href: '/cloud/tokens' },
-                { label: t('nav.apiDocumentation'), href: '/cloud/api-doc' },
             ],
         },
         // Workspaces (Jupyter now, Coder later) from the AI service: for members
@@ -65,8 +64,8 @@ export function useNav() {
             label: t('nav.workspaces'),
             base: '/workspaces',
             items: [
-                cloudProjectsEnabled && { label: t('nav.projects'), href: '/workspaces/projects' },
                 { label: t('nav.gpuServers'), href: '/workspaces/servers' },
+                cloudProjectsEnabled && { label: t('nav.projects'), href: '/workspaces/projects' },
                 { label: t('nav.gpuUsage'), href: '/workspaces/usage' },
                 llm.isAdmin && { label: t('nav.gpuFleet'), href: '/workspaces/gpus' },
             ].filter(Boolean),
@@ -87,7 +86,6 @@ export function useNav() {
                 { label: t('nav.llmUsage'), href: '/llm/usage' },
                 llm.isFleetAdmin && { label: t('nav.llmFleet'), href: '/llm/fleet' },
                 llm.isAdmin && { label: t('nav.llmModels'), href: '/llm/models' },
-                { label: t('nav.apiDocumentation'), href: '/llm/api-doc' },
             ].filter(Boolean),
         } : cloudProjectsEnabled && offered.includes('llm') && { id: 'llm', label: t('nav.llm'), base: '/llm', items: [{ label: t('nav.projects'), href: '/llm/projects' }] }),
         dnsZonesEnabled && {
@@ -105,8 +103,6 @@ export function useNav() {
                 // administrative ones (delegations, orphaned zones, zone
                 // events). Old /policy links redirect (see dyndns-routes).
                 hasPolicy && { label: t('nav.administration'), href: '/dyndns/administration', dot: adminEvents > 0 },
-                { label: t('nav.apiTokens'), href: '/dyndns/tokens' },
-                { label: t('nav.apiDocumentation'), href: '/dyndns/api-doc' },
             ].filter(Boolean),
         },
         // Only for someone who manages a budget or is root admin. A dot, not a
@@ -139,8 +135,9 @@ export function useNav() {
         sections,
         activeSection,
         activeItem,
-        // Only a section WITH items gets a second bar; Home would otherwise
-        // leave an empty strip under the header.
-        subNavItems: activeSection?.items ?? [],
+        // Only a section with at least two items gets a second bar: Home would
+        // otherwise leave an empty strip under the header, and a single item
+        // is where clicking the section goes anyway (Cloud: Projects).
+        subNavItems: (activeSection?.items?.length ?? 0) > 1 ? activeSection.items : [],
     };
 }

@@ -33,7 +33,8 @@
         "signOut": "Abmelden",
         "greeting": "Hallo, {{name}}!",
         "signOutTitle": "Abmelden?",
-        "signOutMessage": "Damit endet die Sitzung in der DHBW-Cloud, anschließend erscheint wieder die Anmeldeseite. Die bwIDM-Anmeldung bleibt bestehen, eine erneute Anmeldung fragt also womöglich nicht nach einem Passwort. Sie endet erst mit dem Schließen des Browsers."
+        "signOutMessage": "Damit endet die Sitzung in der DHBW-Cloud, anschließend erscheint wieder die Anmeldeseite. Die bwIDM-Anmeldung bleibt bestehen, eine erneute Anmeldung fragt also womöglich nicht nach einem Passwort. Sie endet erst mit dem Schließen des Browsers.",
+        "developer": "API & Tokens"
     },
     "footer": {
         "copyright": "© Dennis Pfisterer, DHBW"
@@ -136,6 +137,22 @@
             "cloud": "Cloud-Projekte",
             "dns": "DNS",
             "llm": "KI-Dienst"
+        }
+    },
+    "developer": {
+        "title": "API & Tokens",
+        "intro": "Für Skripte und eigene Anwendungen: API-Tokens und die Dokumentation der Schnittstellen. Die API Keys für die Sprachmodelle stehen im Bereich LLM.",
+        "cloud": {
+            "title": "Cloud-Projekte",
+            "text": "Projekte, Budgets und Kontingente der DHBW-Cloud."
+        },
+        "dns": {
+            "title": "DNS-Zonen",
+            "text": "Zonen und Einträge, z. B. für dynamisches DNS oder ACME."
+        },
+        "llm": {
+            "title": "LLM und Workspaces",
+            "text": "Verwaltung von Keys, Projekten und Workspaces. Die Keys selbst gibt es unter LLM → API Keys."
         }
     }
 }
