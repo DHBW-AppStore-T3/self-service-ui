@@ -90,6 +90,9 @@ function Box({ title, hint, children }) {
 }
 
 
+// shortDigest shows the start of a digest, enough to tell versions apart.
+const shortDigest = (d) => (d || '').replace(/^sha256:/, '').slice(0, 12);
+
 // ProjectImage is the project's environment, run by every server type (docs/bauplan.md 10.12): a base of the catalogue, a Git repository built on it, or an existing image — one not built on a base runs as it is, without the GPU kernel.
 function ProjectImage({ draft, set, bases }) {
     const { t } = useTranslation();
@@ -118,6 +121,19 @@ function ProjectImage({ draft, set, bases }) {
             setBusy(false);
         }
     };
+    const takeUpdate = async () => {
+        setBusy(true); setError('');
+        try {
+            await api.updateProjectImage(saved.slug);
+            await queryClient.invalidateQueries({ queryKey: ['gpu', 'projects'] });
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setBusy(false);
+        }
+    };
+    // The saved finished image, as long as the field still shows it: its digest and a newer one of its tag.
+    const pinnedImage = source === 'image' && saved?.project_image && saved.project_image === p.project_image && !saved.image_git_url ? saved : null;
     const showLog = () => setLogOpen(true);
     return (
         <Stack gap={6}>
@@ -164,6 +180,20 @@ function ProjectImage({ draft, set, bases }) {
             {source === 'image' && saved?.project_image && saved.project_image === p.project_image && !saved.image_derived && (
                 <Text size="xs" c="orange">{t('gpu.projects.image.notDerived')}</Text>
             )}
+            {pinnedImage?.image_digest && (
+                <Text size="xs" c="dimmed">{t('gpu.projects.image.pinned')} <Code>{shortDigest(pinnedImage.image_digest)}</Code></Text>
+            )}
+            {pinnedImage?.image_update && (
+                <Group gap="xs" wrap="wrap">
+                    <Text size="xs" c="orange">{t('gpu.projects.image.updateAvailable')} <Code>{shortDigest(pinnedImage.image_update)}</Code></Text>
+                    <Button size="compact-xs" variant="light" leftSection={<RotateCcw size={12} />} loading={busy} onClick={takeUpdate}>{t('gpu.projects.image.update')}</Button>
+                </Group>
+            )}
+            {source === 'image' && (
+                <Checkbox size="xs" label={t('gpu.projects.image.autoUpdate')} description={t('gpu.projects.image.autoUpdateHint')}
+                    checked={!!p.image_auto_update} onChange={e => set('image_auto_update', e.currentTarget.checked)} />
+            )}
+            {source === 'image' && error && <Text size="xs" c="red">{error}</Text>}
             <Text size="xs">
                 {t('gpu.projects.image.current')}{' '}
                 {saved?.project_image ? <Code>{saved.project_image}</Code> : (bases.find(b => b.id === (saved?.image_base || defaultBase))?.name ?? '—')}

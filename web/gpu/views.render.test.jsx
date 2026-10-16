@@ -65,6 +65,7 @@ beforeEach(() => {
         listServers: async () => SERVERS,
         projectImageLog: async () => 'log',
         rebuildProjectImage: async () => ({}),
+        updateProjectImage: async () => ({}),
         myWorkspaceUsage: async () => USAGE,
         listProjects: async () => PROJECTS,
         catalog: async () => CATALOG,
