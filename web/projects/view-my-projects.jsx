@@ -177,7 +177,7 @@ export function MyProjectsView({ area = 'cloud' }) {
 
             <BudgetOffers
                 budgets={offers}
-                resources={resources}
+                resources={areaResources}
                 myProjects={ownProjects}
                 kinds={kinds}
                 onNewProject={(b, k) => setNewProject({ budget: b.id, kind: k })}
