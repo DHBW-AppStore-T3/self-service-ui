@@ -66,6 +66,7 @@
         "remove": "Remove",
         "environments": "Environments",
         "profiles": "Server types in JupyterHub",
+        "profilesFromTree": "The project's budget decides its server types (quotas, Workspaces: “Server type …”); none without a grant.",
         "image": {
             "buildOnSave": "The build starts on saving (usually 5–15 minutes).",
             "status": {

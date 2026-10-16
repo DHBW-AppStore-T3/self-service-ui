@@ -262,7 +262,7 @@ export function WorkspaceSettingsPanel({ draft }) {
         <Stack gap="md">
             {locked && <Text size="xs" c="dimmed">{t('gpu.projects.adminOnlyHint')}</Text>}
             <Box title={t('gpu.projects.environments')}>
-                <MultiSelect label={t('gpu.projects.profiles')} description={t('gpu.projects.profilesHint')} value={p.profiles ?? []} onChange={v => set('profiles', v)} readOnly={locked}
+                <MultiSelect label={t('gpu.projects.profiles')} description={p.tree_profiles ? t('gpu.projects.profilesFromTree') : t('gpu.projects.profilesHint')} value={p.profiles ?? []} onChange={v => set('profiles', v)} readOnly={locked || !!p.tree_profiles}
                     data={(catalog.data?.profiles ?? []).map(x => ({ value: x.slug, label: x.name }))} />
                 <ProjectImage draft={draft} set={set} bases={catalog.data?.bases ?? []} />
             </Box>

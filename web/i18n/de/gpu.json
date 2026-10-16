@@ -66,6 +66,7 @@
         "remove": "Entfernen",
         "environments": "Umgebungen",
         "profiles": "Server-Arten in JupyterHub",
+        "profilesFromTree": "Welche Server-Arten das Projekt hat, legt sein Budget fest (Reiter Kontingente bzw. Workspaces im Budget: „Server type …“); ohne Zuteilung keine.",
         "image": {
             "buildOnSave": "Der Build startet beim Speichern (meist 5–15 Minuten).",
             "status": {
