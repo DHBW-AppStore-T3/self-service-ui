@@ -208,7 +208,9 @@ export function GpuStart() {
                                 )}
                                 {classes.length > 1 && (
                                     <Select label={t('gpu.start.gpuClass')} allowDeselect={false} maw={480} value={chosenClass?.id} onChange={setGpuClass}
-                                        data={classes.map(c => ({ value: c.id, label: c.available ? c.name : t('gpu.start.noGpuNow', { name: c.name }) }))} />
+                                        data={classes.map(c => ({ value: c.id, label: c.available ? c.name : t('gpu.start.noGpuNow', { name: c.name }), hardware: c.hardware }))}
+                                        renderOption={({ option }) => <ClassOption label={option.label} hardware={option.hardware} />}
+                                        description={chosenClass?.hardware ? `(${chosenClass.hardware})` : undefined} />
                                 )}
                             </Stack>
 
@@ -275,5 +277,14 @@ function BuildState({ project }) {
                 {log.data ? <BuildLogBody build={project.image_build} data={log.data} /> : (!building && project.image_build?.message && <Text size="sm" fw={500}>{project.image_build.message}</Text>)}
             </Stack>
         </Alert>
+    );
+}
+
+// ClassOption is a GPU class in the choice: its name, and dimmed in brackets what a GPU of it is (e.g. "L4-3Q · 3 GB"), so one knows what one gets.
+function ClassOption({ label, hardware }) {
+    return (
+        <Text size="sm">
+            {label}{hardware && <Text span size="sm" c="dimmed">{` (${hardware})`}</Text>}
+        </Text>
     );
 }

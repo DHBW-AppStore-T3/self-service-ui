@@ -94,7 +94,15 @@
             "gitHint": "Built like Binder from requirements.txt, environment.yml, apt.txt and postBuild (top level, binder/ or .binder/) on the chosen base. The repository’s files reach the servers as “Material from Git” (below). A new version of the base triggers a rebuild; until a build is ready, the previous image stays.",
             "state": "State",
             "since": "running since {{time}}",
-            "live": "updates every 3 s"
+            "live": "updates every 3 s",
+            "baseDeprecatedLabel": "{{name}} (running out)",
+            "baseRunsOut": "{{name}} runs out. Successor: {{successor}}. The project keeps it until its end unless it is changed.",
+            "baseRunsOutOn": "{{name}} runs out on {{date}}. The project is then moved to {{successor}} (environments built from Git are rebuilt on it).",
+            "baseSwitch": "Switch to {{name}}",
+            "baseProjects_one": "{{count}} project",
+            "baseProjects_other": "{{count}} projects",
+            "baseUntil": "until {{date}}",
+            "baseOpenEnd": "without end"
         },
         "git": {
             "url": "Public Git repository (GitHub, GitLab)",

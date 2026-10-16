@@ -9,6 +9,7 @@ import { ProjectCredentials } from '/gpu/credentials.jsx';
 import { llmEnabled } from '/features.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
+import { formatDay } from '/format-date.js';
 import { gpuKeys } from '/gpu/query-keys.js';
 
 // How a Lab/KI project's workspaces are used — profiles, the project image, limits and shares per person, shorter windows. Everything else about the project (name, members, end, quotas) is the project's own and edited in its dialog; this is the one part only the AI service knows, so it is a tab of the project's edit dialog (modal-project-form.jsx) instead of a second list of the same projects.
@@ -153,8 +154,7 @@ function ProjectImage({ draft, set, bases }) {
                 { value: 'image', label: t('gpu.projects.image.sourceImage') },
             ]} />
             {source !== 'image' && bases.length > 0 && (
-                <Select label={t('gpu.projects.image.base')} allowDeselect={false} value={p.image_base || defaultBase}
-                    onChange={v => set('image_base', v === defaultBase ? '' : v)} data={bases.map(b => ({ value: b.id, label: b.name }))} />
+                <BaseChoice bases={bases} value={p.image_base || defaultBase} saved={saved?.image_base} onChange={v => set('image_base', v)} />
             )}
             {source === 'git' && (
                 <>
@@ -202,6 +202,40 @@ function ProjectImage({ draft, set, bases }) {
                 {saved?.project_image ? <Code>{saved.project_image}</Code> : (bases.find(b => b.id === (saved?.image_base || defaultBase))?.name ?? '—')}
             </Text>
             <BuildLogModal slug={saved?.slug} build={build} opened={logOpen} onClose={() => setLogOpen(false)} />
+        </Stack>
+    );
+}
+
+// BaseChoice is the version of a base the project runs. Versions that run out are offered only to the project already on one, with a notice: until when, and a button that takes the successor (saved with the dialog). Admins see per version how many projects run it and until when, to know when an old one can go.
+function BaseChoice({ bases, value, saved, onChange }) {
+    const { t } = useTranslation();
+    const { isAdmin } = useLlmMe();
+    const byId = Object.fromEntries(bases.map(b => [b.id, b]));
+    const usage = (b) => {
+        if (!isAdmin) return '';
+        const until = b.projects > 0 ? (b.last_end ? t('gpu.projects.image.baseUntil', { date: formatDay(b.last_end) }) : t('gpu.projects.image.baseOpenEnd')) : '';
+        return [t('gpu.projects.image.baseProjects', { count: b.projects ?? 0 }), until].filter(Boolean).join(', ');
+    };
+    const offered = bases.filter(b => b.status !== 'deprecated' || b.id === value || b.id === saved);
+    const current = byId[value];
+    const successor = current?.status === 'deprecated' ? byId[current.replaced_by] : null;
+    return (
+        <Stack gap={4}>
+            <Select label={t('gpu.projects.image.base')} allowDeselect={false} value={value} onChange={onChange}
+                data={offered.map(b => ({ value: b.id, label: b.status === 'deprecated' ? t('gpu.projects.image.baseDeprecatedLabel', { name: b.name }) : b.name, usage: usage(b) }))}
+                renderOption={({ option }) => (
+                    <Text size="sm">{option.label}{option.usage && <Text span size="xs" c="dimmed">{` (${option.usage})`}</Text>}</Text>
+                )} />
+            {current?.status === 'deprecated' && (
+                <Group gap="xs" wrap="wrap">
+                    <Text size="xs" c="orange">
+                        {current.end_of_life
+                            ? t('gpu.projects.image.baseRunsOutOn', { name: current.name, date: formatDay(current.end_of_life), successor: successor?.name ?? current.replaced_by })
+                            : t('gpu.projects.image.baseRunsOut', { name: current.name, successor: successor?.name ?? current.replaced_by })}
+                    </Text>
+                    {successor && <Button size="compact-xs" variant="light" onClick={() => onChange(successor.id)}>{t('gpu.projects.image.baseSwitch', { name: successor.name })}</Button>}
+                </Group>
+            )}
         </Stack>
     );
 }
