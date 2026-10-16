@@ -75,7 +75,8 @@ function BudgetOfferCard({ budget, resources, kinds = [], myProjects, onNewProje
                 ) : (
                     <>
                         <FactRow label={t('projects.offers.stillFree')}>
-                            {summary || t('projects.offers.nothing')}
+                            {/* A budget that passes on its parent's limit has no cap of its own; listing the whole catalogue at ∞ read as if all of it were there for the asking. */}
+                            {budget.inherits_limit ? t('projects.offers.noOwnLimit') : (summary || t('projects.offers.nothing'))}
                         </FactRow>
                         <FactRow label={t('projects.offers.everyProject')}>
                             {t('projects.autoApprove.beyondManager')}

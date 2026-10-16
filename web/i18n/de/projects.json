@@ -290,7 +290,8 @@
         "nothing": "Nichts",
         "headingHint": "Neue Projekte werden aus einem dieser Budgets bezahlt. Jede Karte zeigt, wie viel sofort verfügbar ist.",
         "shareInUse": "Nichts mehr frei – der eigene Anteil ({{share}}) ist durch die eigenen Projekte belegt",
-        "budgetUsedUp": "Nichts mehr frei – das Budget ist ausgeschöpft"
+        "budgetUsedUp": "Nichts mehr frei – das Budget ist ausgeschöpft",
+        "noOwnLimit": "Keine eigene Obergrenze; wie viel es gibt, entscheidet ein Manager je Antrag."
     },
     "projectCard": {
         "overcommittedBadge": "Über dem Limit",

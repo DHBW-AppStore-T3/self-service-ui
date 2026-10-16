@@ -290,7 +290,8 @@
         "nothing": "Nothing",
         "headingHint": "New projects are paid from one of these budgets. Each card says how much is available right away.",
         "shareInUse": "None left — your share ({{share}}) is in use by your projects",
-        "budgetUsedUp": "None left — the budget is fully used"
+        "budgetUsedUp": "None left — the budget is fully used",
+        "noOwnLimit": "No cap of its own; a manager decides per request how much there is."
     },
     "projectCard": {
         "overcommittedBadge": "Overcommitted",
