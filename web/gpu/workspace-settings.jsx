@@ -5,6 +5,7 @@ import { ActionIcon, Badge, Button, Checkbox, Code, Group, Loader, Modal, MultiS
 import { FileText, Plus, RotateCcw, X } from 'lucide-react';
 import { BUILD_COLOUR, BuildLogModal } from '/gpu/build-log.jsx';
 import { GitSource } from '/gpu/git-source.jsx';
+import { ProjectCredentials } from '/gpu/credentials.jsx';
 import { llmEnabled } from '/features.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
@@ -236,6 +237,12 @@ export function WorkspaceSettingsPanel({ draft }) {
                 <GitSource value={{ url: p.material_git_url, ref: p.material_git_ref }} refLabel={t('gpu.projects.material.ref')}
                     onChange={({ url, ref }) => draft.update(cur => ({ ...cur, material_git_url: url, material_git_ref: ref }))} />
             </Box>
+
+            {draft.project?.slug && (
+                <Box title={t('gpu.projects.credentials.title')} hint={t('gpu.projects.credentials.hint')}>
+                    <ProjectCredentials slug={draft.project.slug} />
+                </Box>
+            )}
 
             <Box title={t('gpu.projects.limits')} hint={t('gpu.projects.limitsHint')}>
                 <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">

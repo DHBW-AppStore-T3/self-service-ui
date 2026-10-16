@@ -7,6 +7,7 @@ import { useClient } from '/providers/client.jsx';
 import {
     deleteGpuPool, deleteWorkspaceProject, getGpuFleet, getMyWorkspaceUsage, getGpuHours, putGpuNode, putGpuPool, getProjectImageLog, getWorkspaceCatalog, getWorkspaceStorage, getWorkspaceUsage,
     getGpuServerProgress, getGpuStartOptions, listGpuServers, listWorkspaceProjects, startGpuServer, rebuildProjectImage, stopGpuServer, updateProjectImage, updateWorkspaceProject,
+    deleteProjectCredential, listProjectCredentials, setProjectCredential,
 } from '@dhbw-cloud/llm-client';
 
 function unwrap(res) {
@@ -42,6 +43,10 @@ export function useGpuApi() {
             rebuildProjectImage: (slug) => call(rebuildProjectImage, { path: { slug } }),
             // A finished image runs at its digest; this takes the newer one its tag points at now (image_update).
             updateProjectImage: (slug) => call(updateProjectImage, { path: { slug } }),
+            // A project's access to private repositories and registries: per host the user name, never the token. Setting one answers with the new list.
+            listCredentials: async (slug) => (await call(listProjectCredentials, { path: { slug } })) ?? [],
+            setCredential: (slug, body) => call(setProjectCredential, { path: { slug }, body, headers: JSON_HEADERS }),
+            deleteCredential: (slug, host) => call(deleteProjectCredential, { path: { slug, host } }),
             // The build's log and what its pod is doing: { log, state, since }.
             projectImageLog: async (slug) => (await call(getProjectImageLog, { path: { slug } })) ?? { log: '' },
             // Admins: how full the workspace storage and its metadata are.

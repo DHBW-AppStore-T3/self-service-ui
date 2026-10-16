@@ -106,6 +106,17 @@
             "ref": "Branch",
             "hint": "Wird bei jedem Start eines Servers nach ~/projects/<Repository> geholt und aktualisiert, ohne eigene Änderungen zu überschreiben; JupyterLab öffnet diesen Ordner. Unabhängig von der Umgebung, also auch mit einem vorhandenen Image."
         },
+        "credentials": {
+            "title": "Zugänge für private Repositories und Images",
+            "hint": "Mit einem Zugang für einen Host können Material aus Git und ein vorhandenes Image von dort privat sein; die Server des Projekts nutzen ihn beim Start. Das Token wird verschlüsselt gespeichert und nicht wieder angezeigt; ein neues für denselben Host ersetzt es. Builds aus privaten Repositories gibt es noch nicht.",
+            "host": "Host",
+            "username": "Benutzername",
+            "token": "Token",
+            "add": "Zugang hinzufügen",
+            "save": "Speichern",
+            "setBy": "gesetzt von {{who}} am {{when}}",
+            "providers": "GitHub: klassisches Token mit „repo“ und „read:packages“, Benutzername = GitHub-Name. GitLab: Deploy-Token des Projekts oder der Gruppe mit „read_repository“ und „read_registry“, Benutzername = Name des Tokens (Registry-Host eigens eintragen, z. B. registry.gitlab.com). Forgejo/Gitea: Token mit „read:repository“ und „read:package“."
+        },
         "limits": "Grenzen pro Person (gleichzeitig)",
         "limitsHint": "Gezählt wird, was eine Person in diesem Projekt gleichzeitig laufen hat. 0 heißt: keine Grenze – außer bei GPUs, dort heißt 0: keine GPU.",
         "cancel": "Abbrechen",
