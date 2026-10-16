@@ -50,7 +50,8 @@ export function useWorkspaceSettings(nodeId, active) {
         queryKey: gpuKeys.projects(false),
         queryFn: () => api.listProjects(false),
         enabled: llmEnabled && active && !!nodeId,
-        staleTime: 60 * 1000,
+        // Asked again whenever the dialog opens: a project created a moment ago is missing from a list fetched before it.
+        staleTime: 0,
         // While the project image builds, its state follows.
         refetchInterval: (q) => ((q.state.data ?? []).some(p => p.image_build?.status === 'building') ? 10 * 1000 : false),
     });
