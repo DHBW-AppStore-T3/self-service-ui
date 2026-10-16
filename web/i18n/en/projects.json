@@ -51,7 +51,8 @@
         "managedByHint": "They approve requests and can pass parts of this budget on.",
         "inheritsLimit": "Limit",
         "inheritsLimitFrom": "taken from “{{name}}”",
-        "inheritsLimitFromAbove": "taken from the budget above"
+        "inheritsLimitFromAbove": "taken from the budget above",
+        "nothingGranted": "Nothing granted."
     },
     "budgetForm": {
         "titleRequest": "Request a budget",

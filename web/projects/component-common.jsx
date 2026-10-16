@@ -291,11 +291,15 @@ export function ResourceBar({ resource, limit, approved = 0, changePending = 0, 
 export function NodeUsageBars({ resources, node, incomingQuota = null }) {
     if (!resources || !node) return null;
     const usage = node.usage ?? {};
-    const quantities = resources.filter(r => !isAvailability(r));
+    // Only what is granted (or unlimited), used or asked for: a catalogue with a pair of resources per GPU class would otherwise list every 0 / 0.
+    const shown = (r) => (node.limit?.[r.id] ?? 0) !== 0 || (usage.approved?.limit?.[r.id] ?? 0) > 0 || (usage.change_pending?.limit?.[r.id] ?? 0) > 0
+        || (usage.released?.limit?.[r.id] ?? 0) > 0 || (usage.archived?.limit?.[r.id] ?? 0) > 0 || (incomingQuota?.[r.id] ?? 0) > 0;
+    const quantities = resources.filter(r => !isAvailability(r) && shown(r));
     const granted = resources.filter(r => isAvailability(r) && node.limit?.[r.id] === 1);
 
     return (
         <Stack gap="xs">
+            {quantities.length === 0 && granted.length === 0 && <NothingGranted />}
             {quantities.map(r => {
                 // Only what the deployment charges shows up under these keys.
                 const retired = (usage.released?.limit?.[r.id] ?? 0) + (usage.archived?.limit?.[r.id] ?? 0);
@@ -314,6 +318,11 @@ export function NodeUsageBars({ resources, node, incomingQuota = null }) {
             <AvailabilityBadges resources={granted} />
         </Stack>
     );
+}
+
+function NothingGranted() {
+    const { t } = useTranslation();
+    return <Text size="xs" c="dimmed">{t('projects.budgetCard.nothingGranted')}</Text>;
 }
 
 // AvailabilityBadges lists what a node may use, as opposed to how much of it.

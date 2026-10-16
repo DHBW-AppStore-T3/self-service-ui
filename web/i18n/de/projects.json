@@ -51,7 +51,8 @@
         "managedByHint": "Diese Personen genehmigen Anfragen und können Teile dieses Budgets weitergeben.",
         "inheritsLimit": "Limit",
         "inheritsLimitFrom": "übernommen von „{{name}}“",
-        "inheritsLimitFromAbove": "übernommen vom Budget darüber"
+        "inheritsLimitFromAbove": "übernommen vom Budget darüber",
+        "nothingGranted": "Nichts zugeteilt."
     },
     "budgetForm": {
         "titleRequest": "Budget anfragen",
