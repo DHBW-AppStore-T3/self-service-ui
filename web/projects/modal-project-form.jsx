@@ -216,7 +216,8 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         if (!h || isPoolAutoApprove(budgetById(id))) return null;
         const ok = offeredFor(id, kind).every(r =>
             isAvailability(r) || (h[r.id] ?? 0) >= (r.min ?? 0));
-        return ok ? onlyOffered(h, id, kind) : null;
+        // The headroom counts quantities only; the availabilities come with their defaults (e.g. the server types), as in an untouched form.
+        return ok ? onlyOffered({ ...defaultsWithin(resources.filter(isAvailability), null), ...h }, id, kind) : null;
     };
 
     // What an untouched form asks for under a budget: the most its auto-approve

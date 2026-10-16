@@ -44,9 +44,12 @@ export function StartView() {
             const has = mine.some(p => p.parent_id === budget.id && ['pending', 'approved', 'change_pending'].includes(p.status));
             const headroom = autoApproveHeadroom(budget, resources, mine);
             const instant = !!headroom && offered.some(r => (headroom[r.id] ?? 0) > 0);
-            const amounts = instant
-                ? Object.fromEntries(offered.map(r => [r.id, headroom[r.id] ?? 0]))
-                : defaultsWithin(offered, roomIn(budget, offered));
+            // The availabilities of the area the budget offers come with their defaults (e.g. the server types of workspaces); the server would add them too, this keeps what is sent and what is shown the same.
+            const switches = defaultsWithin(visibleResources(resources, budget).filter(r => kindOfResource(r) === area && isAvailability(r)), null);
+            const amounts = {
+                ...switches,
+                ...(instant ? Object.fromEntries(offered.map(r => [r.id, headroom[r.id] ?? 0])) : defaultsWithin(offered, roomIn(budget, offered))),
+            };
             return { budget, offered, amounts, instant, has };
         }).filter(Boolean);
     }, [eligibleQuery.data, mineQuery.data, resources, area]);
