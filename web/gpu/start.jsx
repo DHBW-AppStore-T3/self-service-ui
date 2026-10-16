@@ -212,6 +212,12 @@ export function GpuStart() {
                                         renderOption={({ option }) => <ClassOption label={option.label} hardware={option.hardware} />}
                                         description={chosenClass?.hardware ? `(${chosenClass.hardware})` : undefined} />
                                 )}
+                                {classes.length === 1 && (
+                                    <Text size="sm">
+                                        {t('gpu.start.gpuClassOnly')} {classes[0].name}
+                                        {classes[0].hardware && <Text span size="sm" c="dimmed">{` (${classes[0].hardware})`}</Text>}
+                                    </Text>
+                                )}
                             </Stack>
 
                             {project.image_pending && <BuildState project={project} />}

@@ -303,6 +303,7 @@
         "buildFailed": "Ohne gebautes Image kann in diesem Projekt kein Workspace starten. Das Projekt verwalten können das Repository in den Projekteinstellungen (Workspaces) korrigieren und neu bauen.",
         "buildLog": "Bau-Protokoll",
         "autostart": "Auto-Start",
-        "linkHintAuto": "Der Link startet den Workspace mit dieser Auswahl gleich beim Öffnen; läuft dort schon einer, öffnet er diesen."
+        "linkHintAuto": "Der Link startet den Workspace mit dieser Auswahl gleich beim Öffnen; läuft dort schon einer, öffnet er diesen.",
+        "gpuClassOnly": "GPU:"
     }
 }
