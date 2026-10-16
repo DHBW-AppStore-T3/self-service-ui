@@ -1,10 +1,10 @@
 import { Clock, Inbox, Zap } from 'lucide-react';
 import { Badge, Button, Card, Group, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { FactRow, formatTerm, TokenBadgeList } from './component-common.jsx';
+import { FactRow, formatTerm, NodeUsageBars, TokenBadgeList } from './component-common.jsx';
 import {
     autoApproveHeadroom, beyondAutoApproveRefused, COLOR, expiryTone, expiryValue, freeAmount, hasAutoApprove, headroomExhaustedBy,
-    budgetKinds, isAvailability, resourceSummaryText, UNLIMITED_QUOTA, visibleResources,
+    budgetKinds, isAvailability, isPoolAutoApprove, resourceSummaryText, UNLIMITED_QUOTA, visibleResources,
 } from './util-project.jsx';
 import { NewProjectButton } from './component-new-project-button.jsx';
 
@@ -61,28 +61,21 @@ function BudgetOfferCard({ budget, resources, kinds = [], myProjects, onNewProje
             </Group>
 
             <Stack gap={6} style={{ flex: 1 }} mb="sm">
-                {/* One label, one value — what the viewer can take from here
-                    without anybody deciding, and what happens to the rest. */}
-                {instant ? (
-                    <>
-                        <FactRow label={t('projects.offers.yoursRightAway')}>
-                            {summary || nothingText}
-                        </FactRow>
-                        <FactRow label={t('projects.fact.beyondThat')}>
-                            {hardLimit ? t('projects.autoApprove.beyondRefused') : t('projects.autoApprove.beyondManager')}
-                        </FactRow>
-                    </>
+                {/* The same bars a manager sees: what the budget holds, what is taken and what is left. A budget that passes on its parent's limit has no cap of its own; bars at ∞ for the whole catalogue would read as if all of it were there for the asking. */}
+                {budget.inherits_limit ? (
+                    <FactRow label={t('projects.offers.stillFree')}>{t('projects.offers.noOwnLimit')}</FactRow>
                 ) : (
-                    <>
-                        <FactRow label={t('projects.offers.stillFree')}>
-                            {/* A budget that passes on its parent's limit has no cap of its own; listing the whole catalogue at ∞ read as if all of it were there for the asking. */}
-                            {budget.inherits_limit ? t('projects.offers.noOwnLimit') : (summary || t('projects.offers.nothing'))}
-                        </FactRow>
-                        <FactRow label={t('projects.offers.everyProject')}>
-                            {t('projects.autoApprove.beyondManager')}
-                        </FactRow>
-                    </>
+                    <NodeUsageBars resources={visibleResources(resources, budget)} node={budget} />
                 )}
+                {/* A per-person share is not in the bars: what of it is still the viewer's. */}
+                {instant && !isPoolAutoApprove(budget) && (
+                    <FactRow label={t('projects.offers.yourShare')}>
+                        {summary || nothingText}
+                    </FactRow>
+                )}
+                <FactRow label={instant ? t('projects.fact.beyondThat') : t('projects.offers.everyProject')}>
+                    {instant && hardLimit ? t('projects.autoApprove.beyondRefused') : t('projects.autoApprove.beyondManager')}
+                </FactRow>
                 <FactRow label={t('projects.fact.managedBy')}>
                     <TokenBadgeList size="xs" tokens={budget.admin_scope}
                         emptyMessage={t('projects.fact.managedByEmpty')} />
