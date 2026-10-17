@@ -4,6 +4,7 @@ import { ExternalLink } from '/helper/external-link.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { useCloudConfig } from '/providers/cloud-config.jsx';
 import { useRemoteConfig } from '/providers/remote-config.jsx';
+import { useAiAreasVisible } from '/ai-areas.jsx';
 
 // Every component this portal is made of links to its own repository, so the
 // separate "Source Code" link is gone: it only ever pointed at the UI, which is
@@ -19,8 +20,9 @@ export function Footer({ title, version }) {
     // /config.json once) — the footer does not fetch anything itself.
     const { config: dynDnsConfig } = useDynDnsConfig();
     const { config: cloudConfig } = useCloudConfig();
-    // The AI service (LLM, workspaces) is only there where it is configured; its base URL may be relative to the portal.
-    const { config: llmConfig } = useRemoteConfig(llmBase());
+    // The AI service (LLM, workspaces) is only there where it is configured, and named only to whoever sees one of its areas in the navigation (same condition, ai-areas.jsx); its base URL may be relative to the portal.
+    const { anyVisible: aiVisible } = useAiAreasVisible();
+    const { config: llmConfig } = useRemoteConfig(aiVisible ? llmBase() : undefined);
 
     // One line, one format for every component: "<name> (<version>)", the name
     // linking to its repository. An API that is not configured (Cloud API on
@@ -29,7 +31,7 @@ export function Footer({ title, version }) {
         { label: title, version, repo: UI_REPO },
         dynDnsConfig?.version && { label: 'Dynamic Zones API', version: dynDnsConfig.version, repo: DYNDNS_REPO },
         cloudConfig?.version && { label: 'Cloud API', version: cloudConfig.version, repo: CLOUD_REPO },
-        llmConfig?.version && { label: 'AI Service API', version: llmConfig.version, repo: LLM_REPO },
+        aiVisible && llmConfig?.version && { label: 'AI Service API', version: llmConfig.version, repo: LLM_REPO },
     ].filter(Boolean);
 
     return (

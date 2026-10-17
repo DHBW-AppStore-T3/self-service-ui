@@ -159,7 +159,7 @@
             "out": "ausgehend",
             "in": "eingehend",
             "nothing": "nichts",
-            "hint": "Beides derzeit nur über IPv6 — in einem reinen IPv4-Netz scheitert die Anmeldung. Voraussetzung: Apple Silicon mit mindestens 16 GB."
+            "hint": "Beides nur über IPv4, die Ziele haben keine IPv6-Adresse. Voraussetzung: Apple Silicon mit mindestens 16 GB."
         },
         "check": {
             "title": "4 · Kontrolle",
@@ -194,7 +194,7 @@
             "title": "Linux-Rechner ohne Geräteverwaltung aufnehmen",
             "hint": "Auf der Maschine als root ausführen. Sie erzeugt ihr Schlüsselpaar selbst, meldet sich an und richtet zwei systemd-Timer ein. Einen Inferenzdienst installiert das <1>nicht</1> — den betreibt der Standort weiter selbst, er muss nur auf der Tunneladresse lauschen.",
             "badContact": "keine gültige Adresse",
-            "options": "Freiwillig dazu: <2>--operator \"Labor WI\"</2> (Gruppe, der die Maschine zugerechnet wird, <1>keine</1> Adresse), <2>--port 8000</2> für vLLM statt Ollama, <2>--gate always</2> für eine dedizierte Maschine.",
+            "options": "Freiwillig dazu: <2>--operator \"Labor WI\"</2> (Gruppe, der die Maschine zugerechnet wird, <1>keine</1> Adresse), <2>--gate always</2> für eine dedizierte Maschine. vLLM statt Ollama ebenfalls auf Port 11434 starten (<2>vllm serve … --port 11434</2>): über den Tunnel lässt der Hub nur diesen Port zu.",
             "secret": "Der Befehl enthält das Anmelde-Token der gesamten Flotte — er gehört nicht in ein Ticket und nicht in einen Chat."
         },
         "col": {

@@ -1,10 +1,9 @@
 import { useLocation } from 'wouter';
 import { useTranslation } from 'react-i18next';
-import { cloudProjectsEnabled, dnsZonesEnabled, llmEnabled } from '/features.js';
+import { cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
 import { useCloudStatus } from '/projects/cloud-status.jsx';
 import { useDnsPolicyStatus } from '/dyndns/use-policy.jsx';
-import { hasWorkspaces } from '/gpu/access.js';
-import { useLlmMe } from '/llm/use-llm-me.jsx';
+import { useAiAreasVisible } from '/ai-areas.jsx';
 
 // The whole navigation as data, in one place: the header renders it two ways
 // (two bars on a wide screen, one vertical list in the burger) and the shell
@@ -35,9 +34,10 @@ export const NAV_BREAKPOINT = 'md';
 export function useNav() {
     const [currentPath] = useLocation();
     const { t } = useTranslation();
-    const { isRoot, pending, hasBudgets, offered } = useCloudStatus();
+    const { isRoot, pending, hasBudgets } = useCloudStatus();
     const { hasPolicy, adminEvents, ownEvents } = useDnsPolicyStatus();
-    const llm = useLlmMe();
+    // Which of the AI service's areas are visible, and how (ai-areas.jsx, shared with the footer).
+    const { llm, workspaces, llmArea } = useAiAreasVisible();
 
 
 
@@ -59,7 +59,7 @@ export function useNav() {
         // Workspaces (Jupyter now, Coder later) from the AI service: for members
         // of a project, and admins, who manage the projects; for everybody else
         // the way to a project, when a budget in reach offers one.
-        llmEnabled && llm.me && (hasWorkspaces(llm.me, llm.isAdmin) ? {
+        workspaces === 'member' ? {
             id: 'workspaces',
             label: t('nav.workspaces'),
             base: '/workspaces',
@@ -69,13 +69,13 @@ export function useNav() {
                 { label: t('nav.gpuUsage'), href: '/workspaces/usage' },
                 llm.isAdmin && { label: t('nav.gpuFleet'), href: '/workspaces/gpus' },
             ].filter(Boolean),
-        } : cloudProjectsEnabled && offered.includes('workspaces') && { id: 'workspaces', label: t('nav.workspaces'), base: '/workspaces', items: [{ label: t('nav.projects'), href: '/workspaces/projects' }] }),
+        } : workspaces === 'offer' && { id: 'workspaces', label: t('nav.workspaces'), base: '/workspaces', items: [{ label: t('nav.projects'), href: '/workspaces/projects' }] },
         // For whoever has LLM tokens through a project (or a role there); for
         // somebody without, only the way to a project, and only when a budget
         // in reach offers one. Its API keys are LiteLLM keys for the model
         // endpoint — a different thing from the API tokens of Cloud and DNS,
         // which manage this platform.
-        llmEnabled && llm.me && (llm.hasAccess ? {
+        llmArea === 'member' ? {
             id: 'llm',
             label: t('nav.llm'),
             base: '/llm',
@@ -87,7 +87,7 @@ export function useNav() {
                 llm.isFleetAdmin && { label: t('nav.llmFleet'), href: '/llm/fleet' },
                 llm.isAdmin && { label: t('nav.llmModels'), href: '/llm/models' },
             ].filter(Boolean),
-        } : cloudProjectsEnabled && offered.includes('llm') && { id: 'llm', label: t('nav.llm'), base: '/llm', items: [{ label: t('nav.projects'), href: '/llm/projects' }] }),
+        } : llmArea === 'offer' && { id: 'llm', label: t('nav.llm'), base: '/llm', items: [{ label: t('nav.projects'), href: '/llm/projects' }] },
         dnsZonesEnabled && {
             id: 'dyndns',
             label: t('nav.dnsZones'),

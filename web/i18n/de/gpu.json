@@ -103,7 +103,13 @@
             "baseProjects_one": "{{count}} Projekt",
             "baseProjects_other": "{{count}} Projekte",
             "baseUntil": "bis {{date}}",
-            "baseOpenEnd": "ohne Ende"
+            "baseOpenEnd": "ohne Ende",
+            "size": "Größe: {{size}} (komprimiert, was ein Knoten herunterlädt)",
+            "scanDone": "Sicherheitsscan: {{critical}} kritisch, {{high}} hoch",
+            "scan_running": "Sicherheitsscan läuft",
+            "scan_failed": "Sicherheitsscan fehlgeschlagen",
+            "scanAt": "vom {{date}}",
+            "scanLink": "Bericht in Harbor"
         },
         "git": {
             "url": "Öffentliches Git-Repository (GitHub, GitLab)",

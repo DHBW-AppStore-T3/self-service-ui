@@ -159,7 +159,7 @@
             "out": "outbound",
             "in": "inbound",
             "nothing": "nothing",
-            "hint": "Both currently IPv6 only — in an IPv4-only network enrolment fails. Requires Apple Silicon with at least 16 GB."
+            "hint": "Both over IPv4 only, the targets have no IPv6 address. Requires Apple Silicon with at least 16 GB."
         },
         "check": {
             "title": "4 · Verify",
@@ -194,7 +194,7 @@
             "title": "Enrol Linux machines without device management",
             "hint": "Run as root on the machine. It generates its own key pair, enrols, and sets up two systemd timers. This does <1>not</1> install an inference service — the site keeps running its own; it only has to listen on the tunnel address.",
             "badContact": "not a valid address",
-            "options": "Optional: <2>--operator \"Labor WI\"</2> (group the machine belongs to, <1>not</1> an address), <2>--port 8000</2> for vLLM instead of Ollama, <2>--gate always</2> for a dedicated machine.",
+            "options": "Optional: <2>--operator \"Labor WI\"</2> (group the machine belongs to, <1>not</1> an address), <2>--gate always</2> for a dedicated machine. For vLLM instead of Ollama, run vLLM on port 11434 as well (<2>vllm serve … --port 11434</2>): through the tunnel the hub only allows this port.",
             "secret": "The command contains the enrolment token of the whole fleet — it does not belong in a ticket or a chat."
         },
         "col": {

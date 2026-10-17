@@ -6,6 +6,7 @@ import { FileText, Plus, RotateCcw, X } from 'lucide-react';
 import { BUILD_COLOUR, BuildLogModal } from '/gpu/build-log.jsx';
 import { GitSource } from '/gpu/git-source.jsx';
 import { ProjectCredentials } from '/gpu/credentials.jsx';
+import { ImageFacts } from '/gpu/image-facts.jsx';
 import { llmEnabled } from '/features.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
@@ -138,6 +139,8 @@ function ProjectImage({ draft, set, bases }) {
     };
     // The saved finished image, as long as the field still shows it: its digest and a newer one of its tag.
     const pinnedImage = source === 'image' && saved?.project_image && saved.project_image === p.project_image && !saved.image_git_url ? saved : null;
+    // What the service found about the saved image (size, warnings, Harbor's scan), as long as the dialog still shows that image or that repository.
+    const facts = pinnedImage ?? (source === 'git' && saved?.project_image && saved.image_git_url && saved.image_git_url === p.image_git_url ? saved : null);
     const showLog = () => setLogOpen(true);
     // The repository of the build is usually the course's material too: the material follows it while it is empty or was the same.
     const fromGit = ({ url, ref }) => draft.update(cur => ({
@@ -183,6 +186,7 @@ function ProjectImage({ draft, set, bases }) {
             {source === 'image' && saved?.project_image && saved.project_image === p.project_image && !saved.image_derived && (
                 <Text size="xs" c="orange">{t('gpu.projects.image.notDerived')}</Text>
             )}
+            <ImageFacts project={facts} />
             {pinnedImage?.image_digest && (
                 <Text size="xs" c="dimmed">{t('gpu.projects.image.pinned')} <Code>{shortDigest(pinnedImage.image_digest)}</Code></Text>
             )}
