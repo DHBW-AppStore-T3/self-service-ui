@@ -37,11 +37,11 @@
     },
     "usage": {
         "title": "Nutzung",
-        "hint": "Was Workspaces reserviert haben, vom {{from}} bis {{to}}: Server-Stunden, vCPU-, RAM- und GPU-Stunden, Home-Größe. Erfasst jede Minute; der heutige Tag ist noch nicht vollständig.",
+        "hint": "Was Workspaces reserviert haben, vom {{from}} bis {{to}}: Workspace-Stunden, vCPU-, RAM- und GPU-Stunden, Home-Größe. Erfasst jede Minute; der heutige Tag ist noch nicht vollständig.",
         "mine": "Eigene",
         "all": "Alle",
         "people": "Personen",
-        "serverHours": "Server-h",
+        "serverHours": "Workspace-h",
         "vcpuHours": "vCPU-h",
         "ramGbHours": "RAM-GB-h",
         "gpuHours": "GPU-h",
@@ -65,8 +65,8 @@
     "projects": {
         "remove": "Entfernen",
         "environments": "Umgebungen",
-        "profiles": "Server-Arten in JupyterHub",
-        "profilesFromTree": "Welche Server-Arten das Projekt hat, legt sein Budget fest (Reiter Kontingente bzw. Workspaces im Budget: „Server type …“); ohne Zuteilung keine.",
+        "profiles": "Workspace-Arten in JupyterHub",
+        "profilesFromTree": "Welche Workspace-Arten das Projekt hat, legt sein Budget fest (Reiter Kontingente bzw. Workspaces im Budget: „Workspace type …“); ohne Zuteilung keine.",
         "image": {
             "buildOnSave": "Der Build startet beim Speichern (meist 5–15 Minuten).",
             "status": {
@@ -79,7 +79,7 @@
             "rebuild": "Neu bauen",
             "current": "Aktuell im Einsatz:",
             "label": "Umgebung",
-            "hint": "Was auf den Servern des Projekts installiert ist, für alle Server-Arten gleich. Die Server-Art wählt nur die Hardware (CPU, CPU mit GPU-Kernel, GPU).",
+            "hint": "Was in den Workspaces des Projekts installiert ist, für alle Workspace-Arten gleich. Die Workspace-Art wählt nur die Hardware (CPU, CPU mit GPU-Kernel, GPU).",
             "sourceBase": "Basis",
             "sourceGit": "Basis + Git",
             "sourceImage": "Vorhandenes Image",
@@ -88,11 +88,11 @@
             "finishedHint": "Ein öffentlich abrufbares Image. Auf einer unserer Basen aufgebaut (FROM registry.gpu.services.dhbw.cloud/platform/base-…) läuft es mit allem; jedes andere läuft so, wie es ist (es braucht jupyterhub-singleuser), ohne „CPU + GPU-Kernel“.",
             "notDerived": "Dieses Image baut auf keiner unserer Basen auf: Es läuft so, wie es ist, ohne „CPU + GPU-Kernel“ und ohne die DHBW-Erweiterungen.",
             "pinned": "Läuft fest auf Version",
-            "updateAvailable": "Der Tag zeigt inzwischen auf eine neuere Version. Laufende und neue Server bleiben bei der bisherigen, bis sie übernommen wird.",
+            "updateAvailable": "Der Tag zeigt inzwischen auf eine neuere Version. Laufende und neue Workspaces bleiben bei der bisherigen, bis sie übernommen wird.",
             "update": "Neuere Version übernehmen",
             "autoUpdate": "Neue Versionen des Tags automatisch übernehmen",
-            "autoUpdateHint": "Sonst wird eine neuere Version nur angezeigt und auf Knopfdruck übernommen. Neue Server starten dann mit ihr, laufende behalten ihre.",
-            "gitHint": "Gebaut wird wie bei Binder aus requirements.txt, environment.yml, apt.txt und postBuild (im Hauptverzeichnis, binder/ oder .binder/) auf der gewählten Basis. Auf die Server kommen die Dateien des Repositorys als „Material aus Git“ (unten). Bei einer neuen Version der Basis wird neu gebaut; bis ein Build fertig ist, bleibt das bisherige Image.",
+            "autoUpdateHint": "Sonst wird eine neuere Version nur angezeigt und auf Knopfdruck übernommen. Neue Workspaces starten dann mit ihr, laufende behalten ihre.",
+            "gitHint": "Gebaut wird wie bei Binder aus requirements.txt, environment.yml, apt.txt und postBuild (im Hauptverzeichnis, binder/ oder .binder/) auf der gewählten Basis. In die Workspaces kommen die Dateien des Repositorys als „Material aus Git“ (unten). Bei einer neuen Version der Basis wird neu gebaut; bis ein Build fertig ist, bleibt das bisherige Image.",
             "state": "Zustand",
             "since": "läuft seit {{time}}",
             "live": "wird alle 3 s aktualisiert",
@@ -119,11 +119,11 @@
         "material": {
             "title": "Material aus Git",
             "ref": "Branch",
-            "hint": "Wird bei jedem Start eines Servers nach ~/projects/<Repository> geholt und aktualisiert, ohne eigene Änderungen zu überschreiben; JupyterLab öffnet diesen Ordner. Unabhängig von der Umgebung, also auch mit einem vorhandenen Image."
+            "hint": "Wird bei jedem Start eines Workspaces nach ~/projects/<Repository> geholt und aktualisiert, ohne eigene Änderungen zu überschreiben; JupyterLab öffnet diesen Ordner. Unabhängig von der Umgebung, also auch mit einem vorhandenen Image."
         },
         "credentials": {
             "title": "Zugänge für private Repositories und Images",
-            "hint": "Mit einem Zugang für einen Host können Material aus Git und ein vorhandenes Image von dort privat sein; die Server des Projekts nutzen ihn beim Start. Das Token wird verschlüsselt gespeichert und nicht wieder angezeigt; ein neues für denselben Host ersetzt es. Builds aus privaten Repositories gibt es noch nicht.",
+            "hint": "Mit einem Zugang für einen Host können Material aus Git und ein vorhandenes Image von dort privat sein; die Workspaces des Projekts nutzen ihn beim Start. Das Token wird verschlüsselt gespeichert und nicht wieder angezeigt; ein neues für denselben Host ersetzt es. Builds aus privaten Repositories gibt es noch nicht.",
             "host": "Host",
             "username": "Benutzername",
             "token": "Token",
@@ -137,7 +137,7 @@
         "cancel": "Abbrechen",
         "save": "Speichern",
         "limit": {
-            "serversShort": "Server",
+            "serversShort": "Workspaces",
             "cpuShort": "Kerne",
             "ramShort": "RAM (GB)",
             "gpusShort": "GPUs",
@@ -145,7 +145,7 @@
         },
         "budgets": "Zusätzliche Verbrauchsgrenzen",
         "addBudget": "Grenze hinzufügen",
-        "budgetsHint": "Engere Grenzen innerhalb der Projektkontingente, zum Beispiel höchstens 40 vCPU-Stunden pro Person in 7 Tagen, damit niemand das Kontingent allein aufbraucht. Fenster in Kalendertagen: „heute“, 7 bzw. 30 Tage einschließlich heute, „gesamt“ seit Anlegen des Projekts. Ist eine Grenze erreicht, startet kein Server mehr, und laufende Server werden innerhalb von 5 Minuten beendet (das Home bleibt).",
+        "budgetsHint": "Engere Grenzen innerhalb der Projektkontingente, zum Beispiel höchstens 40 vCPU-Stunden pro Person in 7 Tagen, damit niemand das Kontingent allein aufbraucht. Fenster in Kalendertagen: „heute“, 7 bzw. 30 Tage einschließlich heute, „gesamt“ seit Anlegen des Projekts. Ist eine Grenze erreicht, startet kein Workspace mehr, und laufende Workspaces werden innerhalb von 5 Minuten beendet (das Home bleibt).",
         "budget": {
             "line": "{{amount}} {{unit}} {{window}} {{who}}",
             "used": "{{used}} von {{amount}}",
@@ -160,7 +160,7 @@
                 "vcpu_hours": "vCPU-Stunden",
                 "ram_gb_hours": "RAM-GB-Stunden",
                 "gpu_hours": "GPU-Stunden",
-                "server_hours": "Server-Stunden"
+                "server_hours": "Workspace-Stunden"
             },
             "windows": {
                 "24h": "heute",
@@ -170,8 +170,8 @@
             },
             "fromTree": "aus dem Projekt"
         },
-        "profilesHint": "Was Mitglieder beim Start eines Servers in JupyterHub wählen können. Die Liste gibt die Plattform vor; GPU-Arten zählen gegen die GPU-Kontingente des Projekts.",
-        "adminOnlyHint": "Server-Arten, Grenzen und Verbrauchsgrenzen legen Admins fest. Die Umgebung (Basis, Projekt-Image, Git) und das Material lassen sich hier ändern."
+        "profilesHint": "Was Mitglieder beim Start eines Workspaces in JupyterHub wählen können. Die Liste gibt die Plattform vor; GPU-Arten zählen gegen die GPU-Kontingente des Projekts.",
+        "adminOnlyHint": "Workspace-Arten, Grenzen und Verbrauchsgrenzen legen Admins fest. Die Umgebung (Basis, Projekt-Image, Git) und das Material lassen sich hier ändern."
     },
     "storage": {
         "title": "Speicher (Admins)",
@@ -223,7 +223,7 @@
     },
     "fleet": {
         "title": "GPUs",
-        "intro": "Jeder GPU-Knoten gehört zu einem Pool (für wen die GPUs sind) und einer Stufe (wie groß sie sind). Pool und Stufe ergeben eine GPU-Klasse: Sie wird im Budgetbaum vergeben und beim Start eines Servers gewählt. Weitere GPUs einer vorhandenen Klasse brauchen im Baum nichts; ein Knoten ohne Pool nimmt keine Workspaces an.",
+        "intro": "Jeder GPU-Knoten gehört zu einem Pool (für wen die GPUs sind) und einer Stufe (wie groß sie sind). Pool und Stufe ergeben eine GPU-Klasse: Sie wird im Budgetbaum vergeben und beim Start eines Workspaces gewählt. Weitere GPUs einer vorhandenen Klasse brauchen im Baum nichts; ein Knoten ohne Pool nimmt keine Workspaces an.",
         "classes": "Klassen",
         "classesHint": "Jede Klasse hat eine eigene Warteschlange und zwei Ressourcen im Budgetbaum. Eine Klasse ohne Knoten bleibt erhalten, ihre Starts warten.",
         "class": "Klasse",

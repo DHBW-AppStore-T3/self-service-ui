@@ -37,11 +37,11 @@
     },
     "usage": {
         "title": "Usage",
-        "hint": "What workspaces reserved from {{from}} to {{to}}: server hours, vCPU, RAM and GPU hours, home size. Collected every minute; today is not complete yet.",
+        "hint": "What workspaces reserved from {{from}} to {{to}}: workspace hours, vCPU, RAM and GPU hours, home size. Collected every minute; today is not complete yet.",
         "mine": "Own",
         "all": "All",
         "people": "People",
-        "serverHours": "Server h",
+        "serverHours": "Workspace h",
         "vcpuHours": "vCPU h",
         "ramGbHours": "RAM GB h",
         "gpuHours": "GPU h",
@@ -65,8 +65,8 @@
     "projects": {
         "remove": "Remove",
         "environments": "Environments",
-        "profiles": "Server types in JupyterHub",
-        "profilesFromTree": "The project's budget decides its server types (quotas, Workspaces: “Server type …”); none without a grant.",
+        "profiles": "Workspace types in JupyterHub",
+        "profilesFromTree": "The project's budget decides its workspace types (quotas, Workspaces: “Workspace type …”); none without a grant.",
         "image": {
             "buildOnSave": "The build starts on saving (usually 5–15 minutes).",
             "status": {
@@ -79,7 +79,7 @@
             "rebuild": "Rebuild",
             "current": "In use now:",
             "label": "Environment",
-            "hint": "What is installed on the project’s servers, the same for every server type. The server type only chooses the hardware (CPU, CPU with GPU kernel, GPU).",
+            "hint": "What is installed in the project’s workspaces, the same for every workspace type. The workspace type only chooses the hardware (CPU, CPU with GPU kernel, GPU).",
             "sourceBase": "Base",
             "sourceGit": "Base + Git",
             "sourceImage": "Existing image",
@@ -88,11 +88,11 @@
             "finishedHint": "A publicly pullable image. Built on one of our bases (FROM registry.gpu.services.dhbw.cloud/platform/base-…) it runs with everything; any other runs as it is (it needs jupyterhub-singleuser), without “CPU + GPU kernel”.",
             "notDerived": "This image is not built on one of our bases: it runs as it is, without “CPU + GPU kernel” and without the DHBW extensions.",
             "pinned": "Runs pinned at version",
-            "updateAvailable": "The tag now points at a newer version. Running and new servers stay on the current one until it is taken.",
+            "updateAvailable": "The tag now points at a newer version. Running and new workspaces stay on the current one until it is taken.",
             "update": "Take the newer version",
             "autoUpdate": "Take new versions of the tag automatically",
-            "autoUpdateHint": "Otherwise a newer version is only shown and taken at the press of a button. New servers then start with it, running ones keep theirs.",
-            "gitHint": "Built like Binder from requirements.txt, environment.yml, apt.txt and postBuild (top level, binder/ or .binder/) on the chosen base. The repository’s files reach the servers as “Material from Git” (below). A new version of the base triggers a rebuild; until a build is ready, the previous image stays.",
+            "autoUpdateHint": "Otherwise a newer version is only shown and taken at the press of a button. New workspaces then start with it, running ones keep theirs.",
+            "gitHint": "Built like Binder from requirements.txt, environment.yml, apt.txt and postBuild (top level, binder/ or .binder/) on the chosen base. The repository’s files reach the workspaces as “Material from Git” (below). A new version of the base triggers a rebuild; until a build is ready, the previous image stays.",
             "state": "State",
             "since": "running since {{time}}",
             "live": "updates every 3 s",
@@ -119,11 +119,11 @@
         "material": {
             "title": "Material from Git",
             "ref": "Branch",
-            "hint": "Fetched into ~/projects/<repository> and updated at every server start, without overwriting one’s own changes; JupyterLab opens that folder. Independent of the environment, so with an existing image too."
+            "hint": "Fetched into ~/projects/<repository> and updated at every workspace start, without overwriting one’s own changes; JupyterLab opens that folder. Independent of the environment, so with an existing image too."
         },
         "credentials": {
             "title": "Access to private repositories and images",
-            "hint": "With access to a host, the material from Git and an existing image can be private there; the project's servers use it when they start. The token is stored encrypted and not shown again; a new one for the same host replaces it. Builds from private repositories are not offered yet.",
+            "hint": "With access to a host, the material from Git and an existing image can be private there; the project's workspaces use it when they start. The token is stored encrypted and not shown again; a new one for the same host replaces it. Builds from private repositories are not offered yet.",
             "host": "Host",
             "username": "User name",
             "token": "Token",
@@ -137,7 +137,7 @@
         "cancel": "Cancel",
         "save": "Save",
         "limit": {
-            "serversShort": "Servers",
+            "serversShort": "Workspaces",
             "cpuShort": "Cores",
             "ramShort": "RAM (GB)",
             "gpusShort": "GPUs",
@@ -145,7 +145,7 @@
         },
         "budgets": "Additional usage limits",
         "addBudget": "Add a limit",
-        "budgetsHint": "Tighter limits within the project quotas, e.g. at most 40 vCPU hours per person in 7 days, so nobody uses up the quota alone. Windows in calendar days: “today”, 7 or 30 days including today, “total” since the project was created. Once a limit is reached, no server starts and running servers end within 5 minutes (the home stays).",
+        "budgetsHint": "Tighter limits within the project quotas, e.g. at most 40 vCPU hours per person in 7 days, so nobody uses up the quota alone. Windows in calendar days: “today”, 7 or 30 days including today, “total” since the project was created. Once a limit is reached, no workspace starts and running workspaces end within 5 minutes (the home stays).",
         "budget": {
             "line": "{{amount}} {{unit}} {{window}} {{who}}",
             "used": "{{used}} of {{amount}}",
@@ -160,7 +160,7 @@
                 "vcpu_hours": "vCPU hours",
                 "ram_gb_hours": "RAM GB hours",
                 "gpu_hours": "GPU hours",
-                "server_hours": "server hours"
+                "server_hours": "workspace hours"
             },
             "windows": {
                 "24h": "today",
@@ -170,8 +170,8 @@
             },
             "fromTree": "from the project"
         },
-        "profilesHint": "What members can choose when starting a server in JupyterHub. The platform sets the list; GPU types count against the project's GPU quotas.",
-        "adminOnlyHint": "Server types, limits and usage limits are set by admins. The environment (base, project image, Git) and the material can be changed here."
+        "profilesHint": "What members can choose when starting a workspace in JupyterHub. The platform sets the list; GPU types count against the project's GPU quotas.",
+        "adminOnlyHint": "Workspace types, limits and usage limits are set by admins. The environment (base, project image, Git) and the material can be changed here."
     },
     "storage": {
         "title": "Storage (admins)",
@@ -223,7 +223,7 @@
     },
     "fleet": {
         "title": "GPUs",
-        "intro": "Every GPU node belongs to a pool (who the GPUs are for) and a tier (how large they are). Pool and tier make a GPU class: the budget tree grants it, and a server's start chooses it. More GPUs of an existing class need nothing in the tree; a node without pool takes no workspaces.",
+        "intro": "Every GPU node belongs to a pool (who the GPUs are for) and a tier (how large they are). Pool and tier make a GPU class: the budget tree grants it, and a workspace's start chooses it. More GPUs of an existing class need nothing in the tree; a node without pool takes no workspaces.",
         "classes": "Classes",
         "classesHint": "Each class has its own queue and two resources in the budget tree. A class without nodes stays; its starts wait.",
         "class": "Class",
