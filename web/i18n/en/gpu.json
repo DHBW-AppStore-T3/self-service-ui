@@ -140,7 +140,8 @@
             "serversShort": "Servers",
             "cpuShort": "Cores",
             "ramShort": "RAM (GB)",
-            "gpusShort": "GPUs"
+            "gpusShort": "GPUs",
+            "noGpus": "The project has no GPUs; GPUs are requested in the budget."
         },
         "budgets": "Additional usage limits",
         "addBudget": "Add a limit",

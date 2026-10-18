@@ -262,6 +262,9 @@ export function WorkspaceSettingsPanel({ draft }) {
     // The project's own quotas show their use under their fields already; here only the shares this part sets.
     const status = (draft.project?.budget_status ?? []).filter(b => !b.tree);
     const setBudget = (i, patch) => set('budgets', budgets.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+    // As the service does: a person cannot hold more GPUs than the project has (0 without a GPU class, no cap when a class has none of its own).
+    const gpuCap = projectGpuCap(p);
+
     return (
         <Stack gap="md">
             {locked && <Text size="xs" c="dimmed">{t('gpu.projects.adminOnlyHint')}</Text>}
@@ -287,7 +290,9 @@ export function WorkspaceSettingsPanel({ draft }) {
                     <NumberInput label={t('gpu.projects.limit.serversShort')} min={0} value={p.limits.servers_per_person} onChange={v => setLimit('servers_per_person', v)} readOnly={locked} />
                     <NumberInput label={t('gpu.projects.limit.cpuShort')} min={0} decimalScale={1} value={p.limits.cpu_per_person} onChange={v => setLimit('cpu_per_person', v)} readOnly={locked} />
                     <NumberInput label={t('gpu.projects.limit.ramShort')} min={0} value={p.limits.ram_gb_per_person} onChange={v => setLimit('ram_gb_per_person', v)} readOnly={locked} />
-                    <NumberInput label={t('gpu.projects.limit.gpusShort')} min={0} value={p.limits.gpus_per_person} onChange={v => setLimit('gpus_per_person', v)} readOnly={locked} />
+                    <NumberInput label={t('gpu.projects.limit.gpusShort')} min={0} max={gpuCap >= 0 ? gpuCap : undefined} clampBehavior="strict"
+                        value={gpuCap === 0 ? 0 : p.limits.gpus_per_person} onChange={v => setLimit('gpus_per_person', v)} readOnly={locked}
+                        disabled={gpuCap === 0} description={gpuCap === 0 ? t('gpu.projects.limit.noGpus') : undefined} />
                 </SimpleGrid>
             </Box>
 
@@ -320,4 +325,16 @@ export function WorkspaceSettingsPanel({ draft }) {
             </Box>
         </Stack>
     );
+}
+
+// projectGpuCap mirrors ProjectGPUCap in the AI service: the sum of the project's GPUs over its classes, 0 without a class, -1 when a class has no cap.
+function projectGpuCap(p) {
+    const classes = p.gpu_classes ?? [];
+    let total = 0;
+    for (const c of classes) {
+        const n = p.gpus_by_class?.[c] ?? 0;
+        if (n === 0) return -1;
+        total += n;
+    }
+    return total;
 }
