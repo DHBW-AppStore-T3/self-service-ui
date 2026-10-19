@@ -887,5 +887,27 @@
         "quotaHintNew": "Was das Projekt aus dem gewählten Budget erhält. Je nach Budget wird es sofort gewährt oder beantragt und genehmigt.",
         "workspaces": "Workspace-Einstellungen",
         "workspacesHint": "Wie die Kontingente innerhalb des Projekts genutzt werden: Profile, Images, Grenzen und Anteile pro Person. Gilt sofort, ohne Genehmigung."
+    },
+    "releaseMax": {
+        "title": "Rückgabezeiten (Höchstwerte)",
+        "hint": "Bis zu diesen Werten wählen die Projekte unter diesem Budget, wann ihre Workspaces zurückgegeben werden; gezählt wird Leerlauf, nicht Laufzeit. Leere Felder übernehmen den Wert der Budgets darüber, ohne Wert dort gilt der Standard des KI-Dienstes. Budgets darunter können die Werte nur verkürzen.",
+        "kinds": {
+            "cpu": "CPU – CPU-Workspaces und das Notebook bei „CPU + GPU-Kernel“",
+            "gpu": "GPU – GPU-Workspaces und GPU-Kernel"
+        },
+        "idleOpen": "Leerlauf mit offenem Tab (Min.)",
+        "idleClosed": "Leerlauf ohne Tab (Min.)",
+        "maxHours": "Obergrenze (Std.)",
+        "unlimited": "ohne Obergrenze",
+        "standard": "Standard",
+        "fromAbove": "wie darüber: {{value}}",
+        "errMinutes": "Zwischen 1 und {{max}} Minuten.",
+        "errHours": "Zwischen 1 und {{max}} Stunden.",
+        "errAbove": "Höchstens {{value}}, mehr erlaubt das Budget darüber nicht.",
+        "errUnlimited": "Ohne Obergrenze nur bei GPU und nur, wenn das Budget darüber keine hat.",
+        "none": "keine eigenen",
+        "hoursValue": "{{value}} Std.",
+        "summaryKind": "{{kind}} {{open}}/{{closed}} Min., {{hours}}",
+        "historyChange": "Rückgabezeiten (Höchstwerte): {{from}} → {{to}}"
     }
 }

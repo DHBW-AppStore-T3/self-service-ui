@@ -16,6 +16,8 @@ import { ReasonField, reasonError } from './component-reason-field.jsx';
 import { useNodeMutation } from './use-node-mutation.jsx';
 import { AttributesEditor, useAttributesTab } from './component-node-attributes.jsx';
 import { nodeExtraTabs } from './modal-inspect.jsx';
+import { ReleaseMaxInputs } from './component-release-max.jsx';
+import { effectiveRelease, isEmptyRelease, normalizeRelease, releaseErrors, sameRelease } from './util-release-max.js';
 
 // Same three-step split as the project dialog: what it is → how much → who.
 const TAB_DETAILS = 'details';
@@ -74,6 +76,15 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     };
     // Its maximum project term likewise: this one may only be shorter.
     const termOf = (parentId) => boundFor(parentId)?.max_project_term_days ?? null;
+    // The release maximums the budgets above allow: the server sends them with the node being edited; for a new one they are what applies at the budget it draws from. A budget may only tighten them.
+    const releaseAbove = (parentId) => isEdit ? (node?.inherited_release_max ?? null) : effectiveRelease(boundFor(parentId));
+    // Which resources tab holds the release maximums: the workspaces one, or the only one when the catalogue does not split by kind; undefined where the budget offers nothing of the workspaces (then they would decide nothing).
+    const releaseTabKind = (parentId) => {
+        const scoped = visibleResources(resources, scopeFor(parentId));
+        if (!scoped.some(r => kindOfResource(r) === 'workspaces')) return undefined;
+        if (catalogKinds(resources).length < 2) return null;
+        return PROJECT_KINDS.filter(k => scoped.some(r => kindOfResource(r) === k)).length > 1 ? 'workspaces' : null;
+    };
 
     const [activeTab, setActiveTab] = useState(TAB_DETAILS);
     // Only when editing: a budget being created or requested has none yet.
@@ -100,6 +111,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 terminationDate: node.termination_date ? new Date(node.termination_date) : null,
                 maxTermDays: node.max_project_term_days ?? null,
                 inheritsLimit: !!node.inherits_limit,
+                releaseMax: normalizeRelease(node.release_max),
             }
             : {
                 parentId: parent?.id ?? eligibleBudgets[0]?.id ?? null,
@@ -132,6 +144,8 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 // Under a budget that limits its projects, so does this one.
                 maxTermDays: termOf(parent?.id ?? eligibleBudgets[0]?.id ?? null),
                 inheritsLimit: false,
+                // Nothing of its own: the budgets above decide until somebody tightens them here.
+                releaseMax: normalizeRelease(null),
             },
         validate: (values) => ({
             name: (values.name || '').trim().length < 3
@@ -157,6 +171,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                     Object.entries(validateQuota(t, visibleResources(resources, scopeFor(values.parentId)), values.autoApproveQuota, { emptyIsZero: true }))
                         .map(([id, msg]) => [`autoApproveQuota.${id}`, msg]))
                 : {}),
+            ...(releaseTabKind(values.parentId) === undefined ? {} : releaseErrors(t, values.releaseMax, releaseAbove(values.parentId))),
         }),
     });
 
@@ -172,6 +187,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     const resourceTabValue = (kind) => (kind ? `${TAB_RESOURCES}-${kind}` : TAB_RESOURCES);
     const ofKind = (kind) => (kind ? offered.filter(r => kindOfResource(r) === kind) : offered);
     const resourceById = Object.fromEntries((resources || []).map(r => [r.id, r]));
+    const releaseKind = releaseTabKind(form.values.parentId);
 
     // The budget the new one would draw from: the picked one when requesting,
     // the parent when a manager carves out a sub-budget directly. Editing shows
@@ -208,7 +224,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     const fieldsByTab = {
         [TAB_DETAILS]: (k) => ['name', 'reason', 'parentId', 'terminationDate', 'maxTermDays'].includes(k),
         ...Object.fromEntries(resourceKinds.map(kind => [resourceTabValue(kind),
-            (k) => k.startsWith('quota.') && (!kind || kindOfResource(resourceById[k.slice(6)]) === kind)])),
+            (k) => (k.startsWith('quota.') && (!kind || kindOfResource(resourceById[k.slice(6)]) === kind)) || (k.startsWith('releaseMax.') && kind === releaseKind)])),
         [TAB_ACCESS]: (k) => k === 'adminScope' || k === 'eligibleRequesters',
         [TAB_AUTO_APPROVE]: (k) => k.startsWith('autoApproveQuota.'),
     };
@@ -240,6 +256,8 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         if (values.autoApproveExtensions !== (node.auto_approve_extensions !== false)) {
             body.auto_approve_extensions = values.autoApproveExtensions;
         }
+        // Sent whole when changed; an empty object removes the budget's own.
+        if (!sameRelease(values.releaseMax, node.release_max)) body.release_max = normalizeRelease(values.releaseMax);
         if (values.maxTermDays !== (node.max_project_term_days ?? null)) {
             if (values.maxTermDays) body.max_project_term_days = values.maxTermDays;
             else body.clear_max_project_term_days = true;
@@ -293,6 +311,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 auto_approve_extensions: values.autoApproveExtensions,
                 auto_approve: autoApprovePolicy(values),
                 max_project_term_days: values.maxTermDays,
+                ...(isEmptyRelease(values.releaseMax) ? {} : { release_max: normalizeRelease(values.releaseMax) }),
                 termination_date: values.terminationDate ? values.terminationDate.toISOString() : null,
             });
         },
@@ -424,6 +443,19 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                         onChange={(id, v) => { form.setFieldValue(`quota.${id}`, v); form.clearFieldError(`quota.${id}`); }}
                     />
                 </div>
+            )}
+            {/* Not a quantity, so not part of the limit: shown also while the limit is inherited. */}
+            {releaseKind !== undefined && kind === releaseKind && (
+                <ReleaseMaxInputs
+                    value={form.values.releaseMax}
+                    inherited={releaseAbove(form.values.parentId)}
+                    errors={form.errors}
+                    onChange={(k, field, v) => {
+                        const path = `releaseMax.${k}.${field}`;
+                        form.setFieldValue(path, v);
+                        form.clearFieldError(path);
+                    }}
+                />
             )}
         </Stack>
     );

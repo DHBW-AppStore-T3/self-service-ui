@@ -142,6 +142,31 @@ describe('node dialogs', () => {
         expect(fatal()).toEqual([]);
     });
 
+    it('the budget dialog of the root offers its release maximums with the AI service default as placeholder', async () => {
+        const tree = fixtureTree();
+        const ws = [...RESOURCES, { id: 'ws-vcpu-hours', name: 'vCPU-Stunden', provider: 'aiaas', area: 'workspaces', kind: 'window', window: '30d' }];
+        const root = { ...tree.roots[0], parent_id: null, release_max: { cpu: {}, gpu: { max_hours: 4 } } };
+        renderView(<BudgetFormModal opened onClose={() => {}} resources={ws} mode="edit" node={root} />);
+        fireEvent.click(await screen.findByRole('tab', { name: /Workspaces|Lab/ }));
+        expect(await screen.findByText(/Release times \(maximums\)|Rückgabezeiten \(Höchstwerte\)/)).toBeTruthy();
+        expect(screen.getAllByPlaceholderText(/default|Standard/).length).toBeGreaterThan(0);
+        expect(screen.getByDisplayValue('4')).toBeTruthy();
+        expect(fatal()).toEqual([]);
+    });
+
+    it('a sub-budget shows what the budgets above allow and refuses more', async () => {
+        const tree = fixtureTree();
+        const ws = [...RESOURCES, { id: 'ws-vcpu-hours', name: 'vCPU-Stunden', provider: 'aiaas', area: 'workspaces', kind: 'window', window: '30d' }];
+        const ma = { ...tree.children.b_root.items[0], parent_name: 'Organization Root', parent_path: [], inherited_release_max: { cpu: { idle_open_minutes: 120 }, gpu: { max_hours: 4 } } };
+        renderView(<BudgetFormModal opened onClose={() => {}} resources={ws} mode="edit" node={ma} parent={{ ...tree.roots[0], limit: { ...tree.roots[0].limit, 'ws-vcpu-hours': -1 } }} />);
+        fireEvent.click(await screen.findByRole('tab', { name: /Workspaces|Lab/ }));
+        expect(await screen.findAllByPlaceholderText(/as above: 120|wie darüber: 120/)).toHaveLength(1);
+        expect(screen.getAllByPlaceholderText(/as above: 4|wie darüber: 4/)).toHaveLength(1);
+        // No upper bound only where nothing above has one.
+        expect(screen.queryAllByLabelText(/no upper bound|ohne Obergrenze/)).toHaveLength(0);
+        expect(fatal()).toEqual([]);
+    });
+
     it('the read-only dialog shows the same tabs', async () => {
         renderView(<NodeInspectModal opened onClose={() => {}} resources={RESOURCES} node={project({ status: 'archived' })} />);
         expect(await screen.findAllByRole('tab')).not.toHaveLength(0);

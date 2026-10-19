@@ -887,5 +887,27 @@
         "quotaHintNew": "What the project gets from the chosen budget. Depending on the budget it is granted at once or requested and approved.",
         "workspaces": "Workspace settings",
         "workspacesHint": "How the quotas are used inside the project: profiles, images, limits and shares per person. Applies at once, without approval."
+    },
+    "releaseMax": {
+        "title": "Release times (maximums)",
+        "hint": "Projects below this budget choose up to these values when their workspaces are released; idle time counts, not runtime. Empty fields take the value of the budgets above, without one there the AI service's default applies. Budgets below can only shorten them.",
+        "kinds": {
+            "cpu": "CPU – CPU workspaces and the notebook of “CPU + GPU kernel”",
+            "gpu": "GPU – GPU workspaces and GPU kernels"
+        },
+        "idleOpen": "Idle with open tab (min)",
+        "idleClosed": "Idle without tab (min)",
+        "maxHours": "Upper bound (h)",
+        "unlimited": "no upper bound",
+        "standard": "default",
+        "fromAbove": "as above: {{value}}",
+        "errMinutes": "Between 1 and {{max}} minutes.",
+        "errHours": "Between 1 and {{max}} hours.",
+        "errAbove": "At most {{value}}; the budget above allows no more.",
+        "errUnlimited": "No upper bound only for GPU, and only where the budget above has none.",
+        "none": "none of its own",
+        "hoursValue": "{{value}} h",
+        "summaryKind": "{{kind}} {{open}}/{{closed}} min, {{hours}}",
+        "historyChange": "Release times (maximums): {{from}} → {{to}}"
     }
 }

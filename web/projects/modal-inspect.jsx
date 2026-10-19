@@ -12,6 +12,7 @@ import { formatDateTime } from '../format-date.js';
 import { UsagePanel } from './component-usage.jsx';
 import { AttributesView, hasAttributes } from './component-node-attributes.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
+import { releaseSummary } from './util-release-max.js';
 
 dayjs.extend(relativeTime);
 
@@ -280,6 +281,12 @@ function NodeHistoryPanel({ node, resources }) {
                             dateTo={h.termination_date_to}
                             label={t('projects.inspect.changes')}
                         />
+
+                        {(h.release_max_from || h.release_max_to) && (
+                            <Text size="sm" mt="xs">
+                                {t('projects.releaseMax.historyChange', { from: releaseSummary(t, h.release_max_from), to: releaseSummary(t, h.release_max_to) })}
+                            </Text>
+                        )}
 
                         {h.limit_to && !h.limit_from && (
                             <div style={{ marginTop: 8 }}>
