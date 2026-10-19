@@ -551,18 +551,35 @@ export function changeOutcome({ node, budget, quota, terminationDate, resources,
     return 'instant';
 }
 
-// resourceBarSegments turns absolute amounts into the widths of the three
-// stacked segments of a usage bar. Split out of ResourceBar so the arithmetic
+// resourceBarSegments turns absolute amounts into the widths of the stacked
+// segments of a usage bar. Split out of ResourceBar so the arithmetic
 // can be checked without rendering anything: the clamping is the whole point.
 // Each segment is capped by what the ones before it left over, so the segments
 // never sum past 100 — otherwise an over-committed budget draws a bar that
 // runs out of its own track.
-export function resourceBarSegments(limit, { approved = 0, changePending = 0, incoming = 0 } = {}) {
+//
+// used is what the projects below actually consume, drawn inside the allocated part (used ⊂ allocated ⊂ budget); usedPct is its width and approvedPct the whole allocated part, used included. A project may use more than the budget in between handed out (the rest came from further up), so the allocated part is never drawn narrower than the used one.
+export function resourceBarSegments(limit, { approved = 0, changePending = 0, incoming = 0, used = 0 } = {}) {
     const pct = (v) => (limit > 0 ? Math.round((v / limit) * 100) : 0);
-    const approvedPct = Math.min(100, pct(approved));
+    const usedPct = Math.min(100, pct(used));
+    const approvedPct = Math.max(usedPct, Math.min(100, pct(approved)));
     const pendingPct = Math.min(100 - approvedPct, pct(changePending));
     const incomingPct = Math.min(100 - approvedPct - pendingPct, pct(incoming));
-    return { approvedPct, pendingPct, incomingPct, totalPct: approvedPct + pendingPct + incomingPct };
+    return { usedPct, approvedPct, pendingPct, incomingPct, totalPct: approvedPct + pendingPct + incomingPct };
+}
+
+// usageState is what a budget's bar says about one resource. Handed out and used are two different things: a budget whose projects hold all of it but use none is full, not short — only consumption at the limit is a shortage.
+//   'open'       room left (or no limit at all)
+//   'full'       everything handed out (taken = allocated + requested + about to be granted), whether used or not
+//   'over'       more handed out than the budget holds
+//   'exhausted'  the projects below use all of it
+// used is undefined where nothing measures the resource.
+export function usageState(limit, { taken = 0, used } = {}) {
+    if (limit === UNLIMITED_QUOTA) return 'open';
+    if (used !== undefined && used > 0 && used >= limit) return 'exhausted';
+    if (taken > limit) return 'over';
+    if (limit > 0 && taken >= limit) return 'full';
+    return 'open';
 }
 
 // limitDelta is one row of the before/after table: what a resource is now, what

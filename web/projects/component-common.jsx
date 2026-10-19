@@ -6,7 +6,7 @@ import { ActionIcon, Anchor, Badge, Box, Button, Checkbox, Group, NumberInput, P
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { COLOR, UNLIMITED_QUOTA, formatRoleLabel, isAvailability, limitDelta, nodeChanges, resourceBarSegments, statusDescription, statusLabel, statusStyle, resourceLabel } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, formatRoleLabel, isAvailability, limitDelta, nodeChanges, resourceBarSegments, usageState, statusDescription, statusLabel, statusStyle, resourceLabel } from './util-project.jsx';
 import { tokenDisplay, tokenEmail, useTokenLabels } from './token-labels.jsx';
 import { formatDate } from '../format-date.js';
 
@@ -215,22 +215,28 @@ export function UserRoleBadgeList({ users, label, labelColor, size = 'sm', kinds
     );
 }
 
-// usageText writes a bar's figures: what is committed, what is waiting on a
-// decision, and what a grant being looked at would add — "4 (+8 pending) / 20".
-// One string per case rather than three fragments glued together, because the
-// parenthesis and the order of the parts differ between languages.
-function usageText(t, approved, changePending, incoming, limit, retired = 0) {
+// usageText writes a bar's figures: what is handed out, what is waiting on a
+// decision, what a grant being looked at would add, and what of it the projects
+// below actually use — "4 (+8 pending) / 20 allocated · 1 used". One string per
+// case rather than fragments glued together, because the parenthesis and the
+// order of the parts differ between languages. used is undefined where nothing
+// measures the resource, and then the text says nothing about use.
+function usageText(t, approved, changePending, incoming, limit, retired = 0, used = undefined) {
     const parts = [
         retired > 0 ? t('projects.usage.retired', { count: retired }) : null,
         changePending > 0 ? t('projects.usage.pending', { count: changePending }) : null,
         incoming > 0 ? t('projects.usage.incoming', { count: incoming }) : null,
     ].filter(Boolean);
-    return parts.length > 0
+    const allocated = parts.length > 0
         ? t('projects.usage.ofLimitWith', { used: approved, extra: parts.join(', '), limit })
         : t('projects.usage.ofLimit', { used: approved, limit });
+    return used === undefined ? allocated : t('projects.usage.withInUse', { allocated, inUse: used });
 }
 
 // ── Usage bars ──────────────────────────────────────────────────────────────
+
+// The hue of a bar per usageState. Only consumption at the limit (and handing out more than there is) is red: a budget that is fully handed out but idle is no shortage, it only means a manager has nothing left to give.
+const STATE_COLOR = { open: COLOR.info, full: COLOR.attention, over: COLOR.negative, exhausted: COLOR.negative };
 
 // ResourceBar renders one resource row with a usage progress bar.
 // approved and changePending are plain numbers (already extracted by the caller).
@@ -239,48 +245,57 @@ function usageText(t, approved, changePending, incoming, limit, retired = 0) {
 // otherwise a full bar over a list of given-up projects makes no sense.
 // limit may be UNLIMITED_QUOTA (-1) to indicate no cap.
 // incoming (optional) adds a highlighted segment previewing a pending grant's impact.
-export function ResourceBar({ resource, limit, approved = 0, changePending = 0, incoming = 0, retired = 0 }) {
+// used (optional) is what the projects below consume, drawn as the solid part of the allocated segment; undefined where nothing measures it.
+export function ResourceBar({ resource, limit, approved = 0, changePending = 0, incoming = 0, retired = 0, used = undefined }) {
     const { t } = useTranslation();
     const label = resourceLabel(t, resource);
     const unlimited = limit === UNLIMITED_QUOTA;
+    const figures = usageText(t, approved, changePending, incoming, unlimited ? '∞' : limit, retired, used);
 
     if (unlimited) {
         return (
             <Group justify="space-between">
                 <Text size="xs">{label}</Text>
-                <Text size="xs" c="dimmed">
-                    {usageText(t, approved, changePending, incoming, '∞', retired)}
-                </Text>
+                <Text size="xs" c="dimmed">{figures}</Text>
             </Group>
         );
     }
 
-    const { approvedPct, pendingPct, incomingPct, totalPct } =
-        resourceBarSegments(limit, { approved, changePending, incoming });
-    // Two steps, not a traffic light: the bar is neutral until the budget is
-    // nearly full, and only then does it become a warning. A middle colour would
-    // add a hue that means nothing anywhere else in the UI.
-    const color = totalPct >= 90 ? COLOR.negative : COLOR.info;
+    const { usedPct, approvedPct, pendingPct, incomingPct } =
+        resourceBarSegments(limit, { approved, changePending, incoming, used: used ?? 0 });
+    const state = usageState(limit, { taken: approved + changePending + incoming, used });
+    const color = STATE_COLOR[state];
+    // Without a measurement the allocated part is one solid block, as it always was; with one, the used part is solid and the rest of what is handed out a lighter shade of the same hue.
+    const measured = used !== undefined;
+    const hint = state === 'open' ? null : t(`projects.usage.state.${state}`);
 
     return (
         <Stack gap="2">
-            <Group justify="space-between">
+            <Group justify="space-between" wrap="nowrap" gap="xs">
                 <Text size="xs">{label}</Text>
-                <Text size="xs" c="dimmed">
-                    {usageText(t, approved, changePending, incoming, limit, retired)}
-                </Text>
+                <Text size="xs" c="dimmed" ta="right">{figures}</Text>
             </Group>
-            <Progress.Root size="sm">
-                <Progress.Section value={approvedPct} color={color} />
-                {changePending > 0 && <Progress.Section value={pendingPct} color={COLOR.attention} striped animated />}
-                {incoming > 0 && <Progress.Section value={incomingPct} color={COLOR.positive} striped animated />}
-            </Progress.Root>
+            <Tooltip label={hint} disabled={!hint} withArrow>
+                <Progress.Root size="sm" aria-label={hint ?? undefined} data-state={state}>
+                    {measured
+                        ? <>
+                            {usedPct > 0 && <Progress.Section value={usedPct} color={color} />}
+                            {approvedPct - usedPct > 0 && <Progress.Section value={approvedPct - usedPct} color={`${color}.3`} />}
+                        </>
+                        : <Progress.Section value={approvedPct} color={color} />}
+                    {changePending > 0 && <Progress.Section value={pendingPct} color={COLOR.attention} striped animated />}
+                    {incoming > 0 && <Progress.Section value={incomingPct} color={COLOR.positive} striped animated />}
+                </Progress.Root>
+            </Tooltip>
+            {hint && <Text size="xs" c={state === 'full' ? 'dimmed' : `${color}.7`}>{hint}</Text>}
         </Stack>
     );
 }
 
 // NodeUsageBars renders the full set of resource bars for a budget node, taken
-// from the node's server-computed usage rollup (usage[status].limit per status).
+// from the node's server-computed usage rollup (usage[status].limit per status):
+// how much of the budget is handed out to the projects and sub-budgets below,
+// and — from subtree_in_use — how much of that they actually use.
 // incomingQuota (optional) previews the impact of granting an additional request.
 //
 // Availabilities do not get a bar. A progress track needs a quantity to be a
@@ -291,9 +306,10 @@ export function ResourceBar({ resource, limit, approved = 0, changePending = 0, 
 export function NodeUsageBars({ resources, node, incomingQuota = null }) {
     if (!resources || !node) return null;
     const usage = node.usage ?? {};
+    const inUse = node.subtree_in_use ?? {};
     // Only what is granted (or unlimited), used or asked for: a catalogue with a pair of resources per GPU class would otherwise list every 0 / 0.
     const shown = (r) => (node.limit?.[r.id] ?? 0) !== 0 || (usage.approved?.limit?.[r.id] ?? 0) > 0 || (usage.change_pending?.limit?.[r.id] ?? 0) > 0
-        || (usage.released?.limit?.[r.id] ?? 0) > 0 || (usage.archived?.limit?.[r.id] ?? 0) > 0 || (incomingQuota?.[r.id] ?? 0) > 0;
+        || (usage.released?.limit?.[r.id] ?? 0) > 0 || (usage.archived?.limit?.[r.id] ?? 0) > 0 || (incomingQuota?.[r.id] ?? 0) > 0 || (inUse[r.id] ?? 0) > 0;
     const quantities = resources.filter(r => !isAvailability(r) && shown(r));
     const granted = resources.filter(r => isAvailability(r) && node.limit?.[r.id] === 1);
 
@@ -312,6 +328,7 @@ export function NodeUsageBars({ resources, node, incomingQuota = null }) {
                         retired={retired}
                         changePending={usage.change_pending?.limit?.[r.id] ?? 0}
                         incoming={incomingQuota?.[r.id] ?? 0}
+                        used={inUse[r.id]}
                     />
                 );
             })}

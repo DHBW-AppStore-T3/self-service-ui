@@ -47,7 +47,7 @@
     },
     "budgetCard": {
         "autoApproveBadge": "Auto-approve",
-        "resourceUsage": "Resource usage",
+        "resourceUsage": "Allocated",
         "managedByHint": "They approve requests and can pass parts of this budget on.",
         "inheritsLimit": "Limit",
         "inheritsLimitFrom": "taken from “{{name}}”",
@@ -496,9 +496,15 @@
     "usage": {
         "pending": "+{{count}} pending",
         "incoming": "+{{count}} incoming",
-        "ofLimit": "{{used}} / {{limit}}",
-        "ofLimitWith": "{{used}} ({{extra}}) / {{limit}}",
-        "retired": "{{count}} of it given up"
+        "ofLimit": "{{used}} / {{limit}} allocated",
+        "ofLimitWith": "{{used}} ({{extra}}) / {{limit}} allocated",
+        "retired": "{{count}} of it given up",
+        "withInUse": "{{allocated}} · {{inUse}} used",
+        "state": {
+            "full": "Fully allocated",
+            "over": "More allocated than available",
+            "exhausted": "Fully used"
+        }
     },
     "relations": {
         "dozent": "Lecturer",

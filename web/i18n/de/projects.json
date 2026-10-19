@@ -47,7 +47,7 @@
     },
     "budgetCard": {
         "autoApproveBadge": "Automatisch",
-        "resourceUsage": "Ressourcen-Nutzung",
+        "resourceUsage": "Vergeben",
         "managedByHint": "Diese Personen genehmigen Anfragen und können Teile dieses Budgets weitergeben.",
         "inheritsLimit": "Limit",
         "inheritsLimitFrom": "übernommen von „{{name}}“",
@@ -496,9 +496,15 @@
     "usage": {
         "pending": "+{{count}} angefragt",
         "incoming": "+{{count}} kommt hinzu",
-        "ofLimit": "{{used}} / {{limit}}",
-        "ofLimitWith": "{{used}} ({{extra}}) / {{limit}}",
-        "retired": "davon {{count}} aufgegeben"
+        "ofLimit": "{{used}} / {{limit}} vergeben",
+        "ofLimitWith": "{{used}} ({{extra}}) / {{limit}} vergeben",
+        "retired": "davon {{count}} aufgegeben",
+        "withInUse": "{{allocated}} · {{inUse}} genutzt",
+        "state": {
+            "full": "Vollständig vergeben",
+            "over": "Mehr vergeben als vorhanden",
+            "exhausted": "Vollständig genutzt"
+        }
     },
     "relations": {
         "dozent": "Dozent:in",

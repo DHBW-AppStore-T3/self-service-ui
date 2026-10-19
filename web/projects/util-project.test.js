@@ -4,7 +4,7 @@ import i18n from '/i18n/index.js';
 // The real English resources, so a renamed key fails here rather than showing
 // the key itself on the screen.
 const t = i18n.getFixedT('en');
-import { resourceUsageText, sortProjects, usageLevel, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, isRetired, lastEventAt, scheduledDeletion, autoApproveHeadroom, childrenById, expiryTone, freeAmount, groupResources, headroomExhaustedBy, isAvailability, isExpired, isProvisioning, limitDelta, nodeChanges, nodeTitle, normalizeObjectResponse, openstackProjectUrl, overageEntries, overageText, ownerEmail, quotaFits, requestType, resourceBarSegments, resourceSummaryText, statusLabel, usedAmount, visibleResources, defaultsWithin, projectActions, effectiveLimit, availabilityElsewhere, hasAllocations, roomIn, resourceLabel, pollWhileDeleting, DELETING_POLL_MS, projectKinds, catalogKinds, resourcesOfKinds, budgetKinds } from './util-project.jsx';
+import { resourceUsageText, sortProjects, usageLevel, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, isRetired, lastEventAt, scheduledDeletion, autoApproveHeadroom, childrenById, expiryTone, freeAmount, groupResources, headroomExhaustedBy, isAvailability, isExpired, isProvisioning, limitDelta, nodeChanges, nodeTitle, normalizeObjectResponse, openstackProjectUrl, overageEntries, overageText, ownerEmail, quotaFits, requestType, resourceBarSegments, usageState, resourceSummaryText, statusLabel, usedAmount, visibleResources, defaultsWithin, projectActions, effectiveLimit, availabilityElsewhere, hasAllocations, roomIn, resourceLabel, pollWhileDeleting, DELETING_POLL_MS, projectKinds, catalogKinds, resourcesOfKinds, budgetKinds } from './util-project.jsx';
 
 const RESOURCES = [
     { id: 'cpu', name: 'vCPUs' },
@@ -218,7 +218,7 @@ describe('requestType', () => {
 describe('resourceBarSegments', () => {
     it('turns amounts into rounded percentages', () => {
         expect(resourceBarSegments(10, { approved: 5 })).toEqual({
-            approvedPct: 50, pendingPct: 0, incomingPct: 0, totalPct: 50,
+            usedPct: 0, approvedPct: 50, pendingPct: 0, incomingPct: 0, totalPct: 50,
         });
     });
 
@@ -243,8 +243,45 @@ describe('resourceBarSegments', () => {
 
     it('defaults every amount to zero', () => {
         expect(resourceBarSegments(10)).toEqual({
-            approvedPct: 0, pendingPct: 0, incomingPct: 0, totalPct: 0,
+            usedPct: 0, approvedPct: 0, pendingPct: 0, incomingPct: 0, totalPct: 0,
         });
+    });
+
+    // used ⊂ allocated ⊂ budget: the used part is drawn inside the allocated one.
+    it('draws what is used inside what is allocated', () => {
+        expect(resourceBarSegments(200, { approved: 20, used: 5 })).toMatchObject({ usedPct: 3, approvedPct: 10, totalPct: 10 });
+    });
+
+    // A project may use more than the budget in between handed out — the rest came from further up.
+    it('never draws the allocated part narrower than the used one', () => {
+        const s = resourceBarSegments(10, { approved: 2, used: 6, changePending: 8 });
+        expect(s.usedPct).toBe(60);
+        expect(s.approvedPct).toBe(60);
+        expect(s.pendingPct).toBe(40);
+    });
+});
+
+// Handed out is not used: a budget that is fully allocated but idle is full, not short.
+describe('usageState', () => {
+    it('is open while there is room, and always without a limit', () => {
+        expect(usageState(200, { taken: 20, used: 0 })).toBe('open');
+        expect(usageState(-1, { taken: 999, used: 999 })).toBe('open');
+        expect(usageState(0, { taken: 0 })).toBe('open');
+    });
+
+    it('is full, not a shortage, when everything is allocated but unused', () => {
+        expect(usageState(1, { taken: 1, used: 0 })).toBe('full');
+        expect(usageState(1, { taken: 1 })).toBe('full');
+    });
+
+    it('is exhausted only when consumption reaches the limit', () => {
+        expect(usageState(1, { taken: 1, used: 1 })).toBe('exhausted');
+        expect(usageState(10, { taken: 4, used: 12 })).toBe('exhausted');
+    });
+
+    it('is over when more is allocated than the budget holds', () => {
+        expect(usageState(10, { taken: 12, used: 3 })).toBe('over');
+        expect(usageState(0, { taken: 2 })).toBe('over');
     });
 });
 
