@@ -1,4 +1,4 @@
-import { cloudProjectsEnabled, cloudProjectsMcpUrl, dnsZonesEnabled, dnsZonesMcpUrl } from '/features.js';
+import { cloudProjectsEnabled, cloudProjectsMcpUrl, dnsZonesEnabled, dnsZonesMcpUrl, llmEnabled } from '/features.js';
 
 // The token scopes, in one place because two callers need the same list: the
 // header renders them as the second-level tabs, the page as its routes. Kept
@@ -36,6 +36,16 @@ export const TOKEN_SCOPES = [
         mcpUrl: cloudProjectsMcpUrl,
         mcpServerName: 'dhbw-cloud-projects',
         mcpSubjectKey: 'tokens.scopes.projects.mcpSubject',
+    },
+    // The management API of the AI service (workspaces, GPU servers, models). Its tokens are not the LLM keys: those call the models on the OpenAI-compatible API and live in the LLM area. No MCP endpoint yet. "Never expires" only for a read-only token or an admin's (allowNever: 'readOnlyOrAdmin', matching the service; `isAdmin` comes from the page), so the choice is not offered where the server would refuse it. `noteKey` is the sentence that keeps the two credentials apart on the page itself.
+    llmEnabled && {
+        id: 'ai',
+        labelKey: 'tokens.scopes.ai.label',
+        prefix: 'aiaas_',
+        descriptionKey: 'tokens.scopes.ai.description',
+        noteKey: 'tokens.scopes.ai.note',
+        allowNever: 'readOnlyOrAdmin',
+        mcpUrl: '',
     },
 ].filter(Boolean);
 

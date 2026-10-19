@@ -9,6 +9,7 @@ export const llmKeys = {
     tiers: () => ['llm', 'tiers'],
     models: () => ['llm', 'models'],
     aliases: () => ['llm', 'aliases'],
+    apiTokens: () => ['llm', 'api-tokens'],
     // Prefix only; the autocomplete appends the search term and limit.
     principals: () => ['llm', 'principals'],
 };

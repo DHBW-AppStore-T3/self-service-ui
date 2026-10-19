@@ -152,7 +152,7 @@
         },
         "llm": {
             "title": "LLM and workspaces",
-            "text": "Management of keys, projects and workspaces. The keys themselves are under LLM → API Keys."
+            "text": "Management of workspaces, GPU servers and models. The API tokens only work for this management API; the keys for the language models are under LLM → API Keys."
         }
     }
 }

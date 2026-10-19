@@ -152,7 +152,7 @@
         },
         "llm": {
             "title": "LLM und Workspaces",
-            "text": "Verwaltung von Keys, Projekten und Workspaces. Die Keys selbst gibt es unter LLM → API Keys."
+            "text": "Verwaltung von Workspaces, GPU-Servern und Modellen. Die API-Tokens gelten nur für diese Verwaltungs-API; die Keys für die Sprachmodelle gibt es unter LLM → API Keys."
         }
     }
 }

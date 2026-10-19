@@ -31,6 +31,12 @@ const lifetimes = (t) => [
 ];
 const DEFAULT_LIFETIME = '8760';
 
+// Whether a scope's service accepts a token without expiry: always unless allowNever is false; with 'readOnlyOrAdmin' only for a read-only token or for an admin (scope.isAdmin).
+export const neverAllowed = (scope, readOnly) => scope.allowNever === 'readOnlyOrAdmin' ? !!(readOnly || scope.isAdmin) : scope.allowNever !== false;
+
+// The lifetimes a scope offers: all of them, minus "never" where its service would refuse a token without expiry.
+export const scopeLifetimes = (scope, t, readOnly = false) => lifetimes(t).filter(l => l.value !== '-1' || neverAllowed(scope, readOnly));
+
 // One scope's tokens: its own query, its own error state, its own create form.
 //
 // Per scope and not per page, because the scopes are separate services. A
@@ -49,7 +55,9 @@ export function TokenScopePanel({ scope }) {
     const confirm = useConfirm();
     const [readOnly, setReadOnly] = useState(false);
     const [description, setDescription] = useState('');
-    const [lifetime, setLifetime] = useState(DEFAULT_LIFETIME);
+    const [chosenLifetime, setLifetime] = useState(DEFAULT_LIFETIME);
+    // "Never" can stop being allowed (read-only unticked): then the default applies rather than what the server would refuse.
+    const lifetime = chosenLifetime === '-1' && !neverAllowed(scope, readOnly) ? DEFAULT_LIFETIME : chosenLifetime;
     // The server stores only a hash, so a token exists in readable form exactly
     // once: in the response that created it. Kept for this page view (id →
     // secret) and gone on reload — the one piece of state here that is NOT
@@ -124,7 +132,7 @@ export function TokenScopePanel({ scope }) {
                         <Select
                             size="sm"
                             w={150}
-                            data={lifetimes(t)}
+                            data={scopeLifetimes(scope, t, readOnly)}
                             value={lifetime}
                             onChange={value => setLifetime(value ?? DEFAULT_LIFETIME)}
                             allowDeselect={false}
@@ -141,6 +149,12 @@ export function TokenScopePanel({ scope }) {
                         </Button>
                     </Group>
                 </Group>
+
+                {scope.noteKey && (
+                    <Alert color="blue" variant="light" p="xs">
+                        <Text size="sm">{t(scope.noteKey)}</Text>
+                    </Alert>
+                )}
 
                 {tokensQuery.isPending && <Loading size="sm" />}
 

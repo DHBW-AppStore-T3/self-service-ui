@@ -9,6 +9,7 @@ import { LlmKeys } from '/llm/keys.jsx';
 import { LlmUsage } from '/llm/usage.jsx';
 import { NoProject } from '/projects/no-project.jsx';
 import { AreaProjects } from '/projects/projects.jsx';
+import { ApiTokens } from '/tokens/api-tokens.jsx';
 
 const LlmFleet = lazy(() => import('/llm/fleet.jsx').then(m => ({ default: m.LlmFleet })));
 const LlmModels = lazy(() => import('/llm/models.jsx').then(m => ({ default: m.LlmModels })));
@@ -27,10 +28,13 @@ export function LlmManagement() {
     if (query.isError) return <Container size="lg" py="md"><LoadError query={query} /></Container>;
     // The projects of this area are there for everybody: they are the way to a first one.
     const projects = <Route path="/projects"><AreaProjects area="llm" /></Route>;
+    // The AI service's API tokens are for everybody signed in, like the projects: a workspace user without LLM tokens scripts the management API just the same.
+    const tokens = <Route path="/tokens"><ApiTokens scope="ai" /></Route>;
     if (!hasAccess) {
         return (
             <Switch>
                 {projects}
+                {tokens}
                 <Route><NoProject area="llm" title={t('llm.noAccess.title')} text={t('llm.noAccess.text')} /></Route>
             </Switch>
         );
@@ -40,6 +44,7 @@ export function LlmManagement() {
         <Suspense fallback={<Container size="lg" py="md"><Loading /></Container>}>
             <Switch>
                 {projects}
+                {tokens}
                 <Route path="/overview" component={LlmOverview} />
                 <Route path="/keys" component={LlmKeys} />
                 <Route path="/usage" component={LlmUsage} />

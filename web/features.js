@@ -28,7 +28,7 @@ export const dnsZonesEnabled = Boolean(window?.appconfig?.dynamicZonesBaseUrl);
 export const llmEnabled = Boolean(window?.appconfig?.llmBaseUrl);
 
 // At least one API has to be there for a token to be issuable at all.
-export const apiTokensEnabled = dnsZonesEnabled || cloudProjectsEnabled;
+export const apiTokensEnabled = dnsZonesEnabled || cloudProjectsEnabled || llmEnabled;
 
 // Both APIs also speak MCP, so an AI assistant can work on someone's behalf.
 // SEPARATE values, not derived from the base URLs: those may be the BFF paths,

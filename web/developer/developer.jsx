@@ -4,13 +4,13 @@ import { Button, Container, Group, Paper, SimpleGrid, Stack, Text, Title } from 
 import { BookOpen, KeyRound } from 'lucide-react';
 import { cloudProjectsEnabled, dnsZonesEnabled, llmEnabled } from '/features.js';
 
-// Developer (/developer, from the account menu): the API tokens and the API documentation of the services, out of the areas' navigation — they are for scripts and integrations, not for the everyday flow. The pages themselves stay where they were (/cloud/tokens, /dyndns/api-doc, …), so links to them keep working. The LLM API keys are not here: they are the LLM area's product, used with the models.
+// Developer (/developer, from the account menu): the API tokens and the API documentation of the services, out of the areas' navigation — they are for scripts and integrations, not for the everyday flow. The pages themselves stay where they were (/cloud/tokens, /dyndns/api-doc, …), so links to them keep working. The LLM API keys are not here: they are the LLM area's product, used with the models; the AI service's API tokens (/llm/tokens) are, because they are for its management API like the others.
 export function Developer() {
     const { t } = useTranslation();
     const services = [
         cloudProjectsEnabled && { id: 'cloud', tokens: '/cloud/tokens', docs: '/cloud/api-doc' },
         dnsZonesEnabled && { id: 'dns', tokens: '/dyndns/tokens', docs: '/dyndns/api-doc' },
-        llmEnabled && { id: 'llm', docs: '/llm/api-doc' },
+        llmEnabled && { id: 'llm', tokens: '/llm/tokens', docs: '/llm/api-doc' },
     ].filter(Boolean);
     return (
         <Container size="lg" py="md">

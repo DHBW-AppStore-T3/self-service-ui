@@ -2,6 +2,9 @@ import { Trans, useTranslation } from 'react-i18next';
 import { Alert, Container, Stack, Text, Title } from '@mantine/core';
 import { useZonesApi } from '/dyndns/api-zones.jsx';
 import { dyndnsKeys } from '/dyndns/query-keys.js';
+import { useLlmApi } from '/llm/api-llm.jsx';
+import { llmKeys } from '/llm/query-keys.js';
+import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useNodesApi } from '/projects/api-nodes.jsx';
 import { projectKeys } from '/projects/query-keys.js';
 import { TOKEN_SCOPES } from '/tokens/scopes.js';
@@ -22,6 +25,10 @@ export function ApiTokens({ scope: scopeId }) {
     // useNodesApi returns null where the projects API is not configured.
     const zonesApi = useZonesApi();
     const nodesApi = useNodesApi();
+    // Always an object; whether the AI service exists in this deployment is the scope list's question (llmEnabled).
+    const llmApi = useLlmApi();
+    // Admins of the AI service may issue tokens without expiry there (and anyone a read-only one).
+    const { isAdmin: llmAdmin } = useLlmMe();
 
     // The API adapter per scope id. Kept next to the hooks rather than in
     // scopes.js, which nav.jsx imports and which therefore has to stay free of
@@ -41,6 +48,15 @@ export function ApiTokens({ scope: scopeId }) {
                 list: () => nodesApi.listApiTokens(),
                 create: (opts) => nodesApi.createApiToken(opts),
                 remove: (id) => nodesApi.deleteApiToken(id),
+            },
+        },
+        ai: {
+            isAdmin: llmAdmin,
+            queryKey: llmKeys.apiTokens(),
+            api: {
+                list: () => llmApi.listApiTokens(),
+                create: (opts) => llmApi.createApiToken(opts),
+                remove: (id) => llmApi.deleteApiToken(id),
             },
         },
     };
