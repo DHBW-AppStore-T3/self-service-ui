@@ -11,6 +11,7 @@ import { llmEnabled } from '/features.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { formatDay } from '/format-date.js';
+import { formatDuration } from '/helper/duration.js';
 import { gpuKeys } from '/gpu/query-keys.js';
 
 // How a Lab/KI project's workspaces are used — profiles, the project image, limits and shares per person, shorter windows. Everything else about the project (name, members, end, quotas) is the project's own and edited in its dialog; this is the one part only the AI service knows, so it is a tab of the project's edit dialog (modal-project-form.jsx) instead of a second list of the same projects.
@@ -79,7 +80,7 @@ export function useWorkspaceSettings(nodeId, active) {
 
 // The part of a workspace project its settings change; the rest (name, members, end, quotas) belongs to the tree and is sent back as it is.
 function editable(project) {
-    const { role: _role, budget_status: _status, image_build: _build, ...rest } = project;
+    const { role: _role, budget_status: _status, image_build: _build, release_ceiling: _ceiling, release_effective: _effective, ...rest } = project;
     return { ...rest, limits: { ...DEFAULT_LIMITS, ...(project.limits ?? {}) } };
 }
 
@@ -244,11 +245,92 @@ function BaseChoice({ bases, value, saved, onChange }) {
     );
 }
 
+const RELEASE_KINDS = ['cpu', 'gpu'];
+const RELEASE_FIELDS = ['idle_open_minutes', 'idle_closed_minutes', 'max_hours'];
+const RELEASE_LABELS = { idle_open_minutes: 'gpu.release.idleOpen', idle_closed_minutes: 'gpu.release.idleClosed', max_hours: 'gpu.release.maxHours' };
+
+// withTime sets one release time of a kind; null or '' clears it (inherited).
+function withTime(release, kind, field, value) {
+    const times = { ...(release?.[kind] ?? {}) };
+    if (value === null || value === '' || value === undefined) delete times[field];
+    else times[field] = Number(value);
+    return { ...(release ?? {}), [kind]: times };
+}
+
+// ReleaseRow is one kind's three times: number fields (empty = inherited, shown as placeholder) and, where no upper bound is allowed, a checkbox for it. ceiling: the most each time may be (max_hours 0 = no upper bound allowed); null = no limit shown (the budget's own maximums).
+function ReleaseRow({ kind, value, inherited, ceiling, unlimitedAllowed, onChange, readOnly }) {
+    const { t, i18n } = useTranslation();
+    const fmt = (field, v) => (field === 'max_hours' && v === 0 ? t('gpu.release.unlimited') : String(v));
+    return (
+        <Stack gap={4}>
+            <Text size="xs" fw={600}>{t(`gpu.release.kinds.${kind}`)}</Text>
+            <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="xs">
+                {RELEASE_FIELDS.map(field => {
+                    const own = value?.[field];
+                    const from = inherited?.[field];
+                    const ceil = ceiling?.[field];
+                    const unlimited = field === 'max_hours' && own === 0;
+                    const limit = field === 'max_hours' ? 24 * 30 : 24 * 60;
+                    return (
+                        <Stack key={field} gap={2}>
+                            <NumberInput size="xs" label={t(RELEASE_LABELS[field])} min={1} max={ceil > 0 ? ceil : limit} clampBehavior="strict" allowDecimal={false}
+                                value={unlimited || own === undefined || own === null ? '' : own} disabled={unlimited} readOnly={readOnly}
+                                placeholder={from !== undefined && from !== null ? t('gpu.release.fromBudget', { value: fmt(field, from) }) : t('gpu.release.standard')}
+                                description={ceil === undefined || ceil === null ? undefined : ceil === 0 ? t('gpu.release.unlimitedAllowed') : t('gpu.release.atMost', { value: ceil.toLocaleString(i18n.language) })}
+                                onChange={v => onChange(field, v)} />
+                            {field === 'max_hours' && unlimitedAllowed && (
+                                <Checkbox size="xs" label={t('gpu.release.unlimited')} checked={unlimited} disabled={readOnly}
+                                    onChange={e => onChange(field, e.currentTarget.checked ? 0 : null)} />
+                            )}
+                        </Stack>
+                    );
+                })}
+            </SimpleGrid>
+        </Stack>
+    );
+}
+
+// ReleaseTimes is the project's release times (docs/todo.md idle_release in aiaas-deployment): the project chooses within the budget's maximums, which admins set here while the budget tree sends none; below what the servers and GPU kernels enforce now.
+function ReleaseTimes({ draft, isAdmin }) {
+    const { t, i18n } = useTranslation();
+    const p = draft.value;
+    const saved = draft.project;
+    const ceiling = saved?.release_ceiling ?? {};
+    const effective = saved?.release_effective;
+    const set = (key, kind, field, v) => draft.update(cur => ({ ...cur, [key]: withTime(cur[key], kind, field, v) }));
+    const own = projectGpuCap(p) > 0;
+    const fmt = (sec) => formatDuration(sec * 1000, i18n.language);
+    const line = (r) => r ? `${fmt(r.idle_open)} / ${fmt(r.idle_closed)}, ${r.max > 0 ? fmt(r.max) : t('gpu.release.unlimited')}` : '';
+    return (
+        <Box title={t('gpu.release.title')} hint={t('gpu.release.hint')}>
+            {RELEASE_KINDS.map(kind => (
+                <ReleaseRow key={kind} kind={kind} value={p.release?.[kind]} inherited={p.release_max?.[kind]} ceiling={ceiling[kind]}
+                    unlimitedAllowed={ceiling[kind]?.max_hours === 0} onChange={(field, v) => set('release', kind, field, v)} />
+            ))}
+            {effective && (
+                <Text size="xs" c="dimmed">
+                    {t('gpu.release.effective')}: {[...Object.entries(effective.servers ?? {}).map(([slug, r]) => `${t(`gpu.release.uses.${slug}`, { defaultValue: slug })} ${line(r)}`), effective.kernel && (p.profiles ?? []).includes('cpu-gpukernel') ? `${t('gpu.release.uses.kernel')} ${line(effective.kernel)}` : null].filter(Boolean).join(' · ')}
+                </Text>
+            )}
+            {isAdmin && (
+                <Stack gap={6} mt="xs">
+                    <Text size="sm" fw={600}>{t('gpu.release.budgetTitle')}</Text>
+                    <Text size="xs" c="dimmed">{p.tree_release ? t('gpu.release.budgetFromTree') : t('gpu.release.budgetHint')}</Text>
+                    {RELEASE_KINDS.map(kind => (
+                        <ReleaseRow key={kind} kind={kind} value={p.release_max?.[kind]} readOnly={!!p.tree_release}
+                            unlimitedAllowed={kind === 'gpu' && own} onChange={(field, v) => set('release_max', kind, field, v)} />
+                    ))}
+                </Stack>
+            )}
+        </Box>
+    );
+}
+
 // WorkspaceSettingsPanel is the dialog's "Workspaces" tab.
 export function WorkspaceSettingsPanel({ draft }) {
     const { t } = useTranslation();
     const api = useGpuApi();
-    // A project's managers change only its description, members and environment; profiles, limits and budgets are the admins' — the server keeps them as they are for anybody else, so they are shown, not offered for editing.
+    // A project's managers change only its description, members, environment, material and release times (within the budget's); profiles, limits and budgets are the admins' — the server keeps them as they are for anybody else, so they are shown, not offered for editing.
     const { isAdmin } = useLlmMe();
     const locked = !isAdmin;
     const catalog = useQuery({ queryKey: gpuKeys.catalog(), queryFn: () => api.catalog(), staleTime: 10 * 60 * 1000 });
@@ -295,6 +377,8 @@ export function WorkspaceSettingsPanel({ draft }) {
                         disabled={gpuCap === 0} description={gpuCap === 0 ? t('gpu.projects.limit.noGpus') : undefined} />
                 </SimpleGrid>
             </Box>
+
+            <ReleaseTimes draft={draft} isAdmin={isAdmin} />
 
             <Box title={t('gpu.projects.budgets')} hint={t('gpu.projects.budgetsHint')}>
                 {status.length > 0 && <Stack gap={6}>{status.map((b, i) => <BudgetBar key={i} b={b} classes={catalog.data?.gpuClasses ?? []} />)}</Stack>}

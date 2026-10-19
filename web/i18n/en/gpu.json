@@ -171,7 +171,7 @@
             "fromTree": "from the project"
         },
         "profilesHint": "What members can choose when starting a workspace in JupyterHub. The platform sets the list; GPU types count against the project's GPU quotas.",
-        "adminOnlyHint": "Workspace types, limits and usage limits are set by admins. The environment (base, project image, Git) and the material can be changed here."
+        "adminOnlyHint": "Workspace types, limits and usage limits are set by admins. The environment (base, project image, Git), the material and the release times (within the budget's maximums) can be changed here."
     },
     "storage": {
         "title": "Storage (admins)",
@@ -313,5 +313,37 @@
         "autostart": "Auto start",
         "linkHintAuto": "The link starts the workspace with this choice as soon as it is opened; when one is already running there, it opens that one.",
         "gpuClassOnly": "GPU:"
+    },
+    "release": {
+        "title": "Release times",
+        "hint": "Idle time counts, not runtime: as long as something computes (a cell, a background thread with CPU or GPU load, a program in the terminal), the workspace keeps running. Empty fields take the budget's value, without one there the default. Shortly before the release a warning appears in JupyterLab. Changed times apply to workspaces started afterwards.",
+        "kinds": {
+            "cpu": "CPU – CPU workspaces and the notebook of “CPU + GPU kernel”",
+            "gpu": "GPU – GPU workspaces and GPU kernels"
+        },
+        "idleOpen": "Idle with open tab (min)",
+        "idleClosed": "Idle without tab (min)",
+        "maxHours": "Upper bound (h)",
+        "unlimited": "no upper bound",
+        "fromBudget": "as budget: {{value}}",
+        "standard": "default",
+        "atMost": "at most {{value}}",
+        "unlimitedAllowed": "no upper bound possible",
+        "budgetTitle": "Budget maximums",
+        "budgetHint": "The project chooses up to these values; empty fields = default. No upper bound only for GPU and only with the project's own GPUs (GPUs per class); the shared pool always has one.",
+        "budgetFromTree": "The maximums are set by the budget in the budget tree.",
+        "effective": "Currently in effect",
+        "uses": {
+            "cpu": "CPU",
+            "cpu-gpukernel": "CPU + GPU kernel (notebook)",
+            "gpu": "GPU",
+            "kernel": "GPU kernel"
+        },
+        "idle": "Released after {{open}} without activity",
+        "idleBoth": "Released after {{open}} without activity, without an open tab after {{closed}}",
+        "withMax": "{{idle}}, after {{max}} at the latest.",
+        "noMax": "{{idle}}, no upper bound.",
+        "left": "{{idle}}, in {{left}} at the latest.",
+        "kernel": "GPU kernels: {{text}}"
     }
 }

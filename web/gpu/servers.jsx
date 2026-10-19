@@ -9,6 +9,7 @@ import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
 import { profileLabel, usesGpu } from '/gpu/profiles.js';
 import { formatDuration } from '/helper/duration.js';
+import { releaseIdle, releaseOf } from '/gpu/release.js';
 
 // The person's JupyterHub servers (also those started on the hub page itself).
 export function GpuServers() {
@@ -20,9 +21,19 @@ export function GpuServers() {
     // The names of the person's projects, so a server shows its project instead of the generated server name.
     const options = useQuery({ queryKey: gpuKeys.startOptions(), queryFn: () => api.startOptions() });
     const projectName = (slug) => options.data?.projects?.find(p => p.slug === slug)?.name || slug;
-    // The runtime limits of the server's environment, as JupyterHub enforces them: idle time, and the latest end from its start.
-    // The runtime limits of the server's environment, as JupyterHub enforces them: the idle time, and how long until its latest end (from its start, counted from the list's last refresh every 10 s); the time of day on hover.
+    // The release times of the server, as the hub enforces them: the project's (budget and project, idle time with and without an open tab, upper bound), else the profile's from before; how long until its latest end (from its start, counted from the list's last refresh every 10 s), the time of day on hover. The countdown to the idle release itself is shown in JupyterLab, which knows the activity.
     const ends = (s) => {
+        const project = options.data?.projects?.find(p => p.slug === s.project);
+        const r = releaseOf(project, s.profile);
+        if (r) {
+            const idle = releaseIdle(r, t, i18n.language);
+            if (!r.max || !s.started) return { text: r.max ? `${idle}.` : t('gpu.release.noMax', { idle }), at: null };
+            const end = new Date(s.started).getTime() + r.max * 1000;
+            return {
+                text: t('gpu.release.left', { idle, left: formatDuration(end - servers.dataUpdatedAt, i18n.language) }),
+                at: new Date(end).toLocaleString(i18n.language, { weekday: 'short', hour: '2-digit', minute: '2-digit' }),
+            };
+        }
         const p = options.data?.profiles?.find(x => x.slug === s.profile);
         if (!p?.idle_minutes || !p?.max_hours || !s.started) return null;
         const end = new Date(s.started).getTime() + p.max_hours * 3600 * 1000;
@@ -86,7 +97,7 @@ export function GpuServers() {
                                     </Table.Td>
                                     <Table.Td>
                                         <Text size="sm">{s.ready ? t('gpu.servers.ready') : s.pending === 'stop' ? t('gpu.servers.stopping') : t('gpu.servers.starting')}</Text>
-                                        {s.ready && ends(s) && <Tooltip label={ends(s).at} withArrow><Text size="xs" c="dimmed">{ends(s).text}</Text></Tooltip>}
+                                        {s.ready && ends(s) && <Tooltip label={ends(s).at} withArrow disabled={!ends(s).at}><Text size="xs" c="dimmed">{ends(s).text}</Text></Tooltip>}
                                     </Table.Td>
                                     <Table.Td align="right">
                                         <Group gap={4} justify="flex-end" wrap="nowrap">

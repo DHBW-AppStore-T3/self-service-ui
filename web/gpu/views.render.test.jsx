@@ -43,7 +43,10 @@ const PROJECTS = [
       image_build: { status: 'building', image: 'reg/envs/github-com-o-ml-kurs:89abcdef0123-v1.1.0', commit: '89abcdef0123456', branch: 'main', updated_at: '2026-10-14T08:00:00Z' },
       limits: { servers_per_person: 2, cpu_per_person: 4, ram_gb_per_person: 16, gpus_per_person: 1 }, gpus_by_class: { "l4-3q": 4 },
       budgets: [{ unit: 'vcpu_hours', window: '30d', amount: 40, per_person: true }],
-      budget_status: [{ unit: 'vcpu_hours', window: '30d', amount: 40, per_person: true, used: 34.5, exhausted: false }] },
+      budget_status: [{ unit: 'vcpu_hours', window: '30d', amount: 40, per_person: true, used: 34.5, exhausted: false }],
+      release: { gpu: { idle_closed_minutes: 10 } }, release_max: { gpu: { idle_open_minutes: 60, max_hours: 0 } },
+      release_ceiling: { cpu: { idle_open_minutes: 120, idle_closed_minutes: 120, max_hours: 12 }, gpu: { idle_open_minutes: 60, idle_closed_minutes: 30, max_hours: 0 } },
+      release_effective: { servers: { cpu: { idle_open: 7200, idle_closed: 7200, max: 43200 }, gpu: { idle_open: 3600, idle_closed: 600, max: 0 } }, kernel: { idle_open: 3600, idle_closed: 600, max: 0 } } },
     { slug: 'statistik', name: 'Statistik', role: 'member', profiles: ['cpu'], gpu_classes: [], members: [],
       limits: { servers_per_person: 1 }, budgets: [], ends_at: '2027-03-31T00:00:00Z' },
 ];
@@ -118,6 +121,25 @@ describe('the GPU views render', () => {
         expect(screen.queryByText(/Grenze hinzufügen|Add a limit/)).toBeNull();
         // The environment stays editable.
         expect(screen.getByText('89abcdef0123 (main)')).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('the workspace settings tab lets a manager choose the release times within the budget', async () => {
+        globalThis.__llmIsAdmin = false;
+        renderView(<SettingsTab nodeId="p_ml" />);
+        expect(await screen.findByText(/^(Rückgabezeiten|Release times)$/)).toBeTruthy();
+        // The budget's value as placeholder, the ceiling below, no upper bound offered where the budget allows it (own GPUs).
+        expect(screen.getByPlaceholderText(/(wie Budget|as budget): 60/)).toBeTruthy();
+        expect(screen.getAllByText(/(höchstens|at most) 120/).length).toBeGreaterThan(0);
+        expect(screen.getAllByLabelText(/(ohne Obergrenze|no upper bound)/).length).toBe(1);
+        expect(screen.queryByText(/(Höchstwerte des Budgets|Budget maximums)/)).toBeNull();
+        expectNoRenderFailure();
+    });
+
+    it('the workspace settings tab shows admins the budget maximums', async () => {
+        renderView(<SettingsTab nodeId="p_ml" />);
+        expect(await screen.findByText(/(Höchstwerte des Budgets|Budget maximums)/)).toBeTruthy();
+        expect(screen.getByText(/(Zurzeit gilt|Currently in effect)/)).toBeTruthy();
         expectNoRenderFailure();
     });
 

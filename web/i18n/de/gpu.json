@@ -171,7 +171,7 @@
             "fromTree": "aus dem Projekt"
         },
         "profilesHint": "Was Mitglieder beim Start eines Workspaces in JupyterHub wählen können. Die Liste gibt die Plattform vor; GPU-Arten zählen gegen die GPU-Kontingente des Projekts.",
-        "adminOnlyHint": "Workspace-Arten, Grenzen und Verbrauchsgrenzen legen Admins fest. Die Umgebung (Basis, Projekt-Image, Git) und das Material lassen sich hier ändern."
+        "adminOnlyHint": "Workspace-Arten, Grenzen und Verbrauchsgrenzen legen Admins fest. Die Umgebung (Basis, Projekt-Image, Git), das Material und die Rückgabezeiten (innerhalb der Höchstwerte des Budgets) lassen sich hier ändern."
     },
     "storage": {
         "title": "Speicher (Admins)",
@@ -313,5 +313,37 @@
         "autostart": "Auto-Start",
         "linkHintAuto": "Der Link startet den Workspace mit dieser Auswahl gleich beim Öffnen; läuft dort schon einer, öffnet er diesen.",
         "gpuClassOnly": "GPU:"
+    },
+    "release": {
+        "title": "Rückgabezeiten",
+        "hint": "Gezählt wird Leerlauf, nicht Laufzeit: Solange etwas rechnet (eine Zelle, ein Hintergrund-Thread mit CPU- oder GPU-Last, ein Programm im Terminal), läuft der Workspace weiter. Leere Felder übernehmen den Wert des Budgets, ohne Wert dort den Standard. Kurz vor der Rückgabe warnt eine Meldung in JupyterLab. Geänderte Zeiten gelten für Workspaces, die danach starten.",
+        "kinds": {
+            "cpu": "CPU – CPU-Workspaces und das Notebook bei „CPU + GPU-Kernel“",
+            "gpu": "GPU – GPU-Workspaces und GPU-Kernel"
+        },
+        "idleOpen": "Leerlauf mit offenem Tab (Min.)",
+        "idleClosed": "Leerlauf ohne Tab (Min.)",
+        "maxHours": "Obergrenze (Std.)",
+        "unlimited": "ohne Obergrenze",
+        "fromBudget": "wie Budget: {{value}}",
+        "standard": "Standard",
+        "atMost": "höchstens {{value}}",
+        "unlimitedAllowed": "ohne Obergrenze möglich",
+        "budgetTitle": "Höchstwerte des Budgets",
+        "budgetHint": "Bis zu diesen Werten wählt das Projekt; leere Felder = Standard. Ohne Obergrenze geht es nur bei GPU und nur mit eigenen GPUs des Projekts (GPUs je Klasse); im gemeinsamen Pool gibt es immer eine.",
+        "budgetFromTree": "Die Höchstwerte setzt das Budget im Budgetbaum.",
+        "effective": "Zurzeit gilt",
+        "uses": {
+            "cpu": "CPU",
+            "cpu-gpukernel": "CPU + GPU-Kernel (Notebook)",
+            "gpu": "GPU",
+            "kernel": "GPU-Kernel"
+        },
+        "idle": "Rückgabe nach {{open}} ohne Aktivität",
+        "idleBoth": "Rückgabe nach {{open}} ohne Aktivität, ohne offenen Tab nach {{closed}}",
+        "withMax": "{{idle}}, spätestens nach {{max}}.",
+        "noMax": "{{idle}}, ohne Obergrenze.",
+        "left": "{{idle}}, spätestens in {{left}}.",
+        "kernel": "GPU-Kernel: {{text}}"
     }
 }
