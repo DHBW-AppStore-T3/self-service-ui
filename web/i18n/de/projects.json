@@ -801,7 +801,19 @@
         "grantServers_other": "Von {{count}} Servern verwendet",
         "grantUsedNotGranted": "Wird verwendet, ist aber nicht freigegeben",
         "grantOffNetwork": "lässt sich erst entziehen, wenn nichts mehr daran hängt",
-        "grantOffServers": "die Server laufen weiter, lassen sich aber nicht mehr neu aufsetzen oder in der Größe ändern"
+        "grantOffServers": "die Server laufen weiter, lassen sich aber nicht mehr neu aufsetzen oder in der Größe ändern",
+        "syncFailed": "In OpenStack nicht umgesetzt: {{reason}}",
+        "syncReason": {
+            "over_quota_network": "Kontingent für Netzfreigaben erschöpft – die Administration ist informiert",
+            "over_quota": "ein Kontingent in OpenStack ist erschöpft – die Administration ist informiert",
+            "forbidden": "von OpenStack abgelehnt (fehlende Berechtigung) – die Administration ist informiert",
+            "not_found": "das Objekt existiert in OpenStack nicht mehr – die Administration ist informiert",
+            "conflict": "von OpenStack wegen eines Konflikts abgelehnt; wird beim nächsten Abgleich erneut versucht",
+            "unreachable": "OpenStack war nicht erreichbar; wird beim nächsten Abgleich erneut versucht",
+            "failed": "unbekannter Fehler; wird beim nächsten Abgleich erneut versucht"
+        },
+        "syncProblems": "In OpenStack nicht umgesetzt",
+        "syncSince": "seit {{date}}"
     },
     "attributes": {
         "tab": "Merkmale",

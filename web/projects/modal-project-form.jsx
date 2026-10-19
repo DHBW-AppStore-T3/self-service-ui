@@ -646,7 +646,9 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     resources={kind ? offered.filter(r => kindOfResource(r) === kind) : offered}
                     value={quota}
                     headroom={newRoom}
-                    usage={inUseNow ? { inUse: inUseNow, grantUse: openstackSide(node).grant_use, total: effectiveLimit(node, quota) } : null}
+                    usage={inUseNow || openstackSide(node).sync_errors
+                        ? { inUse: inUseNow, grantUse: inUseNow ? openstackSide(node).grant_use : undefined, total: inUseNow ? effectiveLimit(node, quota) : undefined, syncErrors: openstackSide(node).sync_errors }
+                        : null}
                     errors={Object.fromEntries((resources || []).map(r => [r.id, form.errors[`quota.${r.id}`]]))}
                     onChange={(id, v) => {
                         quotaTouched.current = true;

@@ -7,7 +7,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { NodeChangesDiff, NodeStatusBadge, QuotaBadges, TokenBadgeList, UserRoleBadgeList } from './component-common.jsx';
 import { autoApproveFacts, effectiveLimit, formatRelativeDate, isBudget, nodeTitle, ownerEmail, statusLabel, measuredUse, openstackSide, projectKinds } from './util-project.jsx';
-import { ProjectResources } from './component-project-resources.jsx';
+import { ProjectResources, SyncErrorDetails } from './component-project-resources.jsx';
 import { formatDateTime } from '../format-date.js';
 import { UsagePanel } from './component-usage.jsx';
 import { AttributesView, hasAttributes } from './component-node-attributes.jsx';
@@ -207,7 +207,7 @@ export function nodeExtraTabs(t, node, resources, activeTab) {
     return [
         {
             value: TAB_HISTORY, label: t('projects.inspect.tabHistory'),
-            content: <Stack><NodeFacts node={node} /><NodeHistoryPanel node={node} resources={resources} /></Stack>,
+            content: <Stack><NodeFacts node={node} /><SyncErrorDetails node={node} resources={resources} /><NodeHistoryPanel node={node} resources={resources} /></Stack>,
         },
         ...(showsUsage(node) ? [{
             value: TAB_USAGE, label: t('projects.consumption.tab'),

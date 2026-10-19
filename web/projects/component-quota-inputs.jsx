@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Anchor, Badge, Checkbox, Grid, Group, NumberInput, Paper, Stack, Switch, Text, TextInput } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { UNLIMITED_QUOTA, groupResources, isAvailability, resourceLabel, resourceUnit } from './util-project.jsx';
-import { UsageMeter, grantUseText } from './component-project-resources.jsx';
+import { UsageMeter, grantUseText, syncErrorText } from './component-project-resources.jsx';
 
 // Above this many fields the list stops being scannable and gets a filter. The
 // root of the tree sees the whole catalogue — every GPU flavour of every campus,
@@ -30,8 +30,9 @@ const SEARCH_THRESHOLD = 12;
 // `extra` is for an amount on top of something else — an allocation: smaller
 // fields, 0 allowed whatever the resource's minimum, no range text.
 // `usage` is what an existing project uses in OpenStack, for a line under each
-// field: { inUse, grantUse, total } — measuredUse(node), openstackSide(node).grant_use, and
-// what the project would hold in all (the entered values plus allocations).
+// field: { inUse, grantUse, total, syncErrors } — measuredUse(node), openstackSide(node).grant_use,
+// what the project would hold in all (the entered values plus allocations), and what OpenStack
+// refused on the last sync (openstackSide(node).sync_errors), shown in red under the field.
 // providerDefaults: the values are a PROJECT's, where a rate of another provider left empty takes that provider's default (showsDefault). In a budget an empty field is no default, so budget dialogs leave this off.
 export function QuotaInputs({ resources, value, onChange, errors = {}, disabled = false, allowUnlimited = false, headroom = null, extra = false, usage = null, providerDefaults = false, emptyIsZero = false }) {
     const { t } = useTranslation();
@@ -53,7 +54,7 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
     const quantity = (r, name) => (
         <QuantityField providerDefaults={providerDefaults} emptyIsZero={emptyIsZero} resource={r} name={name}
             value={value?.[r.id]} onChange={onChange} error={errors[r.id]} disabled={disabled} allowUnlimited={allowUnlimited}
-            free={headroom?.[r.id]} extra={extra} used={usage?.inUse?.[r.id]} total={usage?.total?.[r.id] ?? value?.[r.id]} />
+            free={headroom?.[r.id]} extra={extra} used={usage?.inUse?.[r.id]} total={usage?.total?.[r.id] ?? value?.[r.id]} syncError={usage?.syncErrors?.[r.id]} />
     );
 
     return (
@@ -113,7 +114,7 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
                                             {part.resources.map(r => (
                                                 <Grid.Col key={r.id} span={{ base: 12, sm: isAvailability(r) ? 6 : 4 }}>
                                                     {isAvailability(r)
-                                                        ? <AvailabilityField resource={r} label={part.short ? shortName(r.name) : undefined} value={value?.[r.id]} onChange={onChange} disabled={disabled} error={errors[r.id]} used={usage?.grantUse?.[r.id]} />
+                                                        ? <AvailabilityField resource={r} label={part.short ? shortName(r.name) : undefined} value={value?.[r.id]} onChange={onChange} disabled={disabled} error={errors[r.id]} used={usage?.grantUse?.[r.id]} syncError={usage?.syncErrors?.[r.id]} />
                                                         : quantity(r, part.short ? shortName(r.name) : undefined)}
                                                 </Grid.Col>
                                             ))}
@@ -196,7 +197,8 @@ export function gpuPools(resources) {
 // Switched off while in use, the line turns into a warning: a network cannot
 // be taken away while anything is attached, and a flavour or image taken away
 // leaves its servers running but unable to be rebuilt or resized.
-function AvailabilityField({ resource, label, value, onChange, disabled, error, used }) {
+// `syncError` is what OpenStack refused on the last sync: then the switch says what is wanted, and the red line under it that it is not in place.
+function AvailabilityField({ resource, label, value, onChange, disabled, error, used, syncError }) {
     const { t } = useTranslation();
     const on = value === 1;
     const useText = grantUseText(t, resource, used);
@@ -219,6 +221,7 @@ function AvailabilityField({ resource, label, value, onChange, disabled, error, 
                     {losing && ` — ${t(resource?.grant_type === 'network' ? 'projects.resources.grantOffNetwork' : 'projects.resources.grantOffServers')}`}
                 </Text>
             )}
+            <SyncErrorLine resource={resource} error={syncError} pl={46} />
         </Stack>
     );
 }
@@ -229,7 +232,7 @@ function showsDefault(r) {
 }
 
 // name replaces the resource's own (shortened under its section heading); the unit and window follow in grey.
-function QuantityField({ providerDefaults, emptyIsZero, resource: r, name, value: current, onChange, error, disabled, allowUnlimited, free, extra, used, total }) {
+function QuantityField({ providerDefaults, emptyIsZero, resource: r, name, value: current, onChange, error, disabled, allowUnlimited, free, extra, used, total, syncError }) {
     const { t } = useTranslation();
     const isUnlimited = current === UNLIMITED_QUOTA;
     return (
@@ -250,6 +253,7 @@ function QuantityField({ providerDefaults, emptyIsZero, resource: r, name, value
             <HeadroomShare free={free} value={isUnlimited ? UNLIMITED_QUOTA : current}
                 onTake={disabled ? undefined : () => onChange(r.id, typeof r.max === 'number' && r.max > 0 ? Math.min(free, r.max) : free)} />
             <UsageMeter used={used} limit={typeof total === 'number' ? total : undefined} window={r.window} />
+            <SyncErrorLine resource={r} error={syncError} />
             {allowUnlimited && (
                 <Checkbox
                     size="xs"
@@ -328,4 +332,11 @@ export function validateQuota(t, resources, quota, { allowUnlimited = false, pro
         }
     });
     return errors;
+}
+
+// SyncErrorLine is what OpenStack refused for a resource on the last sync, in words; nothing while it is in place.
+function SyncErrorLine({ resource, error, pl }) {
+    const { t } = useTranslation();
+    const text = syncErrorText(t, resource, error);
+    return text ? <Text size="xs" c="red.8" pl={pl}>{text}</Text> : null;
 }

@@ -1,5 +1,6 @@
 import { Badge, Group, Progress, Stack, Text, Tooltip } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
+import { formatDateTime } from '../format-date.js';
 import { COLOR, UNLIMITED_QUOTA, USAGE_COLOR, isAvailability, resourceSummaryText, usageLevel, measuredUse, openstackSide, resourceLabel, windowName } from './util-project.jsx';
 
 // ProjectResources: what a project was granted and, where the reconciler has
@@ -11,9 +12,15 @@ import { COLOR, UNLIMITED_QUOTA, USAGE_COLOR, isAvailability, resourceSummaryTex
 export function ProjectResources({ node, resources, quota, size = 'xs' }) {
     const { t } = useTranslation();
     const inUse = measuredUse(node);
+    const errors = openstackSide(node).sync_errors;
     if (!inUse) {
         const text = resourceSummaryText(resources, quota);
-        return text ? <Text size={size}>{text}</Text> : null;
+        return (text || errors) ? (
+            <Stack gap={6}>
+                {text && <Text size={size}>{text}</Text>}
+                <SyncErrorList resources={resources} errors={errors} />
+            </Stack>
+        ) : null;
     }
 
     const granted = (resources || []).filter(r => !isAvailability(r) && (quota?.[r.id] ?? 0) !== 0);
@@ -50,10 +57,61 @@ export function ProjectResources({ node, resources, quota, size = 'xs' }) {
             {availabilities.length > 0 && (
                 <Group gap={4} wrap="wrap">
                     {availabilities.map(r => (
-                        <GrantUseBadge key={r.id} resource={r} granted={quota?.[r.id] === 1} count={grantUse?.[r.id]} />
+                        <GrantUseBadge key={r.id} resource={r} granted={quota?.[r.id] === 1} count={grantUse?.[r.id]} syncError={errors?.[r.id]} />
                     ))}
                 </Group>
             )}
+            <SyncErrorList resources={resources} errors={errors} />
+        </Stack>
+    );
+}
+
+// syncErrors are what OpenStack refused for a project on the last sync, by resource id (openstackSide(node).sync_errors); empty while everything is in place.
+// syncErrorText says it in words for the project's people: the reason, never the cloud's own message, which the admins read in the History tab (SyncErrorDetails). null without an error.
+export function syncErrorText(t, resource, error) {
+    if (!error) return null;
+    const key = error.reason === 'over_quota' && error.kind === 'availability' && resource?.grant_type === 'network' ? 'over_quota_network' : error.reason;
+    const reason = t(`projects.resources.syncReason.${key}`, { defaultValue: t('projects.resources.syncReason.failed') });
+    return t('projects.resources.syncFailed', { reason });
+}
+
+// SyncErrorList is one red line per resource OpenStack refused, under the resources of a card or the inspect dialog: a switch that reads "granted" while the cloud says no is what the line is for.
+function SyncErrorList({ resources, errors }) {
+    const { t } = useTranslation();
+    const failing = (resources || []).filter(r => errors?.[r.id]);
+    if (!failing.length) return null;
+    return (
+        <Stack gap={2}>
+            {failing.map(r => (
+                <Text key={r.id} size="xs" c="red.8">{resourceLabel(t, r)}: {syncErrorText(t, r, errors[r.id])}</Text>
+            ))}
+        </Stack>
+    );
+}
+
+// SyncErrorDetails is the same for the admins, in the History tab: per resource the reason, since when, and the cloud's own message.
+export function SyncErrorDetails({ node, resources }) {
+    const { t } = useTranslation();
+    const errors = openstackSide(node).sync_errors;
+    const ids = Object.keys(errors || {});
+    if (!ids.length) return null;
+    const byId = new Map((resources || []).map(r => [r.id, r]));
+    return (
+        <Stack gap={4}>
+            <Text size="xs" fw={600} c="red.8">{t('projects.resources.syncProblems')}</Text>
+            {ids.sort().map(id => {
+                const e = errors[id];
+                const r = byId.get(id);
+                return (
+                    <Stack key={id} gap={0}>
+                        <Text size="xs">
+                            {r ? resourceLabel(t, r) : id} · {e.kind} · {e.reason}
+                            {e.since && <Text span size="xs" c="dimmed"> · {t('projects.resources.syncSince', { date: formatDateTime(e.since) })}</Text>}
+                        </Text>
+                        {e.detail && <Text size="xs" ff="monospace" c="dimmed" style={{ wordBreak: 'break-word' }}>{e.detail}</Text>}
+                    </Stack>
+                );
+            })}
         </Stack>
     );
 }
@@ -105,12 +163,13 @@ export function grantUseText(t, resource, count) {
 // GrantUseBadge is one availability on a card: in use (with how many), granted
 // but unused (outlined), or in use WITHOUT being granted (red) — the state in
 // which the reconciler tries to take something away that is still attached.
-function GrantUseBadge({ resource, granted, count }) {
+// Granted but refused by OpenStack (syncError) it is red as well, and says why.
+function GrantUseBadge({ resource, granted, count, syncError }) {
     const { t } = useTranslation();
     const measured = typeof count === 'number';
     const used = measured && count > 0;
-    const color = !granted ? COLOR.negative : used ? COLOR.info : 'gray';
-    const tip = !granted ? t('projects.resources.grantUsedNotGranted') : grantUseText(t, resource, count);
+    const color = !granted || syncError ? COLOR.negative : used ? COLOR.info : 'gray';
+    const tip = syncError ? syncErrorText(t, resource, syncError) : !granted ? t('projects.resources.grantUsedNotGranted') : grantUseText(t, resource, count);
     const badge = (
         <Badge size="xs" variant={measured && !used ? 'outline' : 'light'} color={color}>
             {used ? `${resource.name} · ${count}` : resource.name}

@@ -45,6 +45,20 @@ describe('QuotaInputs', () => {
         expect(numbers.length).toBeLessThanOrEqual(1);
     });
 
+    // Incident 19.10.2026: the switch said granted while OpenStack refused the network share on every sync.
+    it('says under a field what OpenStack refused, in words', () => {
+        const ipv4Network = { ...ipv4, grant_type: 'network' };
+        render(
+            <MantineProvider>
+                <QuotaInputs resources={[cores, ipv4Network]} value={{ cores: 4, 'dhbw-ipv4': 1 }} onChange={() => {}}
+                    usage={{ syncErrors: { 'dhbw-ipv4': { kind: 'availability', reason: 'over_quota', detail: 'HTTP 409' }, cores: { kind: 'quota', reason: 'unreachable' } } }} />
+            </MantineProvider>,
+        );
+        expect(screen.getByText(t('projects.resources.syncFailed', { reason: t('projects.resources.syncReason.over_quota_network') }))).toBeTruthy();
+        expect(screen.getByText(t('projects.resources.syncFailed', { reason: t('projects.resources.syncReason.unreachable') }))).toBeTruthy();
+        expect(screen.queryByText(/HTTP 409/)).toBeNull();
+    });
+
     it('reports 1 and 0 rather than true and false', () => {
         const seen = [];
         renderForm({ onChange: (id, v) => seen.push([id, v]) });

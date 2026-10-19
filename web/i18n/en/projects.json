@@ -801,7 +801,19 @@
         "grantServers_other": "Used by {{count}} servers",
         "grantUsedNotGranted": "In use, but not granted",
         "grantOffNetwork": "it cannot be taken away while anything is attached",
-        "grantOffServers": "the servers keep running but can no longer be rebuilt or resized"
+        "grantOffServers": "the servers keep running but can no longer be rebuilt or resized",
+        "syncFailed": "Not carried out in OpenStack: {{reason}}",
+        "syncReason": {
+            "over_quota_network": "the quota for network shares is exhausted – the administrators have been notified",
+            "over_quota": "a quota in OpenStack is exhausted – the administrators have been notified",
+            "forbidden": "OpenStack refused it (missing permission) – the administrators have been notified",
+            "not_found": "the object no longer exists in OpenStack – the administrators have been notified",
+            "conflict": "OpenStack refused it because of a conflict; it is retried on the next sync",
+            "unreachable": "OpenStack could not be reached; it is retried on the next sync",
+            "failed": "unknown error; it is retried on the next sync"
+        },
+        "syncProblems": "Not carried out in OpenStack",
+        "syncSince": "since {{date}}"
     },
     "attributes": {
         "tab": "Attributes",
