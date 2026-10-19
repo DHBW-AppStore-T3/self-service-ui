@@ -5,7 +5,7 @@ import { useClient } from '/providers/client.jsx';
 // missing from the client fails the build, not the browser.
 import {
     blockMachine, createKey, deleteCatalogModel, deleteFleetPackage,
-    deleteKey, forgetMachine, getFleet, getFleetInference, getMe, getModelCatalog, getUsage,
+    deleteKey, forgetMachine, getFleet, getFleetInference, getMe, getModelAliases, getModelCatalog, getUsage,
     putCatalogModel, putTierModel, setDefaultProject, setFleetModel, unblockMachine,
 } from '@dhbw-cloud/llm-client';
 
@@ -31,6 +31,8 @@ export function useLlmApi() {
             createKey: (name, project) => call(createKey, { body: { name, ...(project ? { project } : {}) }, headers: JSON_HEADERS }),
             setDefaultProject: (project) => call(setDefaultProject, { body: { project }, headers: JSON_HEADERS }),
             deleteKey: (id) => call(deleteKey, { path: { id } }),
+            // Which models currently stand behind each alias, with counts and health.
+            getModelAliases: () => call(getModelAliases),
 
             getFleet: () => call(getFleet),
             getFleetInference: () => call(getFleetInference),

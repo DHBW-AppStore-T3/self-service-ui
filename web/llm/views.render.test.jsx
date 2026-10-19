@@ -56,6 +56,15 @@ const POOL = {
     ],
 };
 
+const ALIASES = {
+    health_known: true,
+    aliases: [
+        { alias: 'chat-default', models: [{ model: 'qwen3.6:35b-a3b-coding-nvfp4', deployments: 33, healthy: 31 }] },
+        { alias: 'chat-fast', models: [] },
+        { alias: 'code', models: [{ model: 'qwen3.6:35b-a3b-coding-nvfp4', deployments: 33, healthy: 31 }, { model: 'Qwen/Qwen3.6-35B-A3B-FP8', deployments: 3, healthy: 3 }] },
+    ],
+};
+
 const { LlmOverview } = await import('/llm/overview.jsx');
 const { LlmKeys } = await import('/llm/keys.jsx');
 const { LlmUsage } = await import('/llm/usage.jsx');
@@ -67,6 +76,7 @@ beforeEach(() => {
         getUsage: async () => USAGE,
         getFleet: async () => FLEET,
         getFleetInference: async () => POOL,
+        getModelAliases: async () => ALIASES,
     };
     consoleErrors = [];
     vi.spyOn(console, 'error').mockImplementation((...args) => { consoleErrors.push(args.join(' ')); });
@@ -86,6 +96,16 @@ describe('the LLM views render', () => {
     it('Overview shows the endpoint and the tools', async () => {
         renderView(<LlmOverview />);
         expect(await screen.findByText('Continue')).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('Overview shows which model stands behind each alias', async () => {
+        renderView(<LlmOverview />);
+        // code: the most deployed model first, the other one counted.
+        expect(await screen.findByText(/(meist|mostly) qwen3\.6:35b-a3b-coding-nvfp4 \(\+1/)).toBeTruthy();
+        expect(screen.getAllByText(/^(meist|mostly) qwen3\.6:35b-a3b-coding-nvfp4/)).toHaveLength(2);
+        expect(screen.getByText(/derzeit kein Modell|no model at the moment/)).toBeTruthy();
+        expect(screen.getByText('x-litellm-model-name')).toBeTruthy();
         expectNoRenderFailure();
     });
 
