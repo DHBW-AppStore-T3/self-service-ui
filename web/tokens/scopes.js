@@ -37,7 +37,7 @@ export const TOKEN_SCOPES = [
         mcpServerName: 'dhbw-cloud-projects',
         mcpSubjectKey: 'tokens.scopes.projects.mcpSubject',
     },
-    // The management API of the AI service (workspaces, GPU servers, models). Its tokens are not the LLM keys: those call the models on the OpenAI-compatible API and live in the LLM area. No MCP endpoint yet. "Never expires" only for a read-only token or an admin's (allowNever: 'readOnlyOrAdmin', matching the service; `isAdmin` comes from the page), so the choice is not offered where the server would refuse it. `noteKey` is the sentence that keeps the two credentials apart on the page itself.
+    // The management API of the AI service (workspaces, GPU servers, models). Its tokens are not the LLM keys: those call the models on the OpenAI-compatible API and live in the LLM area. No MCP endpoint yet. "Never expires" only for a read-only token or an admin's (allowNever: 'readOnlyOrAdmin', matching the service; `isAdmin` comes from the page), so the choice is not offered where the server would refuse it. `noteKey` is the sentence that keeps the two credentials apart on the page itself. An admin acting on behalf of a person creates the token for that person (`actingAs` comes from the page; then "never" needs read-only again, whatever `isAdmin` says).
     llmEnabled && {
         id: 'ai',
         labelKey: 'tokens.scopes.ai.label',

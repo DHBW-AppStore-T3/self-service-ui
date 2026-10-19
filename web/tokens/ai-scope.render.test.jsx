@@ -5,8 +5,9 @@ import { renderView } from '/test/render-harness.jsx';
 
 // The AI service as a token scope: present exactly where the deployment has the service, wired to the LLM facade, and saying on the page that these tokens are not the LLM keys.
 
-// The page asks the AI service whether the caller is an admin (for "never expires"); here nobody is.
-vi.mock('/llm/use-llm-me.jsx', () => ({ useLlmMe: () => ({ isAdmin: false }) }));
+// The page asks the AI service whether the caller is an admin (for "never expires") and the act-as state whom the page acts for; both per test, nobody and nobody by default.
+vi.mock('/llm/use-llm-me.jsx', () => ({ useLlmMe: () => ({ isAdmin: !!globalThis.__llmAdmin }) }));
+vi.mock('/providers/act-as.jsx', () => ({ useActAs: () => ({ actingAs: globalThis.__actingAs ?? null }) }));
 
 vi.mock('/llm/api-llm.jsx', async (importOriginal) => {
     const actual = await importOriginal();
@@ -32,6 +33,8 @@ async function withConfig(appconfig) {
 describe('AI service token scope', () => {
     beforeEach(() => {
         delete window.appconfig;
+        globalThis.__llmAdmin = false;
+        globalThis.__actingAs = null;
         globalThis.__llmApi = {
             listApiTokens: vi.fn(async () => [TOKEN]),
             createApiToken: vi.fn(async () => ({})),
@@ -64,5 +67,29 @@ describe('AI service token scope', () => {
         expect(screen.getByText('nightly GPU report')).toBeTruthy();
         expect(screen.getByText(/LLM → API Keys/)).toBeTruthy();
         expect(globalThis.__llmApi.listApiTokens).toHaveBeenCalled();
+    });
+
+    it('shows who created a token on the owner\'s behalf', async () => {
+        globalThis.__llmApi.listApiTokens = vi.fn(async () => [{ ...TOKEN, created_by: 'admin@dhbw.de' }]);
+        const { ApiTokens } = await withConfig({ llmBaseUrl: '/api/llm/' });
+        renderView(<ApiTokens scope="ai" />);
+        expect(await screen.findByText(/admin@dhbw\.de/)).toBeTruthy();
+    });
+
+    it('acting on behalf: says whose token it is, and the admin role does not unlock "never expires"', async () => {
+        globalThis.__llmAdmin = true;
+        globalThis.__actingAs = 'student@dhbw.de';
+        const { ApiTokens, scopeLifetimes } = await withConfig({ llmBaseUrl: '/api/llm/' });
+        renderView(<ApiTokens scope="ai" />);
+        expect(await screen.findByText(/student@dhbw\.de/)).toBeTruthy();
+        const button = screen.getByRole('button', { name: /Token erstellen|Create token/ });
+        expect(button.disabled).toBe(false);
+
+        // An admin role (the person's, as /me answers while acting) does not unlock "never" on behalf; read-only does.
+        const ai = (await withConfig({ llmBaseUrl: '/api/llm/' })).scopes.find(s => s.id === 'ai');
+        const t = (k) => k;
+        expect(scopeLifetimes({ ...ai, isAdmin: true, actingAs: 'student@dhbw.de' }, t).map(l => l.value)).not.toContain('-1');
+        expect(scopeLifetimes({ ...ai, isAdmin: true, actingAs: 'student@dhbw.de' }, t, true).map(l => l.value)).toContain('-1');
+        expect(scopeLifetimes({ ...ai, isAdmin: true }, t).map(l => l.value)).toContain('-1');
     });
 });

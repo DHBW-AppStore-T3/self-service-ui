@@ -31,8 +31,8 @@ const lifetimes = (t) => [
 ];
 const DEFAULT_LIFETIME = '8760';
 
-// Whether a scope's service accepts a token without expiry: always unless allowNever is false; with 'readOnlyOrAdmin' only for a read-only token or for an admin (scope.isAdmin).
-export const neverAllowed = (scope, readOnly) => scope.allowNever === 'readOnlyOrAdmin' ? !!(readOnly || scope.isAdmin) : scope.allowNever !== false;
+// Whether a scope's service accepts a token without expiry: always unless allowNever is false; with 'readOnlyOrAdmin' only for a read-only token or for an admin's own (scope.isAdmin) — not while acting on behalf (scope.actingAs), where isAdmin is the person's role and the token is not the admin's.
+export const neverAllowed = (scope, readOnly) => scope.allowNever === 'readOnlyOrAdmin' ? !!(readOnly || (scope.isAdmin && !scope.actingAs)) : scope.allowNever !== false;
 
 // The lifetimes a scope offers: all of them, minus "never" where its service would refuse a token without expiry.
 export const scopeLifetimes = (scope, t, readOnly = false) => lifetimes(t).filter(l => l.value !== '-1' || neverAllowed(scope, readOnly));
@@ -150,6 +150,13 @@ export function TokenScopePanel({ scope }) {
                     </Group>
                 </Group>
 
+                {/* Acting on behalf, the token is the person's, not the admin's: say so before it is created, since the secret then has to be handed over. */}
+                {scope.actingAs && (
+                    <Alert color="orange" variant="light" p="xs">
+                        <Text size="sm">{t('tokens.panel.onBehalf', { person: scope.actingAs })}</Text>
+                    </Alert>
+                )}
+
                 {scope.noteKey && (
                     <Alert color="blue" variant="light" p="xs">
                         <Text size="sm">{t(scope.noteKey)}</Text>
@@ -218,6 +225,10 @@ function TokenRows({ token, secret, scope, onRevoke }) {
                     {token.description
                         ? <Text size="sm">{token.description}</Text>
                         : <Text size="sm" c="dimmed">—</Text>}
+                    {/* Who created it, when that was an admin acting on the owner's behalf: a token nobody remembers making should say where it came from. */}
+                    {token.created_by && (
+                        <Text size="xs" c="dimmed">{t('tokens.panel.createdBy', { admin: token.created_by })}</Text>
+                    )}
                 </Table.Td>
                 <Table.Td>
                     <Badge size="sm" variant="light" color={token.read_only ? 'gray' : 'blue'}>
@@ -257,7 +268,7 @@ function TokenRows({ token, secret, scope, onRevoke }) {
                                     )}
                                 </CopyButton>
                                 <Text size="xs" c="dimmed">
-                                    {t('tokens.secret.hint')}
+                                    {scope?.actingAs ? t('tokens.panel.onBehalf', { person: scope.actingAs }) : t('tokens.secret.hint')}
                                 </Text>
                             </Group>
                             {/* The only moment a complete MCP config can be

@@ -6,6 +6,7 @@ import { useLlmApi } from '/llm/api-llm.jsx';
 import { llmKeys } from '/llm/query-keys.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useNodesApi } from '/projects/api-nodes.jsx';
+import { useActAs } from '/providers/act-as.jsx';
 import { projectKeys } from '/projects/query-keys.js';
 import { TOKEN_SCOPES } from '/tokens/scopes.js';
 import { TokenScopePanel } from '/tokens/token-scope-panel.jsx';
@@ -29,6 +30,8 @@ export function ApiTokens({ scope: scopeId }) {
     const llmApi = useLlmApi();
     // Admins of the AI service may issue tokens without expiry there (and anyone a read-only one).
     const { isAdmin: llmAdmin } = useLlmMe();
+    // Acting on behalf of a person, the AI service issues the token FOR that person (theirs, with their rights). /me then answers with the person's role, but the admin exception is for an admin's own token: on behalf, only a read-only token may be without expiry, whoever the person is (neverAllowed).
+    const { actingAs } = useActAs();
 
     // The API adapter per scope id. Kept next to the hooks rather than in
     // scopes.js, which nav.jsx imports and which therefore has to stay free of
@@ -52,6 +55,7 @@ export function ApiTokens({ scope: scopeId }) {
         },
         ai: {
             isAdmin: llmAdmin,
+            actingAs,
             queryKey: llmKeys.apiTokens(),
             api: {
                 list: () => llmApi.listApiTokens(),
