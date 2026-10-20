@@ -12,6 +12,7 @@ import { profileLabel } from '/gpu/profiles.js';
 import { BuildLogBody, useBuildLog } from '/gpu/build-log.jsx';
 import { formatDuration } from '/helper/duration.js';
 import { kernelReleaseOf, releaseOf, releaseText } from '/gpu/release.js';
+import { NoStartableProject } from '/gpu/start-empty.jsx';
 
 // Starting a server (Workspaces → Server → Server starten): the hub has no start form of its own any more, its start page leads here. The choice is in the URL (?project=<slug>&env=<profile>&gpu_class=<class>), so a link to this page with a project and an environment can go out to a course; the page offers only what the person's projects allow and starts through llm-management-api, where the hub checks the start as every start. While the server starts the page waits, then opens it in this tab.
 
@@ -62,8 +63,11 @@ export function GpuStart() {
         refetchInterval: (q) => ((q.state.data?.projects ?? []).some(p => p.image_pending && p.image_build?.status === 'building') ? 10 * 1000 : false),
     });
 
-    const projects = options.data?.projects ?? [];
+    const allProjects = options.data?.projects ?? [];
     const profiles = options.data?.profiles ?? [];
+    // Offered are exactly the projects a start is possible in: active ones with workspaces (what the service answers) that allow at least one environment. The others are named in the empty state, so the person learns why nothing can be started there.
+    const projects = allProjects.filter(p => envsOf(p, profiles).length > 0);
+    const blocked = allProjects.filter(p => envsOf(p, profiles).length === 0);
     const [projectSlug, setProjectSlug] = useState(params.get('project') || '');
     const [env, setEnv] = useState(params.get('env') || '');
     const [gpuClass, setGpuClass] = useState(params.get('gpu_class') || '');
@@ -74,7 +78,9 @@ export function GpuStart() {
     const classes = profile?.gpu ? (project?.gpu_classes ?? []) : [];
     const chosenClass = classes.find(c => c.id === gpuClass) ?? classes.find(c => c.available) ?? classes[0];
     // What the URL asked for and this person cannot start, said once above the form.
-    const unknownProject = !!params.get('project') && !!options.data && !projects.some(p => p.slug === params.get('project'));
+    const linkedProject = params.get('project');
+    const linkedBlocked = !!linkedProject && blocked.find(p => p.slug === linkedProject);
+    const unknownProject = !!linkedProject && !!options.data && !projects.some(p => p.slug === linkedProject) && !linkedBlocked;
     const unknownEnv = !unknownProject && !!params.get('env') && !!project && !envs.some(p => p.slug === params.get('env'));
 
     // startedAt: a server list from before the start must not count as "no longer there".
@@ -157,12 +163,13 @@ export function GpuStart() {
                 <Stack gap="md">
                     <div>
                         <Title order={3}>{t('gpu.start.title')}</Title>
-                        <Text size="sm" c="dimmed" mt={4}>{t('gpu.start.intro')}</Text>
+                        {projects.length > 0 && <Text size="sm" c="dimmed" mt={4}>{t(projects.length === 1 ? 'gpu.start.introSingle' : 'gpu.start.intro')}</Text>}
                     </div>
-                    {unknownProject && <Alert color="orange" variant="light">{t('gpu.start.unknownProject', { project: params.get('project') })}</Alert>}
+                    {unknownProject && <Alert color="orange" variant="light">{t('gpu.start.unknownProject', { project: linkedProject })}</Alert>}
+                    {linkedBlocked && projects.length > 0 && <Alert color="orange" variant="light">{t('gpu.start.blockedProject', { project: linkedBlocked.name || linkedBlocked.slug })}</Alert>}
                     {unknownEnv && <Alert color="orange" variant="light">{t('gpu.start.unknownEnv', { env: profileLabel(params.get('env'), t) })}</Alert>}
                     {projects.length === 0 ? (
-                        <Alert color="gray" variant="light">{t('gpu.start.noProject')}</Alert>
+                        <NoStartableProject blocked={blocked} />
                     ) : (
                         <>
                             <Stack gap={6}>
@@ -171,7 +178,11 @@ export function GpuStart() {
                                     <Select allowDeselect={false} value={project.slug} onChange={setProjectSlug} maw={480}
                                         data={projects.map(p => ({ value: p.slug, label: p.name || p.slug }))} />
                                 ) : (
-                                    <Text fw={600}>{project.name || project.slug}</Text>
+                                    // The only project, shown like a filled-in field: nothing to choose, but it is clear which one is used.
+                                    <Text size="sm">
+                                        <Text span fw={600}>{project.name || project.slug}</Text>
+                                        <Text span size="sm" c="dimmed">{` (${t('gpu.start.onlyProject')})`}</Text>
+                                    </Text>
                                 )}
                                 <Text size="xs" c="dimmed">
                                     {t('gpu.start.booked')}{project.image_label ? ' ' + t('gpu.start.image', { image: project.image_label }) : ''}
@@ -189,9 +200,7 @@ export function GpuStart() {
 
                             <Stack gap={6}>
                                 <Title order={5}>{t('gpu.start.env')}</Title>
-                                {envs.length === 0 ? (
-                                    <Text size="sm" c="dimmed">{t('gpu.start.noEnv')}</Text>
-                                ) : (
+                                {envs.length > 0 && (
                                     <Radio.Group value={profile.slug} onChange={setEnv}>
                                         <SimpleGrid cols={{ base: 1, sm: Math.min(envs.length, 3) }} spacing="sm">
                                             {envs.map(p => (

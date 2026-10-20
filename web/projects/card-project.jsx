@@ -15,7 +15,8 @@ import { ProjectResources } from './component-project-resources.jsx';
 // dialog per view instead of one per card.
 //
 // perspective:
-//   'owner'    the viewer owns this project (My Projects)
+//   'owner'    the viewer owns or administers this project (My Projects)
+//   'member'   the viewer only works in it as an authorized user (My Projects): read-only, only its details
 //   'manager'  the viewer decides on it (Approvals)
 // How many members a card names before it counts the rest.
 const MEMBERS_SHOWN = 5;
@@ -38,7 +39,9 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
     const isRejected = node.status === 'rejected';
     const hasHistory = (node.history || []).length > 0;
     const isManager = perspective === 'manager';
-    const can = projectActions(node, { manager: isManager, canDelete: deletesOnRequest(config?.retirement) });
+    const isMember = perspective === 'member';
+    // A member reads the project and works in it; changing, releasing and deleting it stay with its owner and admins (the API refuses them too).
+    const can = isMember ? { details: true } : projectActions(node, { manager: isManager, canDelete: deletesOnRequest(config?.retirement) });
     // Given up: when it was put away, and when it goes by itself.
     const archivedAt = node.status === 'archived' ? lastEventAt(node, 'archived') : null;
     const deletionAt = deletionRequested(node) ? null : scheduledDeletion(node, config?.retirement);
@@ -94,9 +97,11 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                             than behind a hover nobody finds. Not uppercased: an
                             address in capitals is hard to read. */}
                         {shared && (
-                            <Badge color={COLOR.identity} variant="outline" tt="none" leftSection={<Users size="11" />}>
-                                {t('projects.projectCard.sharedBy', { owner })}
-                            </Badge>
+                            <Tooltip label={t('projects.projectCard.memberTip')} disabled={!isMember} multiline w={280} withArrow>
+                                <Badge color={COLOR.identity} variant="outline" tt="none" leftSection={<Users size="11" />}>
+                                    {t(isMember ? 'projects.projectCard.memberOf' : 'projects.projectCard.sharedBy', { owner })}
+                                </Badge>
+                            </Tooltip>
                         )}
                         {openstackSide(node).overcommitted && (
                             <Tooltip label={overage.length > 0

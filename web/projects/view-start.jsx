@@ -37,7 +37,8 @@ export function StartView() {
 
     const resources = useMemo(() => config?.resources ?? [], [config]);
     const offers = useMemo(() => {
-        const mine = mineQuery.data?.items ?? [];
+        // Only the viewer's own projects: the list also holds the ones they administer or are a member of, which neither count against their share nor mean they already have a project there.
+        const mine = (mineQuery.data?.items ?? []).filter(p => (p.viewer_relation ?? 'owner') === 'owner');
         return (eligibleQuery.data?.items ?? []).map(budget => {
             const offered = visibleResources(resources, budget).filter(r => kindOfResource(r) === area && !isAvailability(r));
             if (offered.length === 0) return null;

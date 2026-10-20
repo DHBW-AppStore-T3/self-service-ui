@@ -271,7 +271,9 @@
     "start": {
         "title": "Workspace starten",
         "intro": "Projekt und Umgebung wählen. Die Auswahl steht in der Adresse dieser Seite: ein Link mit Projekt und Umgebung lässt sich an alle Mitglieder des Projekts weitergeben.",
+        "introSingle": "Umgebung wählen; das Projekt steht fest, weil es das einzige ist, in dem ein Workspace starten kann. Die Auswahl steht in der Adresse dieser Seite: ein Link mit Projekt und Umgebung lässt sich an alle Mitglieder des Projekts weitergeben.",
         "project": "Projekt",
+        "onlyProject": "einziges Projekt",
         "booked": "Die Rechenzeit wird diesem Projekt angerechnet.",
         "image": "Umgebung des Projekts: {{image}}.",
         "storage": "Das Home-Verzeichnis gehört zum Projekt ({{gb}} GB für alle Mitglieder zusammen) und ist in allen Umgebungen dasselbe; der Ordner project-shared darin ist für alle Mitglieder. Wird das Projekt gelöscht, werden auch diese Dateien gelöscht.",
@@ -284,7 +286,6 @@
             "cpu-gpukernel": "Notebook auf der CPU; der Kernel „Python 3 (GPU)“ startet bei Bedarf auf einer GPU. GPU-Kernel enden nach 5 min ohne Ausführung, Variablen gehen dann verloren.",
             "gpu": "Ganzer Workspace auf einer GPU mit JupyterLab und VS Code. Wartet, bis eine GPU frei ist."
         },
-        "noEnv": "Dieses Projekt erlaubt keine Umgebung. Die Umgebungen legen die Verwaltenden des Projekts fest.",
         "gpuClass": "GPU-Klasse",
         "noGpuNow": "{{name}} – derzeit keine GPU",
         "start": "Starten",
@@ -292,8 +293,8 @@
         "copied": "Kopiert",
         "linkHint": "Der Link öffnet diese Seite mit der aktuellen Auswahl; gestartet wird erst mit „Starten“.",
         "unknownProject": "Das Projekt „{{project}}“ aus dem Link ist keines der eigenen aktiven Projekte mit Workspaces. Mitglied wird man über die Verwaltenden des Projekts.",
+        "blockedProject": "Im Projekt „{{project}}“ aus dem Link ist keine Umgebung freigegeben, daher lässt sich dort nichts starten.",
         "unknownEnv": "Die Umgebung „{{env}}“ aus dem Link ist in diesem Projekt nicht freigegeben.",
-        "noProject": "Kein aktives Projekt mit Workspaces.",
         "startingTitle": "Workspace in „{{name}}“ startet",
         "waiting": "Der Workspace startet, das dauert meist unter einer Minute. Sobald er bereit ist, öffnet er sich hier.",
         "waitingGpu": "Der Workspace wartet auf eine freie GPU und startet dann. Sobald er bereit ist, öffnet er sich hier.",
@@ -312,7 +313,20 @@
         "buildLog": "Bau-Protokoll",
         "autostart": "Auto-Start",
         "linkHintAuto": "Der Link startet den Workspace mit dieser Auswahl gleich beim Öffnen; läuft dort schon einer, öffnet er diesen.",
-        "gpuClassOnly": "GPU:"
+        "gpuClassOnly": "GPU:",
+        "empty": {
+            "title": "Zuerst ein Workspace-Projekt",
+            "why": "Ein Workspace läuft immer in einem Projekt: Das Projekt bringt Rechenzeit, Speicher und die erlaubten Umgebungen mit. Derzeit gibt es kein aktives Projekt, in dem ein Workspace starten kann.",
+            "noEnv_one": "Im Projekt {{projects}} ist keine Umgebung freigegeben, daher lässt sich dort nichts starten. Welche Umgebungen ein Projekt erlaubt, legen sein Budget und die Verwaltenden des Projekts fest.",
+            "noEnv_other": "In den Projekten {{projects}} ist keine Umgebung freigegeben, daher lässt sich dort nichts starten. Welche Umgebungen ein Projekt erlaubt, legen sein Budget und die Verwaltenden des Projekts fest.",
+            "instant": "Aus dem Budget „{{budget}}“ ist das sofort möglich.",
+            "onRequest": "Aus dem Budget „{{budget}}“ lässt sich ein Projekt beantragen; nutzbar ist es nach der Genehmigung.",
+            "more_one": "Dazu {{count}} weiteres Budget unter Projekte.",
+            "more_other": "Dazu {{count}} weitere Budgets unter Projekte.",
+            "noBudget": "Derzeit bietet kein erreichbares Budget Workspaces an. Den Zugang zu einem Budget richten Lehrende oder die Administration ein; Mitglied eines bestehenden Projekts wird man über dessen Verwaltende.",
+            "create": "Workspace-Projekt anlegen",
+            "toProjects": "Zu den Workspace-Projekten"
+        }
     },
     "release": {
         "title": "Rückgabezeiten",

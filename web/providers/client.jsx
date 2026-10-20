@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useAuth } from '/providers/auth.jsx';
-import { actingAsAtLoad } from '/providers/act-as.jsx';
+import { actingAsAtLoad } from '/providers/acting-as.js';
 import { useSession } from '/providers/session.jsx';
 
 import { client as projectsClient } from '@dhbw-cloud/os-mgt-client';

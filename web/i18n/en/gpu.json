@@ -271,7 +271,9 @@
     "start": {
         "title": "Start workspace",
         "intro": "Choose project and environment. The choice is in this page's address: a link with project and environment can go to all members of the project.",
+        "introSingle": "Choose the environment; the project is set, as it is the only one a workspace can start in. The choice is in this page’s address: a link with project and environment can go to all members of the project.",
         "project": "Project",
+        "onlyProject": "only project",
         "booked": "Computing time is booked to this project.",
         "image": "Project environment: {{image}}.",
         "storage": "The home directory belongs to the project ({{gb}} GB for all members together) and is the same in every environment; its folder project-shared is for all members. Deleting the project deletes these files too.",
@@ -284,7 +286,6 @@
             "cpu-gpukernel": "Notebook on the CPU; the kernel “Python 3 (GPU)” starts on a GPU when needed. GPU kernels end after 5 min without execution, losing their variables.",
             "gpu": "Whole workspace on a GPU with JupyterLab and VS Code. Waits until a GPU is free."
         },
-        "noEnv": "This project allows no environment. The project's managers set its environments.",
         "gpuClass": "GPU class",
         "noGpuNow": "{{name}} – no GPU right now",
         "start": "Start",
@@ -292,8 +293,8 @@
         "copied": "Copied",
         "linkHint": "The link opens this page with the current choice; nothing starts before “Start”.",
         "unknownProject": "The project “{{project}}” from the link is not one of your active projects with workspaces. The project's managers add members.",
+        "blockedProject": "The project “{{project}}” from the link allows no environment, so nothing can be started there.",
         "unknownEnv": "The environment “{{env}}” from the link is not allowed in this project.",
-        "noProject": "No active project with workspaces.",
         "startingTitle": "Workspace in “{{name}}” is starting",
         "waiting": "The workspace is starting, usually in less than a minute. It opens here once it is ready.",
         "waitingGpu": "The workspace waits for a free GPU, then starts. It opens here once it is ready.",
@@ -312,7 +313,20 @@
         "buildLog": "Build log",
         "autostart": "Auto start",
         "linkHintAuto": "The link starts the workspace with this choice as soon as it is opened; when one is already running there, it opens that one.",
-        "gpuClassOnly": "GPU:"
+        "gpuClassOnly": "GPU:",
+        "empty": {
+            "title": "First a workspace project",
+            "why": "A workspace always runs in a project: the project brings the computing time, the storage and the environments allowed. There is no active project yet that a workspace can start in.",
+            "noEnv_one": "The project {{projects}} allows no environment, so nothing can be started there. Which environments a project allows is set by its budget and the people who administer the project.",
+            "noEnv_other": "The projects {{projects}} allow no environment, so nothing can be started there. Which environments a project allows is set by its budget and the people who administer the project.",
+            "instant": "The budget “{{budget}}” gives you one right away.",
+            "onRequest": "A project can be requested from the budget “{{budget}}”; it can be used once approved.",
+            "more_one": "And {{count}} more budget under Projects.",
+            "more_other": "And {{count}} more budgets under Projects.",
+            "noBudget": "No budget in reach offers workspaces right now. Lecturers or administrators set up access to a budget; the people who administer an existing project can add you as a member.",
+            "create": "Create workspace project",
+            "toProjects": "To the workspace projects"
+        }
     },
     "release": {
         "title": "Release times",

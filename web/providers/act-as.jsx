@@ -6,41 +6,14 @@ import { useAuth } from '/providers/auth.jsx';
 import { useNodesApi } from '/projects/api-nodes.jsx';
 import { useDnsMeQuery } from '/dyndns/use-dns-me.jsx';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
+import { actingAsAtLoad, storeActingAs } from '/providers/acting-as.js';
 
-// Acting on behalf of another person: an admin, working on a ticket, sees and does what that person would — in every service at once. The browser sends the person's address as X-Act-As with every request (providers/client.jsx); each service checks on its own that the signed-in person is one of its admins, and refuses otherwise. Nothing is stored on a server: the choice lives in this tab (sessionStorage), so it ends with the tab and cannot linger unnoticed in another one. ?act_as=<email> in a link starts a tab acting for that person.
+// Acting on behalf of another person: an admin, working on a ticket, sees and does what that person would — in every service at once. The browser sends the person's address as X-Act-As with every request (providers/client.jsx); each service checks on its own that the signed-in person is one of its admins, and refuses otherwise. Nothing is stored on a server: the choice lives in this tab (sessionStorage, providers/acting-as.js), so it ends with the tab and cannot linger unnoticed in another one. ?act_as=<email> in a link starts a tab acting for that person.
 //
 // Switching reloads the page: everything cached so far was the other person's.
 
-const KEY = 'self-service.act-as';
-
-function stored() {
-    try { return sessionStorage.getItem(KEY) || null; } catch { return null; }
-}
-
-function store(email) {
-    try {
-        if (email) sessionStorage.setItem(KEY, email);
-        else sessionStorage.removeItem(KEY);
-    } catch { /* not kept: the reload below then shows the person's own view */ }
-}
-
-// Read once, before the first request (the interceptors need it before React mounts), and fixed for the page's life: a switch reloads.
-function atLoad() {
-    const params = new URLSearchParams(window.location.search);
-    const fromLink = params.get('act_as');
-    if (fromLink !== null) {
-        store(fromLink.trim().toLowerCase());
-        params.delete('act_as');
-        const rest = params.toString();
-        window.history.replaceState({}, document.title, window.location.pathname + (rest ? `?${rest}` : '') + window.location.hash);
-    }
-    return stored();
-}
-
-export const actingAsAtLoad = atLoad();
-
 function switchTo(email) {
-    store(email ? email.trim().toLowerCase() : null);
+    storeActingAs(email ? email.trim().toLowerCase() : null);
     window.location.reload();
 }
 
