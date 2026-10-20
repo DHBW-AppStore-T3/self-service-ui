@@ -35,27 +35,6 @@ describe('autoApproveHeadroom for a pool', () => {
     });
 });
 
-describe('autoApproveHeadroom with the viewer\'s sub-budgets', () => {
-    const sub = (extra) => ({ id: 'b_sub', kind: 'budget', parent_id: 'b1', status: 'approved', limit: { cpu: 3, ram: 8 }, ...extra });
-
-    it('counts the full limit of an active sub-budget against the per-person share', () => {
-        expect(autoApproveHeadroom(individual(), RESOURCES, [sub()])).toEqual({ cpu: 1, ram: 8 });
-    });
-
-    it('ignores a pending sub-budget and one under another budget', () => {
-        expect(autoApproveHeadroom(individual(), RESOURCES, [sub({ status: 'pending' }), sub({ parent_id: 'b2' })])).toEqual({ cpu: 4, ram: 16 });
-    });
-
-    it('leaves no share beside a sub-budget without a finite limit', () => {
-        expect(autoApproveHeadroom(individual(), RESOURCES, [sub({ inherits_limit: true, limit: {} })])).toEqual({ cpu: 0, ram: 0 });
-        expect(autoApproveHeadroom(individual(), RESOURCES, [sub({ limit: { cpu: -1 } })]).cpu).toBe(0);
-    });
-
-    it('does not touch a pool', () => {
-        expect(autoApproveHeadroom(pool(), RESOURCES, [sub()])).toEqual({ cpu: 6, ram: 64 });
-    });
-});
-
 describe('requestOutcome', () => {
     const ask = (b, quota, extra = {}) => requestOutcome({ budget: b, quota, resources: RESOURCES, myProjects: [], ...extra });
 

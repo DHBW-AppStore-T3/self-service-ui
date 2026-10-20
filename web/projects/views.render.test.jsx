@@ -175,7 +175,7 @@ describe('the cloud project views render', () => {
             id: 'b_src', kind: 'budget', status: 'approved', name: 'OneIT', parent_id: 'root',
             limit: { cores: 32, ram: 128 }, admin_scope: ['user:boss@dhbw.de'],
             eligible_requesters: ['user:dennis.pfisterer@dhbw.de'], allow_sub_budget_requests: true,
-            auto_approve: { per_requester_limit: { cores: 8 } }, created_at: '2026-08-01T10:00:00Z',
+            auto_approve: {}, created_at: '2026-08-01T10:00:00Z',
         };
         api.listEligibleForMe = async () => ({ items: [source], total: 1 });
         api.listMyBudgets = async () => ({

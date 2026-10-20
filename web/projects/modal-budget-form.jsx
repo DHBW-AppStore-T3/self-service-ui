@@ -219,6 +219,9 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         if (!values.autoApproveEnabled) return null;
         return values.autoApproveIndividual ? { per_requester_limit: values.autoApproveQuota } : {};
     };
+    // A budget with individual limits takes no sub-budget requests (the API refuses the combination), whatever the checkbox held before.
+    const hasPerPersonLimit = (values) => values.autoApproveEnabled && values.autoApproveIndividual;
+    const subBudgetRequestsAllowed = (values) => values.allowSubBudgetRequests && !hasPerPersonLimit(values);
 
     // Which tab to flag: a field the user cannot see must not fail silently.
     const fieldsByTab = {
@@ -237,9 +240,9 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
 
     const buildEditBody = (values) => {
         const {
-            name, quota, adminScope, eligibleRequesters,
-            allowSubBudgetRequests, terminationDate,
+            name, quota, adminScope, eligibleRequesters, terminationDate,
         } = values;
+        const allowSubBudgetRequests = subBudgetRequestsAllowed(values);
         // Diff against the current node: only send what changed (see note above).
         const body = {};
         if (name !== (node.name || '')) body.name = name;
@@ -306,7 +309,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 inherits_limit: values.inheritsLimit,
                 admin_scope: values.adminScope,
                 eligible_requesters: values.eligibleRequesters,
-                allow_sub_budget_requests: values.allowSubBudgetRequests,
+                allow_sub_budget_requests: subBudgetRequestsAllowed(values),
                 allow_requests_beyond_auto_approve: values.allowRequestsBeyond,
                 auto_approve_extensions: values.autoApproveExtensions,
                 auto_approve: autoApprovePolicy(values),
@@ -465,6 +468,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     // instead of two groups. (What goes through without being asked is its own
     // tab — see autoApproveTab.)
     const hasRequesters = eligibleRequesters.length > 0;
+    const perPersonLimit = hasPerPersonLimit(form.values);
     // Everything below the requester list only matters once somebody may request
     // at all — shown faded rather than hidden, so the setting stays discoverable.
     const fadedWithoutRequesters = { opacity: hasRequesters ? 1 : 0.45, transition: 'opacity 150ms ease' };
@@ -494,11 +498,14 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
 
                     <Checkbox
                         label={t('projects.budgetForm.allowBudgetRequests')}
-                        description={hasRequesters
-                            ? t('projects.budgetForm.allowBudgetRequestsHint')
-                            : t('projects.budgetForm.allowBudgetRequestsInactive')}
-                        disabled={!hasRequesters}
+                        description={!hasRequesters
+                            ? t('projects.budgetForm.allowBudgetRequestsInactive')
+                            : perPersonLimit
+                                ? t('projects.budgetForm.allowBudgetRequestsPerPerson')
+                                : t('projects.budgetForm.allowBudgetRequestsHint')}
+                        disabled={!hasRequesters || perPersonLimit}
                         {...form.getInputProps('allowSubBudgetRequests', { type: 'checkbox' })}
+                        checked={subBudgetRequestsAllowed(form.values)}
                         style={fadedWithoutRequesters}
                     />
                 </Stack>

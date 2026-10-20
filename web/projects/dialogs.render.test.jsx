@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { fakeNodesApi, fixtureTree, renderView } from '/test/render-harness.jsx';
+import i18n from '/i18n/index.js';
 
 // Does each of the node dialogs open, with the data that reaches its branches?
 // The same question as views.render.test.jsx, for the dialogs that took over
@@ -164,6 +165,38 @@ describe('node dialogs', () => {
         expect(screen.getAllByPlaceholderText(/as above: 4|wie darüber: 4/)).toHaveLength(1);
         // No upper bound only where nothing above has one.
         expect(screen.queryAllByLabelText(/no upper bound|ohne Obergrenze/)).toHaveLength(0);
+        expect(fatal()).toEqual([]);
+    });
+
+    // A budget with individual auto-approve limits takes no sub-budget requests: the checkbox is off and locked, says why, and the edit sends it off together with the limits.
+    it('the budget dialog locks sub-budget requests while individual limits apply', async () => {
+        const tree = fixtureTree();
+        const ma = {
+            ...tree.children.b_root.items[0], parent_name: 'Organization Root', parent_path: [],
+            eligible_requesters: ['group:students'], allow_sub_budget_requests: true, auto_approve: {},
+        };
+        const sent = [];
+        globalThis.__testApi.updateNode = async (id, body) => { sent.push(body); return { ...ma, ...body }; };
+        renderView(<BudgetFormModal opened onClose={() => {}} resources={RESOURCES} mode="edit" node={ma} parent={tree.roots[0]} />);
+
+        fireEvent.click(await screen.findByRole('tab', { name: i18n.t('projects.budgetForm.tabAccess') }));
+        const box = await screen.findByRole('checkbox', { name: i18n.t('projects.budgetForm.allowBudgetRequests') });
+        expect(box.checked).toBe(true);
+        expect(box.disabled).toBe(false);
+
+        fireEvent.click(screen.getByRole('tab', { name: i18n.t('projects.budgetForm.tabAutoApprove') }));
+        // The switch's label carries its description too.
+        fireEvent.click(await screen.findByLabelText(new RegExp(`^${i18n.t('projects.budgetForm.individual')}`)));
+        fireEvent.click(screen.getByRole('tab', { name: i18n.t('projects.budgetForm.tabAccess') }));
+        const locked = await screen.findByRole('checkbox', { name: i18n.t('projects.budgetForm.allowBudgetRequests') });
+        expect(locked.checked).toBe(false);
+        expect(locked.disabled).toBe(true);
+        expect(screen.getByText(i18n.t('projects.budgetForm.allowBudgetRequestsPerPerson'))).toBeTruthy();
+
+        fireEvent.click(screen.getByRole('button', { name: i18n.t('projects.forms.saveChanges') }));
+        await waitFor(() => expect(sent).toHaveLength(1));
+        expect(sent[0].allow_sub_budget_requests).toBe(false);
+        expect(sent[0].auto_approve.per_requester_limit).toBeTruthy();
         expect(fatal()).toEqual([]);
     });
 

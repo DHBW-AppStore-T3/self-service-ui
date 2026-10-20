@@ -398,7 +398,6 @@ export function isPoolAutoApprove(budget) {
 // own free capacity. Own usage is summed from the caller's projects because the
 // node's `usage` is the total over all owners. A pool has no personal cap, so
 // its headroom is the budget's free capacity — Infinity where it has no cap.
-// The sub-budgets the caller requested count too, when passed in myProjects (see activeUsageUnder).
 export function autoApproveHeadroom(budget, resources, myProjects) {
     if (!hasAutoApprove(budget)) return null;
     const pool = isPoolAutoApprove(budget);
@@ -419,23 +418,20 @@ export function autoApproveHeadroom(budget, resources, myProjects) {
 
 // activeUsageUnder sums what the caller's active projects under this budget
 // hold — the same definition of "active" the server uses for the per-person sum.
-// myProjects may also hold the sub-budgets the caller requested (see requestedBy): the server counts their full limit against the share as well, and one without a finite limit (inherited, or unlimited) leaves no share at all.
 function activeUsageUnder(budget, resources, myProjects) {
     const mine = {};
-    for (const node of myProjects || []) {
-        if (node?.parent_id !== budget.id) continue;
-        if (node.status !== 'approved' && node.status !== 'change_pending') continue;
+    for (const project of myProjects || []) {
+        if (project?.parent_id !== budget.id) continue;
+        if (project.status !== 'approved' && project.status !== 'change_pending') continue;
         for (const r of resources || []) {
             if (isAvailability(r)) continue;
-            const held = isBudget(node) && (node.inherits_limit || node.limit?.[r.id] === UNLIMITED_QUOTA)
-                ? Infinity : (node.limit?.[r.id] || 0);
-            mine[r.id] = (mine[r.id] || 0) + held;
+            mine[r.id] = (mine[r.id] || 0) + (project.limit?.[r.id] || 0);
         }
     }
     return mine;
 }
 
-// requestedBy reports whether a budget was requested (created) by the user with this email. It stays theirs whoever manages it later, and it is what the server counts against their per-person share.
+// requestedBy reports whether a budget was requested (created) by the user with this email. It stays theirs whoever manages it later.
 export function requestedBy(node, email) {
     return !!email && (node?.created_by || '').toLowerCase() === email.toLowerCase();
 }
