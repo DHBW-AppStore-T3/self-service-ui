@@ -14,6 +14,7 @@ import { llmKeys } from '/llm/query-keys.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { units } from '/llm/format.js';
 import { VscodeSetup } from '/llm/vscode-setup.jsx';
+import { LlmPoolWarnings } from '/projects/component-llm-limits.jsx';
 
 // Names that contain at least one letter or digit, as the API requires.
 const NAME_OK = /[\p{L}\p{N}]/u;
@@ -83,6 +84,7 @@ export function LlmKeys() {
     return (
         <Container size="lg" py="md">
             <Stack gap="lg">
+                <LlmPoolWarnings projects={projects} />
                 <Paper p="lg" radius="md" withBorder>
                     <Group justify="space-between" align="flex-end" wrap="wrap">
                         <div>

@@ -23,6 +23,7 @@ import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, ownerEmail as nod
 import { AttributesEditor, AttributesView, hasAttributes, useAttributesTab } from './component-node-attributes.jsx';
 import { nodeExtraTabs } from './modal-inspect.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
+import { LlmLimitHints } from './component-llm-limits.jsx';
 
 const DEFAULT_TERM_DAYS = 90;
 
@@ -656,6 +657,10 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                         form.clearFieldError(`quota.${id}`);
                     }}
                 />
+                {/* LLM: the recommended values, and a warning while the entered ones leave the project without access (no tokens) or with rates too low to use. Never a block: a budget may set low values on purpose. */}
+                <LlmLimitHints recommend
+                    resources={(kind ? offered.filter(r => kindOfResource(r) === kind) : offered).filter(r => kindOfResource(r) === 'llm')}
+                    limit={isChange ? effectiveLimit(node, quota) : quota} />
                 {first && isChange && <AllocationSection node={node} resources={resources} draft={alloc} />}
             </ResourceSection>
         </Stack>

@@ -311,7 +311,7 @@
     },
     "noAccess": {
         "title": "No access to the LLM service",
-        "text": "LLM tokens come with projects. For most people a personal project from a budget that is approved at once is enough.",
+        "text": "LLM tokens come with projects. Without a token quota there is no access to the chat and the API, not even as a member of a project with 0 tokens. For most people a personal project from a budget that is approved at once is enough.",
         "page": "This page is not available for this role."
     },
     "models": {

@@ -311,7 +311,7 @@
     },
     "noAccess": {
         "title": "Kein Zugang zum LLM-Dienst",
-        "text": "LLM-Tokens gibt es über Projekte. Für die meisten reicht ein persönliches Projekt aus einem Budget, das sofort genehmigt wird.",
+        "text": "LLM-Tokens gibt es über Projekte. Ohne Token-Kontingent ist kein Zugang zu Chat und API möglich, auch nicht als Mitglied eines Projekts mit 0 Tokens. Für die meisten reicht ein persönliches Projekt aus einem Budget, das sofort genehmigt wird.",
         "page": "Diese Seite ist für die eigene Rolle nicht freigegeben."
     },
     "models": {

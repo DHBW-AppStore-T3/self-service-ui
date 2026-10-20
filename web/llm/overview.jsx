@@ -8,6 +8,7 @@ import { useLlmApi } from '/llm/api-llm.jsx';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { llmKeys } from '/llm/query-keys.js';
 import { LITELLM_CLIENT_DOCS, STABLE_MODELS, TOOLS } from '/llm/tools.js';
+import { LlmPoolWarnings } from '/projects/component-llm-limits.jsx';
 
 // One alias with the model that serves it most often underneath, dimmed; the tooltip lists every model behind it with its count. Nothing underneath while the list is loading or not readable: the alias itself stays usable either way.
 function AliasChip({ alias, info, healthKnown }) {
@@ -47,6 +48,8 @@ export function LlmOverview() {
     const api = useLlmApi();
     // Which models stand behind the aliases right now; the server keeps it for a minute, so asking more often shows nothing new.
     const aliases = useQuery({ queryKey: llmKeys.aliases(), queryFn: () => api.getModelAliases(), enabled: hasAccess, refetchInterval: 60_000 });
+    // The pools with their rate limits: a project whose limits are too low to pass a request is said here, next to the chat button, rather than found out by a rejected request.
+    const usage = useQuery({ queryKey: llmKeys.usage(), queryFn: () => api.getUsage(), enabled: hasAccess });
     const byAlias = Object.fromEntries((aliases.data?.aliases ?? []).map(a => [a.alias, a]));
     const apiUrl = me?.api_url || '';
     const chatUrl = me?.chat_url || '';
@@ -74,6 +77,8 @@ export function LlmOverview() {
                         </Group>
                     </Stack>
                 </Paper>
+
+                <LlmPoolWarnings projects={usage.data?.projects} />
 
                 <Paper p="lg" radius="md" withBorder>
                     <Stack gap="xs">

@@ -109,6 +109,13 @@ describe('the LLM views render', () => {
         expectNoRenderFailure();
     });
 
+    it('Overview warns about a project whose per-minute limits are too low', async () => {
+        globalThis.__llmApi.getUsage = async () => ({ ...USAGE, projects: [{ slug: 'p1', name: 'Testprojekt', mtokens: 10, rpm: 60, tpm: 100 }] });
+        renderView(<LlmOverview />);
+        expect(await screen.findByText(/Testprojekt.*(voraussichtlich abgelehnt|likely be rejected)/)).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
     it('API keys lists the keys', async () => {
         renderView(<LlmKeys />);
         expect(await screen.findByText('vscode')).toBeTruthy();

@@ -7,6 +7,7 @@ import { useLlmApi } from '/llm/api-llm.jsx';
 import { llmKeys } from '/llm/query-keys.js';
 import { barColour, percent, units } from '/llm/format.js';
 import { keyLabel } from '/llm/keys.jsx';
+import { LlmPoolWarnings } from '/projects/component-llm-limits.jsx';
 
 export function LlmUsage() {
     const { t, i18n } = useTranslation();
@@ -28,6 +29,7 @@ export function LlmUsage() {
     return (
         <Container size="lg" py="md">
             <Stack gap="lg">
+                <LlmPoolWarnings projects={projects} />
                 {/* One pool per project, shared by all its members: what the
                     project has used of it together, not what this person used. */}
                 <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">

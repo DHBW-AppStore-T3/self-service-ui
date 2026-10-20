@@ -300,6 +300,17 @@
         "budgetUsedUp": "None left — the budget is fully used",
         "noOwnLimit": "No cap of its own; a manager decides per request how much there is."
     },
+    "llmLimits": {
+        "noTokensTitle": "No token quota",
+        "noTokens": "Without a token quota there is no access to the chat and the API. The project needs LLM tokens for that (at least 1 M per 30 days).",
+        "lowRatesTitle": "Very low per-minute limits",
+        "lowRates": "With {{list}}, requests will likely be rejected: a single chat request often takes several thousand tokens.",
+        "poolLowRates": "Project “{{name}}”: with {{list}}, requests will likely be rejected. Higher limits are requested by changing the project.",
+        "tpm": "{{n}} tokens per minute (useful from {{min}})",
+        "rpm": "{{n}} requests per minute (useful from {{min}})",
+        "and": " and ",
+        "recommended": "Recommended to try things out: {{mtokens}} M tokens per 30 days, {{rpm}} requests and {{tpm}} tokens per minute. The per-minute limits apply to all members of the project together."
+    },
     "projectCard": {
         "overcommittedBadge": "Overcommitted",
         "overcommittedWithAmount": "Uses {{amount}} in OpenStack, more than granted. The budget is charged the larger figure, and creating new resources is blocked.",

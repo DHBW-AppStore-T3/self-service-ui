@@ -8,6 +8,7 @@ import { useProjectConfig } from './projects.jsx';
 import { formatDate } from '../format-date.js';
 import { BudgetPath } from './component-budget-path.jsx';
 import { ProjectResources } from './component-project-resources.jsx';
+import { LlmLimitHints } from './component-llm-limits.jsx';
 
 // ProjectCard renders one project leaf. It is purely presentational: every
 // button reports an action to the owning view via onAction(actionId, node),
@@ -69,6 +70,8 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
     // the project has in OpenStack. Where it comes from is the next row.
     const resourceSummary = resourceSummaryText(resources, effectiveLimit(node, summaryQuota));
     const allocated = hasAllocations(node);
+    // An LLM project that is still in use: say when its limits keep it from working (no tokens, rates too low).
+    const llmHints = projectKinds(node, resources).includes('llm') && !isRetired(node) && !isRejected && !deletionRequested(node);
 
     // What OpenStack measures where that exceeds the limit above. This is the
     // number the budget is actually charged, so leaving it off turns the
@@ -242,6 +245,12 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         </FactRow>
                     )}
                 </Stack>
+
+                {llmHints && (
+                    <Box mb="xs">
+                        <LlmLimitHints compact resources={resources} limit={effectiveLimit(node, summaryQuota)} />
+                    </Box>
+                )}
 
                 {/* ── Proposed changes while change_pending ──────────────── */}
                 <NodeChangesDiff

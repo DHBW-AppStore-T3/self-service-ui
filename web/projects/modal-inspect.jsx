@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AlertCircle, Archive, ArrowRight, ArrowRightLeft, CalendarMinus, Check, FileText, FolderInput, Gift, LogOut, Pencil, Rocket, Tags, Trash2, Users, X } from 'lucide-react';
-import { Badge, Button, Group, Modal, Paper, Stack, Table, Text, Timeline } from '@mantine/core';
+import { Badge, Box, Button, Group, Modal, Paper, Stack, Table, Text, Timeline } from '@mantine/core';
 import { DIALOG_SIZE, DIALOG_STYLES, DialogFooter, FormTabs } from './component-form-modal.jsx';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
@@ -13,6 +13,7 @@ import { UsagePanel } from './component-usage.jsx';
 import { AttributesView, hasAttributes } from './component-node-attributes.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
 import { releaseSummary } from './util-release-max.js';
+import { LlmLimitHints } from './component-llm-limits.jsx';
 
 dayjs.extend(relativeTime);
 
@@ -112,6 +113,9 @@ function ResourcesTab({ node, resources }) {
             {!isBudget(node) && measuredUse(node)
                 ? <ProjectResources node={node} resources={resources} quota={effectiveLimit(node, node.limit)} />
                 : <QuotaBadges resources={resources} quota={node.limit} size="xs" />}
+            {!isBudget(node) && projectKinds(node, resources).includes('llm') && (
+                <Box mt="xs"><LlmLimitHints compact resources={resources} limit={effectiveLimit(node, node.limit)} /></Box>
+            )}
         </Section>
     );
 }
