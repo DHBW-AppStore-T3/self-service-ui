@@ -21,7 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { llmEnabled } from '/features.js';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
-import { COLOR, PROJECT_SORTS, budgetKinds, getAuthUserEmail, ownerEmail, projectKinds, resourcesOfKinds, sortProjects, pollWhileDeleting } from './util-project.jsx';
+import { COLOR, PROJECT_SORTS, budgetKinds, getAuthUserEmail, ownerEmail, projectKinds, requestedBy, resourcesOfKinds, sortProjects, pollWhileDeleting } from './util-project.jsx';
 
 // MyProjectsView lists the projects of one area (cloud, workspaces, llm) the
 // signed-in user owns or shares, and lets them request new ones, propose changes
@@ -100,6 +100,10 @@ export function MyProjectsView({ area = 'cloud' }) {
     // so only those go into the arithmetic below.
     const me = getAuthUserEmail(user).toLowerCase();
     const ownProjects = projects.items.filter(n => ownerEmail(n).toLowerCase() === me);
+    // The per-person share also counts the sub-budgets the viewer requested; the ones still managed by them are in hand here.
+    const ownShare = [...ownProjects, ...myBudgets.filter(b => requestedBy(b, me))];
+    // The list also holds projects the viewer only works in, as an authorized user (viewer_relation member): shown after the others, read-only.
+    const memberOnly = (n) => n.viewer_relation === 'member';
     const canRequest = myBudgets.length > 0 || eligibleBudgets.length > 0;
     // The offers are what the user may REQUEST from; budgets they manage live
     // in "My Budgets" and would only repeat themselves here.
@@ -158,14 +162,18 @@ export function MyProjectsView({ area = 'cloud' }) {
             )}
 
             <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                {/* Own projects first, the shared ones after them. */}
-                {[...sortProjects(ownProjects.filter(ofKind), sort), ...sortProjects(shown.filter(n => !ownProjects.includes(n)), sort)].map(node => (
+                {/* Own projects first, then the ones administered with others, then those the viewer is a member of. */}
+                {[
+                    ...sortProjects(ownProjects.filter(ofKind), sort),
+                    ...sortProjects(shown.filter(n => !ownProjects.includes(n) && !memberOnly(n)), sort),
+                    ...sortProjects(shown.filter(n => !ownProjects.includes(n) && memberOnly(n)), sort),
+                ].map(node => (
                     <ProjectCard
                         key={node.id}
                         node={node}
                         resources={areaResources}
                         parentName={node.parent_name}
-                        perspective="owner"
+                        perspective={memberOnly(node) ? 'member' : 'owner'}
                         envBuild={envBuildOf(node)}
                         onAction={handleAction}
                     />
@@ -178,7 +186,7 @@ export function MyProjectsView({ area = 'cloud' }) {
             <BudgetOffers
                 budgets={offers}
                 resources={areaResources}
-                myProjects={ownProjects}
+                myProjects={ownShare}
                 kinds={kinds}
                 onNewProject={(b, k) => setNewProject({ budget: b.id, kind: k })}
                 onRequestBudget={(b) => setBudgetRequestFrom(b)}
@@ -193,7 +201,7 @@ export function MyProjectsView({ area = 'cloud' }) {
                 openstackRoles={config.openstackRoles}
                 myBudgets={myBudgets}
                 eligibleBudgets={eligibleBudgets}
-                myProjects={ownProjects}
+                myProjects={ownShare}
                 initialBudgetId={newProject?.budget || null}
                 initialKind={newProject?.kind ?? null}
             />
@@ -208,7 +216,7 @@ export function MyProjectsView({ area = 'cloud' }) {
                 node={dlg.node}
                 myBudgets={myBudgets}
                 eligibleBudgets={eligibleBudgets}
-                myProjects={ownProjects}
+                myProjects={ownShare}
             />
             <BudgetFormModal
                 key={`budget-request:${budgetRequestFrom?.id ?? 'closed'}`}

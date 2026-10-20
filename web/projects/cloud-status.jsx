@@ -14,6 +14,7 @@ import { budgetKinds, PROJECT_KINDS } from './util-project.jsx';
 //   hasBudgets whether the user manages a budget. The budget view is for
 //              running budgets; somebody who only draws from them finds them
 //              on "My Projects", and the entry is left out (see nav.jsx).
+//   canRequestBudgets whether a budget offered to the user takes sub-budget requests (allow_sub_budget_requests): the budget view is where those are made and followed, so the entry is shown for them too.
 //   offered    the kinds (cloud, workspaces, llm) a budget in reach (managed, or
 //              one the user may request from) offers resources of. Without one,
 //              the LLM or workspace section has nothing to offer somebody who has
@@ -24,7 +25,7 @@ import { budgetKinds, PROJECT_KINDS } from './util-project.jsx';
 // what just happened.
 
 const CloudStatusContext = createContext(null);
-const EMPTY = { isRoot: false, pending: 0, hasBudgets: false, offered: [], ready: false, refresh: () => {} };
+const EMPTY = { isRoot: false, pending: 0, hasBudgets: false, canRequestBudgets: false, offered: [], ready: false, refresh: () => {} };
 
 export function CloudStatusProvider({ children }) {
     const api = useNodesApi();
@@ -62,6 +63,7 @@ export function CloudStatusProvider({ children }) {
                     && !role.value?.acting_as,
                 pending: count(pending),
                 hasBudgets: count(myBudgets) > 0,
+                canRequestBudgets: items(eligible).some(b => b.allow_sub_budget_requests !== false),
                 // The kinds a budget in reach offers (managed or requestable): a section without a project shows the way to one only then.
                 offered: PROJECT_KINDS.filter(k => [...items(mine), ...items(eligible)].some(b => budgetKinds(b, resources).includes(k))),
             };
@@ -73,6 +75,7 @@ export function CloudStatusProvider({ children }) {
         isRoot: statusQuery.data?.isRoot ?? false,
         pending: statusQuery.data?.pending ?? 0,
         hasBudgets: statusQuery.data?.hasBudgets ?? false,
+        canRequestBudgets: statusQuery.data?.canRequestBudgets ?? false,
         offered: statusQuery.data?.offered ?? [],
         // Whether the answers above are KNOWN yet. Until the query settles,
         // isRoot is false because nothing has been asked — not because the user

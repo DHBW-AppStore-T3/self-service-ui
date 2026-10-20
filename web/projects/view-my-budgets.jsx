@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronsDownUp, ChevronsUpDown, Inbox, Search, X } from 'lucide-react';
-import { ActionIcon, Alert, Badge, Box, Button, Checkbox, Flex, Group, Loader, Paper, SegmentedControl, Stack, Text, TextInput, Tooltip, useTree } from '@mantine/core';
+import { ActionIcon, Alert, Anchor, Badge, Box, Button, Checkbox, Flex, Group, Loader, Paper, SegmentedControl, Stack, Text, TextInput, Title, Tooltip, useTree } from '@mantine/core';
 import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
@@ -22,7 +22,8 @@ import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useRouter } from 'wouter';
-import { childrenById, COLOR, formatError, getAuthUserEmail, isBudget, projectActions, requestTypes, requestType } from './util-project.jsx';
+import { childrenById, COLOR, formatError, getAuthUserEmail, isBudget, projectActions, requestedBy, requestTypes, requestType } from './util-project.jsx';
+import { NodeStatusBadge } from './component-common.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 
 // How long typing pauses before a search is sent.
@@ -480,6 +481,12 @@ export function MyBudgetsView({ params }) {
     if (!api || !config || myBudgetsQuery.isPending) return <Loading />;
     if (myBudgetsQuery.isError) return <LoadError query={myBudgetsQuery} title={t('projects.budgets.loadError')} />;
 
+    // The sub-budgets the viewer asked for, pending ones included — those they still manage; one handed over entirely to others is no longer theirs to see.
+    const myRequests = myBudgets.items.filter(b => requestedBy(b, userEmail));
+    // Somebody who manages nothing but what they requested themselves comes here to request sub-budgets and follow them: for them the page starts with that. Managers keep the view they run budgets with.
+    const requesterView = !cloudStatus.isRoot && myBudgets.items.length === myRequests.length
+        && (budgetRequestTargets.length > 0 || myRequests.length > 0);
+
     const resources = config.resources || [];
     // Move targets: every budget visible in the tree.
     const loadedBudgets = Object.values(childrenMap).flatMap(p => p.items).filter(isBudget);
@@ -498,7 +505,7 @@ export function MyBudgetsView({ params }) {
                     {' '}
                     {t('projects.budgets.introSelect')}
                 </Text>
-                {budgetRequestTargets.length > 0 && (
+                {!requesterView && budgetRequestTargets.length > 0 && (
                     <Button size="xs" variant="light" leftSection={<Inbox size="14" />}
                         onClick={() => setBudgetForm({ mode: 'request' })}>
                         {t('projects.actions.requestBudget')}
@@ -506,7 +513,44 @@ export function MyBudgetsView({ params }) {
                 )}
             </Group>
 
-            {myBudgets.items.length === 0 && (
+            {requesterView && (
+                <Paper withBorder p="md" radius="md">
+                    <Stack gap="sm">
+                        <Group justify="space-between" align="center" gap="sm">
+                            <Stack gap={0}>
+                                <Title order={5}>{t('projects.budgets.requestTitle')}</Title>
+                                <Text size="xs" c="dimmed">{t('projects.budgets.requestHint')}</Text>
+                            </Stack>
+                            {budgetRequestTargets.length > 0 && (
+                                <Button size="xs" leftSection={<Inbox size="14" />} ml="auto"
+                                    onClick={() => setBudgetForm({ mode: 'request' })}>
+                                    {t('projects.actions.requestBudget')}
+                                </Button>
+                            )}
+                        </Group>
+                        <Text fw={600} size="sm">{t('projects.budgets.myRequests')}</Text>
+                        {myRequests.length === 0 ? (
+                            <Text size="sm" c="dimmed">{t('projects.budgets.myRequestsNone')}</Text>
+                        ) : (
+                            <Stack gap={6}>
+                                {myRequests.map(b => (
+                                    <Group key={b.id} gap="sm" wrap="nowrap" justify="space-between">
+                                        <Box style={{ minWidth: 0 }}>
+                                            <Anchor component="button" type="button" size="sm" onClick={() => select(b)}>{b.name || b.id}</Anchor>
+                                            {b.parent_name && (
+                                                <Text size="xs" c="dimmed" truncate>{t('projects.budgets.requestedFrom', { name: b.parent_name })}</Text>
+                                            )}
+                                        </Box>
+                                        <NodeStatusBadge status={b.status} size="sm" />
+                                    </Group>
+                                ))}
+                            </Stack>
+                        )}
+                    </Stack>
+                </Paper>
+            )}
+
+            {myBudgets.items.length === 0 && !requesterView && (
                 <Alert color={COLOR.info} variant="light">
                     {budgetRequestTargets.length > 0
                         ? t('projects.budgets.noneCanRequest')

@@ -34,7 +34,7 @@ export const NAV_BREAKPOINT = 'md';
 export function useNav() {
     const [currentPath] = useLocation();
     const { t } = useTranslation();
-    const { isRoot, pending, hasBudgets } = useCloudStatus();
+    const { isRoot, pending, hasBudgets, canRequestBudgets } = useCloudStatus();
     const { hasPolicy, adminEvents, ownEvents } = useDnsPolicyStatus();
     // Which of the AI service's areas are visible, and how (ai-areas.jsx, shared with the footer).
     const { llm, workspaces, llmArea } = useAiAreasVisible();
@@ -105,10 +105,8 @@ export function useNav() {
                 hasPolicy && { label: t('nav.administration'), href: '/dyndns/administration', dot: adminEvents > 0 },
             ].filter(Boolean),
         },
-        // Only for someone who manages a budget or is root admin. A dot, not a
-        // count: the budget view can widen its scope, so a number up here would
-        // disagree with the number down there.
-        cloudProjectsEnabled && (hasBudgets || isRoot) && {
+        // Only for someone who manages a budget, may request a sub-budget somewhere, or is root admin. A dot, not a count: the budget view can widen its scope, so a number up here would disagree with the number down there.
+        cloudProjectsEnabled && (hasBudgets || canRequestBudgets || isRoot) && {
             id: 'budgets',
             label: t('nav.budgets'),
             base: '/budgets',
