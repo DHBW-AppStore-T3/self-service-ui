@@ -86,7 +86,7 @@ ingress:
 bff:
   enabled: false
   image: quay.io/oauth2-proxy/oauth2-proxy
-  version: v7.15.3
+  version: v7.15.5
   # Supplies client-id, client-secret and cookie-secret. Created out of band;
   # keeping the cookie-secret stable across a redeploy is what keeps sessions
   # alive.
