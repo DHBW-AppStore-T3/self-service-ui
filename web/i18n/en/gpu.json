@@ -278,6 +278,8 @@
         "image": "Project environment: {{image}}.",
         "storage": "The home directory belongs to the project ({{gb}} GB for all members together) and is the same in every environment; its folder project-shared is for all members. Deleting the project deletes these files too.",
         "noStorage": "This project has no workspace storage: files are lost when the workspace ends. Storage is requested at the project.",
+        "scratch": "Local storage outside the home: {{gb}} GB per workspace, e.g. for packages installed with pip or conda and /tmp. Files in the home do not count. Writing more ends the workspace; larger packages belong in the project's environment.",
+        "scratchNoStorage": "Local storage: {{gb}} GB per workspace, without workspace storage including the home. Writing more ends the workspace.",
         "ends": "The project ends on {{date}}.",
         "deletes": "On {{date}} its workspaces are deleted with all files; save what matters before or have the project extended.",
         "env": "Environment",

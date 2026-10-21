@@ -278,6 +278,8 @@
         "image": "Umgebung des Projekts: {{image}}.",
         "storage": "Das Home-Verzeichnis gehört zum Projekt ({{gb}} GB für alle Mitglieder zusammen) und ist in allen Umgebungen dasselbe; der Ordner project-shared darin ist für alle Mitglieder. Wird das Projekt gelöscht, werden auch diese Dateien gelöscht.",
         "noStorage": "Dieses Projekt hat keinen Workspace-Speicher: Dateien gehen beim Beenden des Workspace verloren. Speicher wird am Projekt beantragt.",
+        "scratch": "Lokaler Speicher außerhalb des Homes: {{gb}} GB je Workspace, z. B. für mit pip oder conda installierte Pakete und /tmp. Dateien im Home zählen nicht. Wird mehr geschrieben, wird der Workspace beendet; größere Pakete gehören in die Projekt-Umgebung.",
+        "scratchNoStorage": "Lokaler Speicher: {{gb}} GB je Workspace, ohne Workspace-Speicher einschließlich des Homes. Wird mehr geschrieben, wird der Workspace beendet.",
         "ends": "Das Projekt endet am {{date}}.",
         "deletes": "Am {{date}} werden seine Workspaces mit allen Dateien gelöscht; Wichtiges vorher sichern oder das Projekt verlängern lassen.",
         "env": "Umgebung",

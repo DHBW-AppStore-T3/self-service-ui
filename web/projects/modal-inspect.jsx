@@ -13,6 +13,7 @@ import { UsagePanel } from './component-usage.jsx';
 import { AttributesView, hasAttributes } from './component-node-attributes.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
 import { releaseSummary } from './util-release-max.js';
+import { scratchSummary } from './util-workspace-scratch.js';
 import { LlmLimitHints } from './component-llm-limits.jsx';
 
 dayjs.extend(relativeTime);
@@ -289,6 +290,12 @@ function NodeHistoryPanel({ node, resources }) {
                         {(h.release_max_from || h.release_max_to) && (
                             <Text size="sm" mt="xs">
                                 {t('projects.releaseMax.historyChange', { from: releaseSummary(t, h.release_max_from), to: releaseSummary(t, h.release_max_to) })}
+                            </Text>
+                        )}
+
+                        {(h.workspace_scratch_gb_from || h.workspace_scratch_gb_to) && (
+                            <Text size="sm" mt="xs">
+                                {t('projects.workspaceScratch.historyChange', { from: scratchSummary(t, h.workspace_scratch_gb_from), to: scratchSummary(t, h.workspace_scratch_gb_to) })}
                             </Text>
                         )}
 

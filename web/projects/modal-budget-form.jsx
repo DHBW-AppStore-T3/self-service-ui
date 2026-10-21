@@ -18,6 +18,8 @@ import { AttributesEditor, useAttributesTab } from './component-node-attributes.
 import { nodeExtraTabs } from './modal-inspect.jsx';
 import { ReleaseMaxInputs } from './component-release-max.jsx';
 import { effectiveRelease, isEmptyRelease, normalizeRelease, releaseErrors, sameRelease } from './util-release-max.js';
+import { WorkspaceScratchInput } from './component-workspace-scratch.jsx';
+import { effectiveScratch, normalizeScratch, scratchErrors } from './util-workspace-scratch.js';
 
 // Same three-step split as the project dialog: what it is → how much → who.
 const TAB_DETAILS = 'details';
@@ -78,6 +80,8 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     const termOf = (parentId) => boundFor(parentId)?.max_project_term_days ?? null;
     // The release maximums the budgets above allow: the server sends them with the node being edited; for a new one they are what applies at the budget it draws from. A budget may only tighten them.
     const releaseAbove = (parentId) => isEdit ? (node?.inherited_release_max ?? null) : effectiveRelease(boundFor(parentId));
+    // The same for the local storage per workspace: what the budgets above allow, which this one may only lower.
+    const scratchAbove = (parentId) => isEdit ? normalizeScratch(node?.inherited_workspace_scratch_gb) : effectiveScratch(boundFor(parentId));
     // Which resources tab holds the release maximums: the workspaces one, or the only one when the catalogue does not split by kind; undefined where the budget offers nothing of the workspaces (then they would decide nothing).
     const releaseTabKind = (parentId) => {
         const scoped = visibleResources(resources, scopeFor(parentId));
@@ -112,6 +116,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 maxTermDays: node.max_project_term_days ?? null,
                 inheritsLimit: !!node.inherits_limit,
                 releaseMax: normalizeRelease(node.release_max),
+                workspaceScratchGb: normalizeScratch(node.workspace_scratch_gb),
             }
             : {
                 parentId: parent?.id ?? eligibleBudgets[0]?.id ?? null,
@@ -146,6 +151,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 inheritsLimit: false,
                 // Nothing of its own: the budgets above decide until somebody tightens them here.
                 releaseMax: normalizeRelease(null),
+                workspaceScratchGb: null,
             },
         validate: (values) => ({
             name: (values.name || '').trim().length < 3
@@ -172,6 +178,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                         .map(([id, msg]) => [`autoApproveQuota.${id}`, msg]))
                 : {}),
             ...(releaseTabKind(values.parentId) === undefined ? {} : releaseErrors(t, values.releaseMax, releaseAbove(values.parentId))),
+            ...(releaseTabKind(values.parentId) === undefined ? {} : scratchErrors(t, values.workspaceScratchGb, scratchAbove(values.parentId))),
         }),
     });
 
@@ -227,7 +234,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     const fieldsByTab = {
         [TAB_DETAILS]: (k) => ['name', 'reason', 'parentId', 'terminationDate', 'maxTermDays'].includes(k),
         ...Object.fromEntries(resourceKinds.map(kind => [resourceTabValue(kind),
-            (k) => (k.startsWith('quota.') && (!kind || kindOfResource(resourceById[k.slice(6)]) === kind)) || (k.startsWith('releaseMax.') && kind === releaseKind)])),
+            (k) => (k.startsWith('quota.') && (!kind || kindOfResource(resourceById[k.slice(6)]) === kind)) || ((k.startsWith('releaseMax.') || k === 'workspaceScratchGb') && kind === releaseKind)])),
         [TAB_ACCESS]: (k) => k === 'adminScope' || k === 'eligibleRequesters',
         [TAB_AUTO_APPROVE]: (k) => k.startsWith('autoApproveQuota.'),
     };
@@ -261,6 +268,11 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         }
         // Sent whole when changed; an empty object removes the budget's own.
         if (!sameRelease(values.releaseMax, node.release_max)) body.release_max = normalizeRelease(values.releaseMax);
+        const scratch = normalizeScratch(values.workspaceScratchGb);
+        if (scratch !== normalizeScratch(node.workspace_scratch_gb)) {
+            if (scratch === null) body.clear_workspace_scratch_gb = true;
+            else body.workspace_scratch_gb = scratch;
+        }
         if (values.maxTermDays !== (node.max_project_term_days ?? null)) {
             if (values.maxTermDays) body.max_project_term_days = values.maxTermDays;
             else body.clear_max_project_term_days = true;
@@ -315,6 +327,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 auto_approve: autoApprovePolicy(values),
                 max_project_term_days: values.maxTermDays,
                 ...(isEmptyRelease(values.releaseMax) ? {} : { release_max: normalizeRelease(values.releaseMax) }),
+                ...(normalizeScratch(values.workspaceScratchGb) === null ? {} : { workspace_scratch_gb: normalizeScratch(values.workspaceScratchGb) }),
                 termination_date: values.terminationDate ? values.terminationDate.toISOString() : null,
             });
         },
@@ -457,6 +470,17 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                         const path = `releaseMax.${k}.${field}`;
                         form.setFieldValue(path, v);
                         form.clearFieldError(path);
+                    }}
+                />
+            )}
+            {releaseKind !== undefined && kind === releaseKind && (
+                <WorkspaceScratchInput
+                    value={form.values.workspaceScratchGb}
+                    inherited={scratchAbove(form.values.parentId)}
+                    error={form.errors.workspaceScratchGb}
+                    onChange={(v) => {
+                        form.setFieldValue('workspaceScratchGb', v);
+                        form.clearFieldError('workspaceScratchGb');
                     }}
                 />
             )}

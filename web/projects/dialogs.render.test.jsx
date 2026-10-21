@@ -200,6 +200,28 @@ describe('node dialogs', () => {
         expect(fatal()).toEqual([]);
     });
 
+    it('the budget dialog offers the local storage per workspace with what the budgets above allow, and refuses more', async () => {
+        const tree = fixtureTree();
+        const ws = [...RESOURCES, { id: 'ws-vcpu-hours', name: 'vCPU-Stunden', provider: 'aiaas', area: 'workspaces', kind: 'window', window: '30d' }];
+        const ma = { ...tree.children.b_root.items[0], parent_name: 'Organization Root', parent_path: [], inherited_workspace_scratch_gb: 5 };
+        renderView(<BudgetFormModal opened onClose={() => {}} resources={ws} mode="edit" node={ma} parent={{ ...tree.roots[0], limit: { ...tree.roots[0].limit, 'ws-vcpu-hours': -1 } }} />);
+        fireEvent.click(await screen.findByRole('tab', { name: /Workspaces|Lab/ }));
+        expect(await screen.findByText(/Local storage per workspace|Lokaler Speicher je Workspace/)).toBeTruthy();
+        expect(screen.getByPlaceholderText(/as above: 5|wie darüber: 5/)).toBeTruthy();
+        expect(fatal()).toEqual([]);
+    });
+
+    it('the root budget dialog shows the AI service default for the local storage', async () => {
+        const tree = fixtureTree();
+        const ws = [...RESOURCES, { id: 'ws-vcpu-hours', name: 'vCPU-Stunden', provider: 'aiaas', area: 'workspaces', kind: 'window', window: '30d' }];
+        const root = { ...tree.roots[0], parent_id: null, workspace_scratch_gb: 3 };
+        renderView(<BudgetFormModal opened onClose={() => {}} resources={ws} mode="edit" node={root} />);
+        fireEvent.click(await screen.findByRole('tab', { name: /Workspaces|Lab/ }));
+        expect(await screen.findByPlaceholderText(/Default \(10 GB\)|Standard \(10 GB\)/)).toBeTruthy();
+        expect(screen.getByDisplayValue('3')).toBeTruthy();
+        expect(fatal()).toEqual([]);
+    });
+
     it('the read-only dialog shows the same tabs', async () => {
         renderView(<NodeInspectModal opened onClose={() => {}} resources={RESOURCES} node={project({ status: 'archived' })} />);
         expect(await screen.findAllByRole('tab')).not.toHaveLength(0);

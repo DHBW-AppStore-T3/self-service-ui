@@ -87,5 +87,16 @@ describe('start page', () => {
         expect(screen.getByText(`(${i18n.t('gpu.start.onlyProject')})`)).toBeTruthy();
         expect(screen.queryByText('Leer')).toBeNull();
         expect(screen.queryByRole('combobox')).toBeNull();
+        // An AI service from before sends no local storage: no line about it.
+        expect(screen.queryByText(i18n.t('gpu.start.scratch', { gb: 1 }))).toBeNull();
+    });
+    it('names the local storage outside the home the AI service sends', async () => {
+        globalThis.__gpuApi = {
+            startOptions: async () => ({ projects: [{ slug: 'ws', name: 'Workspace-Testprojekt', profiles: ['cpu'], storage_gb: 15, scratch_gb: 1 }], profiles: PROFILES }),
+            listServers: async () => [],
+        };
+        globalThis.__nodesApi = nodesApi();
+        renderView(<GpuStart />);
+        expect(await screen.findByText(i18n.t('gpu.start.scratch', { gb: 1 }))).toBeTruthy();
     });
 });

@@ -190,6 +190,10 @@ export function GpuStart() {
                                 {project.storage_gb > 0
                                     ? <Text size="xs" c="dimmed">{t('gpu.start.storage', { gb: project.storage_gb })}</Text>
                                     : <Text size="xs" c="red">{t('gpu.start.noStorage')}</Text>}
+                                {/* The local storage outside the home (scratch_gb, from an AI service that sends it): above it the workspace is ended. */}
+                                {project.scratch_gb > 0 && (
+                                    <Text size="xs" c="dimmed">{t(project.storage_gb > 0 ? 'gpu.start.scratch' : 'gpu.start.scratchNoStorage', { gb: project.scratch_gb })}</Text>
+                                )}
                                 {project.ends_at && (
                                     <Text size="xs" c="orange">
                                         {t('gpu.start.ends', { date: day(project.ends_at) })}

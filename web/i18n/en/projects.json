@@ -946,5 +946,17 @@
         "hoursValue": "{{value}} h",
         "summaryKind": "{{kind}} {{open}}/{{closed}} min, {{hours}}",
         "historyChange": "Release times (maximums): {{from}} → {{to}}"
+    },
+    "workspaceScratch": {
+        "title": "Local storage per workspace",
+        "hint": "How much a workspace or GPU kernel of the projects below this budget may write outside its home: packages installed into the environment, /tmp, logs. Files in the home and in project-shared do not count (the project's workspace storage). Writing more makes Kubernetes end the workspace. Empty takes the value of the budgets above; without one there, the AI service's default applies (10 GB). Budgets below can only lower it.",
+        "label": "Local storage (GB)",
+        "standard": "Default (10 GB)",
+        "fromAbove": "as above: {{value}}",
+        "errRange": "Between 1 and {{max}} GB.",
+        "errAbove": "At most {{value}} GB; the budget above allows no more.",
+        "none": "none of its own",
+        "gbValue": "{{value}} GB",
+        "historyChange": "Local storage per workspace: {{from}} → {{to}}"
     }
 }

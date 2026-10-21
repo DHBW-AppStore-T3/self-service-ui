@@ -946,5 +946,17 @@
         "hoursValue": "{{value}} Std.",
         "summaryKind": "{{kind}} {{open}}/{{closed}} Min., {{hours}}",
         "historyChange": "Rückgabezeiten (Höchstwerte): {{from}} → {{to}}"
+    },
+    "workspaceScratch": {
+        "title": "Lokaler Speicher je Workspace",
+        "hint": "Wie viel ein Workspace oder GPU-Kernel der Projekte unter diesem Budget außerhalb des Homes schreiben darf: installierte Pakete in der Umgebung, /tmp, Logs. Dateien im Home und in project-shared zählen nicht (Workspace-Speicher des Projekts). Wird mehr geschrieben, beendet Kubernetes den Workspace. Leer übernimmt den Wert der Budgets darüber, ohne Wert dort gilt der Standard des KI-Dienstes (10 GB). Budgets darunter können den Wert nur verkleinern.",
+        "label": "Lokaler Speicher (GB)",
+        "standard": "Standard (10 GB)",
+        "fromAbove": "wie darüber: {{value}}",
+        "errRange": "Zwischen 1 und {{max}} GB.",
+        "errAbove": "Höchstens {{value}} GB, mehr erlaubt das Budget darüber nicht.",
+        "none": "kein eigener",
+        "gbValue": "{{value}} GB",
+        "historyChange": "Lokaler Speicher je Workspace: {{from}} → {{to}}"
     }
 }
