@@ -33,7 +33,7 @@
             "lead": "Private language models on DHBW hardware — in the browser and via API.",
             "a": "The DHBW chat right in the browser",
             "b": "OpenAI-compatible endpoint for VS Code and your own programs",
-            "c": "Requests are not stored and never leave DHBW",
+            "c": "Prompts are neither logged nor passed on",
             "open": "Open the LLM service"
         }
     },

@@ -2,7 +2,7 @@
     "overview": {
         "title": "Sprachmodelle der DHBW",
         "intro": "Ein gemeinsamer, OpenAI-kompatibler Endpunkt für die Sprachmodelle auf Hardware der DHBW: im Browser über den DHBW-Chat, in eigenen Werkzeugen mit einem API Key.",
-        "promise": "Anfragen werden nicht gespeichert und verlassen die DHBW nicht.",
+        "promise": "Prompts und Antworten werden weder protokolliert noch an Dritte weitergegeben. Unterhaltungen im DHBW-Chat bleiben gespeichert, bis sie gelöscht werden; über die API wird nichts gespeichert.",
         "openChat": "Zum DHBW-Chat",
         "createKey": "API Key erstellen",
         "connect": "Verbinden",

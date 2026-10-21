@@ -33,7 +33,7 @@
             "lead": "Private Sprachmodelle auf Hardware der DHBW — im Browser und per API.",
             "a": "Der DHBW-Chat direkt im Browser",
             "b": "OpenAI-kompatibler Endpunkt für VS Code und eigene Programme",
-            "c": "Keine Speicherung der Anfragen, keine Weitergabe nach außen",
+            "c": "Prompts werden nicht protokolliert und nicht weitergegeben",
             "open": "Zum LLM-Dienst"
         }
     },
