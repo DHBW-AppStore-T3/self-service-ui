@@ -2,7 +2,7 @@
     "overview": {
         "title": "DHBW language models",
         "intro": "One shared, OpenAI-compatible endpoint for the language models on DHBW hardware: in the browser through the DHBW chat, in your own tools with an API key.",
-        "promise": "Prompts and answers are neither logged nor passed on to third parties. Conversations in the DHBW chat stay stored until they are deleted; nothing is stored for API requests.",
+        "promise": "Prompts and answers are neither logged nor passed on to third parties. Conversations in the DHBW chat stay stored until they are deleted; for API requests no content is stored, only usage data for quotas and accounting.",
         "openChat": "Open DHBW chat",
         "createKey": "Create API key",
         "connect": "Connect",
