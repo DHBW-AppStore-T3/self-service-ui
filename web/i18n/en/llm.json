@@ -1,0 +1,366 @@
+{
+    "overview": {
+        "title": "DHBW language models",
+        "intro": "One shared, OpenAI-compatible endpoint for the language models on DHBW hardware: in the browser through the DHBW chat, in your own tools with an API key.",
+        "promise": "Prompts and answers are neither logged nor passed on to third parties. Conversations in the DHBW chat stay stored until they are deleted; for API requests no content is stored, only usage data for quotas and accounting.",
+        "openChat": "Open DHBW chat",
+        "createKey": "Create API key",
+        "connect": "Connect",
+        "baseUrl": "Base URL",
+        "copy": "Copy",
+        "copied": "Copied",
+        "models": "Model names",
+        "modelsHint": "One name stands for several models; which one answers depends on load and availability. The names stay valid; concrete model names in the model list can disappear at any time. The response header <1>x-litellm-model-name</1> names the model that answered.",
+        "aliasMostly": "mostly {{model}}",
+        "aliasMore_one": "mostly {{model}} (+{{count}} more)",
+        "aliasMore_other": "mostly {{model}} (+{{count}} more)",
+        "aliasEmpty": "no model at the moment",
+        "aliasModel": "{{model}} — deployed {{count}}×, {{healthy}} available",
+        "aliasModelNoHealth": "{{model}} — deployed {{count}}×",
+        "tools": "Tools",
+        "ownCode": "<1>your own code</1>"
+    },
+    "vscode": {
+        "title": "For VS Code (GitHub Copilot Chat)",
+        "scope": "Built in since VS Code 1.122, no GitHub account or Copilot subscription needed. Applies to chat and agent mode, not to inline completions.",
+        "steps": {
+            "palette": "Open the command palette (<2>⇧⌘P</2> or <3>Ctrl+Shift+P</3>) and choose <1>Chat: Manage Language Models</1>.",
+            "add": "<1>Add Models</1> → <1>Custom Endpoint</1>. Enter <2>DHBW</2> as the name, paste the API key from above, API type <1>Chat Completions</1>.",
+            "json": "Click the gear next to <1>DHBW</1> — the file <2>chatLanguageModels.json</2> opens. In the “DHBW” entry, replace <3>\"models\": [ … ]</3> with the JSON below; keep the API key line. Save.",
+            "select": "Pick the model <1>DHBW Code</1> at the top of the chat window."
+        },
+        "keepIds": "Do not change the model names: <2>\"id\"</2> must be exactly code, chat-default or chat-fast.",
+        "docs": "VS Code guide",
+        "names": {
+            "code": "DHBW Code",
+            "chat": "DHBW Chat",
+            "fast": "DHBW Fast"
+        }
+    },
+    "keys": {
+        "title": "API keys",
+        "count": "at most {{max}} at a time · {{own}} in use",
+        "chatNotCounted": "automatic keys (DHBW chat, workspaces) do not count",
+        "namePlaceholder": "Name (required), e.g. vscode",
+        "create": "Create API key",
+        "full": "Limit reached — delete an old key before creating a new one.",
+        "name": "Name",
+        "spend": "Spend",
+        "reset": "next reset",
+        "none": "no API keys yet",
+        "delete": "delete",
+        "chatKey": "DHBW chat (automatic)",
+        "deleteTitle": "Delete API key?",
+        "deleteConfirm": "Delete",
+        "deleteMessage": "“{{name}}” stops working immediately. Programs using it get errors from then on.",
+        "deleteChatMessage": "The DHBW chat key is created again at the next chat sign-in. Running chats fail until then.",
+        "newTitle": "New API key",
+        "onceTitle": "Shown only once",
+        "onceText": "This API key is never shown again — store it now.",
+        "shellTitle": "For the shell",
+        "shellHint": "Both lines together — many tools read exactly these two variables.",
+        "close": "Close",
+        "project": "Project",
+        "noProject": "no project (blocked)",
+        "unnamed": "(unnamed)",
+        "shortTerm": "Key’s short-term budget",
+        "per": "per {{window}}",
+        "poolsHint": "Every key draws from its project’s pool; the column shows only its own short-term budget.",
+        "toUsage": "Pools and limits under Usage",
+        "workspaceKey": "Workspaces: {{project}} (automatic)",
+        "defaultProject": "Default project:",
+        "defaultProjectHint": "New keys without a chosen project and the workspaces of projects without LLM tokens of their own draw from it."
+    },
+    "usage": {
+        "of": "of {{budget}}",
+        "resetAt": "Reset: {{date}}",
+        "live": "Values come live from the gateway.",
+        "rpm": "{{n}} requests per minute",
+        "tpm": "{{n}} tokens per minute",
+        "allModels": "all models",
+        "perKey": "Usage per API key",
+        "perKeyHint": "Every API key draws from its project’s pool and has a short-term budget of its own on top.",
+        "shortTerm": "Short-term spend",
+        "period": "Period",
+        "explainTitle": "What is shown here",
+        "explain": {
+            "units": "<1>Units:</1> spend and budgets are accounting units, not euros. Every model has an internal price per token (input and output separately), which gives the cost of each request. That way long and short requests can be weighed fairly.",
+            "monthly": "<1>Project quota:</1> every project has one pool shared by all its members. Shown is what all of them used together since the last reset. Once it is used up, requests with keys of this project are refused until the reset.",
+            "shortTerm": "<1>Short-term spend:</1> a smaller budget per API key for the given period (e.g. 4 h). It keeps a runaway loop from using up the whole monthly quota at once and is fully available again after the reset. 0.0000 therefore means nothing spent since the last reset — not that the key was never used."
+        },
+        "pool": "{{mtokens}} M tokens per 30 days, shared by all members",
+        "default": "Default",
+        "makeDefault": "Use as default",
+        "defaultHint": "The DHBW chat and new API keys without a project draw from the default project.",
+        "perProjectHint": "Pool, requests and tokens per minute and models apply per project, to all members together; they are set in the budget tree."
+    },
+    "fleet": {
+        "state": {
+            "active": "active",
+            "silent": "silent",
+            "blocked": "blocked",
+            "pending": "awaiting approval"
+        },
+        "inference": {
+            "reachable": "reachable",
+            "failing": "failing",
+            "partial": "partial",
+            "paused": "paused",
+            "unregistered": "not registered",
+            "unknown": "unknown"
+        },
+        "scripts": {
+            "current": "current",
+            "outdated": "outdated",
+            "heldBack": "held back",
+            "unknown": "unknown"
+        },
+        "scriptsTip": {
+            "current": "The scripts on the machine match what the service ships.",
+            "outdated": "The machine runs an older version and fetches the new one at its next check-in. Normal for up to an hour after a rollout — it reports the version from before that run's update.",
+            "heldBack": "Older version, on purpose: the rollout currently reaches only the canary devices. Arrives once that list is emptied.",
+            "unknown": "The machine does not report its version — its scripts predate the report. Resolves with the next update."
+        },
+        "days_one": "{{count}} day",
+        "days_other": "{{count}} days",
+        "hours_one": "{{count}} hour",
+        "hours_other": "{{count}} hours",
+        "minutes_one": "{{count}} minute",
+        "minutes_other": "{{count}} minutes",
+        "adminUi": {
+            "title": "LiteLLM admin UI",
+            "hint": "Models, sites, spend history, team management — signs in automatically.",
+            "open": "Open"
+        },
+        "jamf": {
+            "title": "Enrol Macs via JAMF",
+            "hint": "One profile, one package, one policy — identical for every device. No script parameter, no device variable, no list of serial numbers.",
+            "readme": "detailed guide"
+        },
+        "profile": {
+            "title": "1 · Configuration profile",
+            "hint": "Contains the enrolment address and token. JAMF: Computers → Configuration Profiles → Upload, scope to the device group. The three fields are optional and apply to every device in scope — use one profile per group for several sites. Downloading the same profile again yields the same UUID and replaces the existing one.",
+            "location": "Location",
+            "operator": "Operator (group)",
+            "contact": "Technical contact",
+            "download": "Download profile",
+            "secret": "The profile carries the token of the whole fleet: do not pass it on by mail or ticket, delete it locally after the upload to JAMF."
+        },
+        "package": {
+            "title": "2 · Package and policy",
+            "download": "Download {{file}}",
+            "info": "{{size}} MB · uploaded {{date}}",
+            "delete": "delete",
+            "deleteHint": "Only removes the download from the service. Nothing changes on the devices or in JAMF. Upload again with build-bundle.sh --upload.",
+            "deleteTitle": "Delete package?",
+            "deleteConfirm": "Delete",
+            "deleteMessage": "{{file}} is removed from the service. The devices are not affected.",
+            "missing": "No package is stored in the service yet. Operations uploads it with <2>fleet/macos/build-bundle.sh --upload</2>.",
+            "policy": "Settings → Packages → Upload\nPolicy:  Packages → Install  (package above)\nTrigger: Recurring Check-in\nExecution Frequency: Once per computer\nScope:   the same device group as the profile",
+            "hint": "No script in the policy, no parameters. The order of profile and package does not matter: if the package comes first, the first run exits 0 and the hourly check-in completes the enrolment later. The package (identifier <2>{{id}}</2>) installs files under /usr/local/libexec/dhbw-llm/ and sets up the check-in service.",
+            "allowList": "<1>Note:</1> enrolment is limited to {{count}} approved serial numbers — new devices must first be listed in the inventory (<2>fleet.allowedSerials</2>)."
+        },
+        "net": {
+            "title": "3 · Network",
+            "out": "outbound",
+            "in": "inbound",
+            "nothing": "nothing",
+            "hint": "Both over IPv4 only, the targets have no IPv6 address. Requires Apple Silicon with at least 16 GB."
+        },
+        "check": {
+            "title": "4 · Verify",
+            "hint": "After the check-in the device appears in the table below within minutes (at the latest after {{minutes}} minutes). On the device: enrolment, handshake (under 2 minutes), GPU (must show Metal, not cpu):"
+        },
+        "updates": {
+            "title": "Updates",
+            "mode": {
+                "off": "Self-update: off",
+                "all": "Self-update: all devices",
+                "canary": "Self-update: canary devices only"
+            },
+            "explain": {
+                "off": "Scripts come only from the package — a patch means a new package via JAMF.",
+                "all": "At every hourly check-in the Macs compare their scripts with the service's version and replace what differs. A patch needs no new package.",
+                "canary": "Staged: only the canary devices get the current version; all others keep theirs until the canary list is emptied."
+            },
+            "root": "A new package is only needed when the WireGuard binaries change. This lets the service run code as root on the devices; JAMF remains the way back if a patch fails.",
+            "canaries": "Canary devices"
+        },
+        "machines": {
+            "title": "Device fleet",
+            "summary": "{{count}} enrolled · pool {{pool}} ({{capacity}} addresses)",
+            "csv": "Inventory as CSV",
+            "spread": "Model distribution:",
+            "assignment": "What runs on which machine follows from its memory class; exceptions per serial number live in the inventory (<2>fleet.overrides</2>). Takes effect at the next hourly check-in.",
+            "pathsTitle": "Check-in and inference are two separate paths",
+            "paths": "<1>Check-in</1> is the control path: every hour the machine calls the enrolment endpoint over public HTTPS and fetches its assignment. “Silent” means that has not happened for three intervals. <1>Inference</1> is the data path: whether LiteLLM reached the machine through the tunnel at the last health check. <1>Paused</1> is not a failure: someone is working at the machine, so it stopped its inference service and gets no requests.",
+            "none": "no enrolments yet"
+        },
+        "linux": {
+            "title": "Enrol Linux machines without device management",
+            "hint": "Run as root on the machine. It generates its own key pair, enrols, and sets up two systemd timers. This does <1>not</1> install an inference service — the site keeps running its own; it only has to listen on the tunnel address.",
+            "badContact": "not a valid address",
+            "options": "Optional: <2>--operator \"Labor WI\"</2> (group the machine belongs to, <1>not</1> an address), <2>--gate always</2> for a dedicated machine. For vLLM instead of Ollama, run vLLM on port 11434 as well (<2>vllm serve … --port 11434</2>): through the tunnel the hub only allows this port.",
+            "secret": "The command contains the enrolment token of the whole fleet — it does not belong in a ticket or a chat."
+        },
+        "col": {
+            "name": "Name",
+            "address": "Address",
+            "profile": "Class",
+            "model": "Model",
+            "lastSeen": "last seen",
+            "scripts": "Version",
+            "state": "Check-in",
+            "inference": "Inference"
+        },
+        "stateTip": {
+            "blocked": "Blocked centrally: the machine is refused and not part of the pool.",
+            "silent": "No check-in at the enrolment endpoint for {{since}}. Says nothing about the tunnel — the Inference column does.",
+            "active": "The machine checks in hourly and last did so on schedule.",
+            "pending": "The machine has enrolled but is not approved yet: it gets neither an address nor a tunnel until someone approves it here."
+        },
+        "inferenceTip": {
+            "reachable": "LiteLLM reached this machine through the tunnel at the last health check.",
+            "failing": "No deployment on this machine answers: {{error}}",
+            "partial": "Only some of its models answer: {{error}}",
+            "paused": "Intended: someone is working at the machine, so it paused its inference service. Comes back by itself once nobody is signed in.",
+            "unregistered": "LiteLLM does not know this machine. The sync runs every five minutes and only adds machines that currently answer.",
+            "unknown": "LiteLLM's health data could not be fetched."
+        },
+        "unknownError": "unknown error",
+        "noContact": "no technical contact",
+        "direct": "direct",
+        "primaryIpTip": "The machine's own address in its local network (interface of the default route), reported at its last enrolment. Behind NAT this is not the address it appears under from outside.",
+        "directTip": "Connected without a tunnel. Protection then rests solely on the endpoint's API key, no longer on the network topology.",
+        "external": "chosen by the site",
+        "externalTip": "This machine runs its own inference service — its model cannot be switched from here. Shown is what it serves.",
+        "differsTip": "Assigned is {{model}}, present is something else: the agent did not apply the assignment.",
+        "has": "has {{models}}",
+        "dedicated": "dedicated",
+        "disabled": "disabled",
+        "pkg": "package {{version}}",
+        "canary": "canary",
+        "block": "block",
+        "unblock": "unblock",
+        "blockTip": "The machine is refused and stays refused — even if it enrols again. Its entry and address are kept. This is the way for a stolen or misbehaving device.",
+        "unblockTip": "Lift the block: the machine is admitted again at its next check-in and keeps its address.",
+        "forget": "remove",
+        "forgetTip": "Reset: delete the entry and free the address. If the machine checks in again it shows up as \"awaiting approval\" and has to be approved again. Needed after a lost machine secret or a change of key, transport or apiBase. To keep it out: block it.",
+        "forgetTitle": "Remove machine?",
+        "forgetConfirm": "Remove",
+        "forgetMessage": "{{name}} ({{serial}}) is removed from the fleet and its address freed. If the machine checks in again it shows up as \"awaiting approval\" and has to be approved again — this is how a machine is reset after a lost machine secret or a change of key, transport or apiBase. Block it instead to keep it out.",
+        "page": {
+            "machines": "Machines",
+            "gpu": "GPU cluster",
+            "setup": "Setup"
+        },
+        "pool": {
+            "title": "Inference pool in the GPU cluster",
+            "hint": "vLLM replicas in the GPU cluster: one gap filler per GPU node with the model of its GPU class, plus the base load. The service registers ready replicas with LiteLLM automatically; an evicted replica disappears there until it restarts.",
+            "disabled": "No inference pool configured (GPU part off or no inference address).",
+            "none": "No replicas. GPU nodes get their gap filler at the next rollout of the inference pool.",
+            "url": "Reachable at <2>{{url}}/{replica}/v1</2> with the pool's API key.",
+            "siteTip": "Name of the site in the discovery job and in LiteLLM.",
+            "col": {
+                "replica": "Replica",
+                "node": "Node",
+                "role": "Role",
+                "model": "Model",
+                "state": "State",
+                "since": "Since"
+            },
+            "role": {
+                "gapFiller": "Gap filler",
+                "baseLoad": "Base load"
+            },
+            "roleTip": {
+                "gapFiller": "Runs only while the GPU is otherwise idle. A job or notebook evicts it; it then waits until the GPU is free again.",
+                "baseLoad": "Not evicted by jobs or notebooks, and evicts gap fillers itself. Preferably on dedicated nodes."
+            },
+            "state": {
+                "ready": "ready",
+                "starting": "starting",
+                "waiting": "waiting for GPU",
+                "terminating": "terminating"
+            },
+            "stateTip": {
+                "ready": "Answers requests and is registered in LiteLLM.",
+                "starting": "Runs on the GPU and loads the model; the discovery job then registers it in LiteLLM.",
+                "waiting": "Kueue holds it back because the GPU is needed for something with higher priority.",
+                "terminating": "Evicted or replaced; frees the GPU within a minute."
+            }
+        },
+        "setModel": {
+            "label": "Model for the selected machines ({{count}})",
+            "set": "Set model",
+            "reset": "Back to the class model",
+            "all": "Select all",
+            "hint": "Takes precedence over the class model (by memory); context and memory limit stay the class's. A model that does not exist or clearly exceeds the memory limit is refused. The machines pull the model at their next enrolment, within {{minutes}} minutes, try it once and then remove their other models; if that fails, the error shows at the machine and the old model stays. Externally managed machines cannot be chosen.",
+            "override": "set",
+            "overrideTip": "Set by hand. The class model would be {{model}}."
+        },
+        "approve": "approve",
+        "approveTip": "Admit the machine to the fleet. It gets its tunnel with its next hourly run.",
+        "noSecret": "recognised by key only",
+        "noSecretTip": "No machine secret is stored for this machine — it is recognised by its tunnel key alone."
+    },
+    "roles": {
+        "user": "Use",
+        "fleet-admin": "Fleet management",
+        "admin": "Administration"
+    },
+    "noAccess": {
+        "title": "No access to the LLM service",
+        "text": "LLM tokens come with projects. Without a token quota there is no access to the chat and the API, not even as a member of a project with 0 tokens. For most people a personal project from a budget that is approved at once is enough.",
+        "page": "This page is not available for this role."
+    },
+    "models": {
+        "title": "Models",
+        "intro": "The models the platform runs itself on its GPUs: as gap fillers while no workspace needs the GPU. Every tier has a default model; a node can choose another under Workspaces → GPUs. Changes apply within a minute; the affected models restart.",
+        "disabled": "The catalogue is off: the models come from the inventory.",
+        "tierDefaults": "Default per tier",
+        "tierDefaultsHint": "The model for every node of the tier that has not chosen another. “none” leaves the tier's GPUs without gap filler.",
+        "none": "none",
+        "catalogue": "Catalogue",
+        "add": "Add model",
+        "edit": "Change model {{key}}",
+        "key": "Key",
+        "keyHint": "e.g. qwen3-8b-awq; fixed afterwards",
+        "repo": "Model",
+        "repoHint": "Hugging Face repository, e.g. Qwen/Qwen3-8B-AWQ",
+        "args": "vLLM arguments",
+        "argsHint": "e.g. --gpu-memory-utilization 0.84 --max-model-len 12288; the service sets --model and --port.",
+        "minGb": "GPU memory from (GB)",
+        "cpu": "CPU",
+        "memRequest": "RAM reserved",
+        "memLimit": "RAM at most",
+        "cancel": "Cancel",
+        "save": "Save",
+        "model": "Model",
+        "needs": "Needs",
+        "state": "State",
+        "change": "Change",
+        "delete": "Delete",
+        "gpuMemory": "from {{gb}} GB GPU memory",
+        "resources": "{{cpu}} CPU · {{req}}–{{lim}} RAM",
+        "unused": "runs nowhere",
+        "ready_one": "{{count}} ready",
+        "ready_other": "{{count}} ready",
+        "starting_one": "{{count}} starting",
+        "starting_other": "{{count}} starting",
+        "waiting_one": "{{count}} waiting for a GPU",
+        "waiting_other": "{{count}} waiting for a GPU",
+        "restarts_one": "{{count}} restart",
+        "restarts_other": "{{count}} restarts",
+        "categories": {
+            "chat": "Chat",
+            "code": "Code",
+            "fast": "Fast",
+            "general": "General"
+        },
+        "category": "Category",
+        "categoryHint": "what it is for; measured later",
+        "measured": "measured",
+        "stated": "stated, not measured yet"
+    }
+}

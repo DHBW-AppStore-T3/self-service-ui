@@ -3,7 +3,12 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import '/test/jsdom-stubs.js';
+// The form and the validator both speak through i18next, so the instance has to
+// exist before either is used; the assertions below are its English values.
+import i18n from '/i18n/index.js';
 import { QuotaInputs, defaultQuota, validateQuota } from './component-quota-inputs.jsx';
+
+const t = (key, options) => i18n.t(key, options);
 
 // The form is where the two kinds have to look different, because the values do
 // not: 1 is "one core" in one row and "granted" in the next.
@@ -38,6 +43,20 @@ describe('QuotaInputs', () => {
         // a second one.
         expect(screen.getByLabelText(/Cores/)).toBeTruthy();
         expect(numbers.length).toBeLessThanOrEqual(1);
+    });
+
+    // Incident 19.10.2026: the switch said granted while OpenStack refused the network share on every sync.
+    it('says under a field what OpenStack refused, in words', () => {
+        const ipv4Network = { ...ipv4, grant_type: 'network' };
+        render(
+            <MantineProvider>
+                <QuotaInputs resources={[cores, ipv4Network]} value={{ cores: 4, 'dhbw-ipv4': 1 }} onChange={() => {}}
+                    usage={{ syncErrors: { 'dhbw-ipv4': { kind: 'availability', reason: 'over_quota', detail: 'HTTP 409' }, cores: { kind: 'quota', reason: 'unreachable' } } }} />
+            </MantineProvider>,
+        );
+        expect(screen.getByText(t('projects.resources.syncFailed', { reason: t('projects.resources.syncReason.over_quota_network') }))).toBeTruthy();
+        expect(screen.getByText(t('projects.resources.syncFailed', { reason: t('projects.resources.syncReason.unreachable') }))).toBeTruthy();
+        expect(screen.queryByText(/HTTP 409/)).toBeNull();
     });
 
     it('reports 1 and 0 rather than true and false', () => {
@@ -87,18 +106,26 @@ describe('validateQuota', () => {
     // call every granted one invalid — the form would refuse to submit a value
     // the API accepts.
     it('accepts a granted availability although it has no bounds', () => {
-        expect(validateQuota([ipv4], { 'dhbw-ipv4': 1 })).toEqual({});
-        expect(validateQuota([ipv4], { 'dhbw-ipv4': 0 })).toEqual({});
+        expect(validateQuota(t, [ipv4], { 'dhbw-ipv4': 1 })).toEqual({});
+        expect(validateQuota(t, [ipv4], { 'dhbw-ipv4': 0 })).toEqual({});
+    });
+
+    // A stored limit only carries the availabilities that were set; one missing
+    // is not granted, not invalid. Flagging it blocked saving a budget whose
+    // tab showed nothing wrong.
+    it('treats a missing availability as not granted', () => {
+        expect(validateQuota(t, [ipv4], {})).toEqual({});
+        expect(validateQuota(t, [ipv4], { 'dhbw-ipv4': null })).toEqual({});
     });
 
     it('rejects anything else on an availability', () => {
-        expect(validateQuota([ipv4], { 'dhbw-ipv4': 2 })['dhbw-ipv4']).toBeTruthy();
-        expect(validateQuota([ipv4], { 'dhbw-ipv4': -1 })['dhbw-ipv4']).toBeTruthy();
+        expect(validateQuota(t, [ipv4], { 'dhbw-ipv4': 2 })['dhbw-ipv4']).toBeTruthy();
+        expect(validateQuota(t, [ipv4], { 'dhbw-ipv4': -1 })['dhbw-ipv4']).toBeTruthy();
     });
 
     it('still range-checks a quantity', () => {
-        expect(validateQuota([cores], { cores: 4 })).toEqual({});
-        expect(validateQuota([cores], { cores: 999 }).cores).toBeTruthy();
+        expect(validateQuota(t, [cores], { cores: 4 })).toEqual({});
+        expect(validateQuota(t, [cores], { cores: 999 }).cores).toBeTruthy();
     });
 });
 
@@ -130,5 +157,28 @@ describe('QuotaInputs headroom', () => {
 
         expect(screen.queryByText(/free in that budget/)).toBeNull();
         expect(screen.queryByText(/Exceeds/)).toBeNull();
+    });
+});
+
+describe('validateQuota and rates with a default', () => {
+    const t = (k) => k;
+    const rpm = { id: 'llm-rpm', name: 'LLM requests per minute', provider: 'aiaas', default: 60, min: 0, max: 100000 };
+    const cores = { id: 'cores', name: 'Cores', default: 4, min: 0, max: 64 };
+
+    it('accepts an empty rate of another provider: it means the default', () => {
+        expect(validateQuota(t, [rpm], {}, { providerDefaults: true })).toEqual({});
+        expect(validateQuota(t, [rpm], { 'llm-rpm': '' }, { providerDefaults: true })).toEqual({});
+    });
+
+    it('wants a number in a budget, where empty is no default', () => {
+        expect(Object.keys(validateQuota(t, [rpm], {}))).toEqual(['llm-rpm']);
+    });
+
+    it('lets a budget leave a quantity empty: not offered', () => {
+        expect(validateQuota(t, [rpm, cores], {}, { allowUnlimited: true, emptyIsZero: true })).toEqual({});
+    });
+
+    it('still wants a number for an OpenStack quantity', () => {
+        expect(Object.keys(validateQuota(t, [cores], {}))).toEqual(['cores']);
     });
 });

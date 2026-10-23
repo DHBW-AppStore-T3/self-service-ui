@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { fakeNodesApi, fixtureSkippedLevel, fixtureTree, renderView } from '/test/render-harness.jsx';
+import i18n from '/i18n/index.js';
 
 // Does each view render at all, with data in it?
 //
@@ -36,7 +37,7 @@ vi.mock('/projects/api-nodes.jsx', async (importOriginal) => {
 // The cloud-status provider asks its own questions of the same API and is
 // mounted above these views in the real app; here the views only read from it.
 vi.mock('/projects/cloud-status.jsx', () => ({
-    useCloudStatus: () => ({ isRoot: true, pending: 0, hasBudgets: true, ready: true, refresh: () => {} }),
+    useCloudStatus: () => globalThis.__cloudStatus ?? { isRoot: true, pending: 0, hasBudgets: true, ready: true, refresh: () => {} },
     CloudStatusProvider: ({ children }) => children,
 }));
 
@@ -58,6 +59,7 @@ const { RootAdminView } = await import('/projects/root-admin-view.jsx');
 let consoleErrors = [];
 beforeEach(() => {
     globalThis.__testApi = fakeNodesApi(fixtureTree());
+    globalThis.__cloudStatus = undefined;
     consoleErrors = [];
     vi.spyOn(console, 'error').mockImplementation((...args) => { consoleErrors.push(args.join(' ')); });
 });
@@ -82,6 +84,22 @@ describe('the cloud project views render', () => {
         // The first level opens itself, so the root's child arrives without a
         // click — and reaching it means the lazy children query ran.
         expect(await screen.findAllByText('Mannheim')).not.toHaveLength(0);
+        expectNoRenderFailure();
+    });
+
+    // Projects are listed in a table under the selected budget, not in the
+    // tree: a budget of student projects buried the budget structure.
+    it('My Budgets lists a budget\'s projects in a table, not in the tree', async () => {
+        renderView(<MyBudgetsView />);
+        const tree = () => within(screen.getByRole('tree'));
+
+        await screen.findAllByText('Mannheim');
+        fireEvent.click(tree().getByText('Mannheim'));
+
+        const table = await screen.findByRole('table');
+        expect(await within(table).findByText('Mein Projekt')).toBeTruthy();
+        expect(within(table).getByText('Projekt mit Änderung')).toBeTruthy();
+        expect(tree().queryAllByText('Mein Projekt')).toHaveLength(0);
         expectNoRenderFailure();
     });
 
@@ -145,13 +163,61 @@ describe('the cloud project views render', () => {
 
         expect(await screen.findAllByText('OneIT')).not.toHaveLength(0);
         expect(screen.queryByRole('button', { name: /Edit/ })).toBeNull();
-        expect(screen.getAllByRole('button', { name: /Request budget/ }).length).toBeGreaterThan(0);
+        expect(screen.getAllByRole('button', { name: i18n.t('projects.actions.requestBudget') }).length).toBeGreaterThan(0);
+        expectNoRenderFailure();
+    });
+
+    // Somebody who may request sub-budgets but runs none of their own: the page starts with the way to a request and the requests made so far, pending ones included, whoever manages them now.
+    it('starts with the sub-budget request and the own requests for a requester', async () => {
+        globalThis.__cloudStatus = { isRoot: false, pending: 0, hasBudgets: true, canRequestBudgets: true, ready: true, refresh: () => {} };
+        const api = fakeNodesApi(fixtureTree());
+        const source = {
+            id: 'b_src', kind: 'budget', status: 'approved', name: 'OneIT', parent_id: 'root',
+            limit: { cores: 32, ram: 128 }, admin_scope: ['user:boss@dhbw.de'],
+            eligible_requesters: ['user:dennis.pfisterer@dhbw.de'], allow_sub_budget_requests: true,
+            auto_approve: {}, created_at: '2026-08-01T10:00:00Z',
+        };
+        api.listEligibleForMe = async () => ({ items: [source], total: 1 });
+        api.listMyBudgets = async () => ({
+            items: [{
+                id: 'b_mine', kind: 'budget', status: 'pending', name: 'Mein Teilbudget', parent_id: 'b_src', parent_name: 'OneIT',
+                limit: { cores: 4 }, admin_scope: ['user:dennis.pfisterer@dhbw.de'], created_by: 'Dennis.Pfisterer@dhbw.de',
+                created_at: '2026-08-02T10:00:00Z',
+            }],
+            total: 1,
+        });
+        globalThis.__testApi = api;
+        renderView(<MyBudgetsView />);
+
+        expect(await screen.findByText(i18n.t('projects.budgets.myRequests'))).toBeDefined();
+        expect(screen.getAllByText('Mein Teilbudget').length).toBeGreaterThan(0);
+        expect(screen.getByText(i18n.t('projects.budgets.requestedFrom', { name: 'OneIT' }))).toBeDefined();
+        expect(screen.getAllByRole('button', { name: i18n.t('projects.actions.requestBudget') })).toHaveLength(1);
+        expect(screen.queryByText(i18n.t('projects.budgets.noneCanRequest'))).toBeNull();
         expectNoRenderFailure();
     });
 
     it('My Projects renders its cards', async () => {
         renderView(<MyProjectsView />);
         expect(await screen.findByText('Mein Projekt')).toBeDefined();
+        expectNoRenderFailure();
+    });
+
+    it('My Projects shows a project the viewer is only a member of, read-only', async () => {
+        const api = globalThis.__testApi;
+        const listMine = api.listMine;
+        api.listMine = async () => {
+            const page = await listMine();
+            const shared = { ...page.items[0], id: 'p_shared', name: 'Geteiltes Projekt', owner: 'user:someone@dhbw.de', admin_scope: [], viewer_relation: 'member', authorized_users: [{ token: 'user:dennis.pfisterer@dhbw.de', openstack_role: 'member' }] };
+            return { items: [shared], total: 1 };
+        };
+        renderView(<MyProjectsView />);
+        expect(await screen.findByText('Geteiltes Projekt')).toBeDefined();
+        expect(screen.getByText(i18n.t('projects.projectCard.memberOf', { owner: 'someone@dhbw.de' }))).toBeDefined();
+        expect(screen.queryByText(i18n.t('projects.actions.edit'))).toBeNull();
+        expect(screen.queryByText(i18n.t('projects.actions.release'))).toBeNull();
+        expect(screen.getByText(i18n.t('projects.actions.details'))).toBeDefined();
+        expect(screen.queryByText(i18n.t('projects.myProjects.none'))).toBeNull();
         expectNoRenderFailure();
     });
 

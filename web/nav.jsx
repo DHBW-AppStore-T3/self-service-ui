@@ -1,8 +1,9 @@
 import { useLocation } from 'wouter';
-import { apiTokensEnabled, appstoreBaseUrl, appstoreEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
-import { TOKEN_SCOPES, tokenScopePath } from '/tokens/scopes.js';
+import { useTranslation } from 'react-i18next';
+import { cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
 import { useCloudStatus } from '/projects/cloud-status.jsx';
 import { useDnsPolicyStatus } from '/dyndns/use-policy.jsx';
+import { useAiAreasVisible } from '/ai-areas.jsx';
 
 // The whole navigation as data, in one place: the header renders it two ways
 // (two bars on a wide screen, one vertical list in the burger) and the shell
@@ -32,73 +33,94 @@ export const NAV_BREAKPOINT = 'md';
 // menu offers, not what exists.
 export function useNav() {
     const [currentPath] = useLocation();
-    const { isRoot, pending, hasBudgets } = useCloudStatus();
-    const { hasPolicy } = useDnsPolicyStatus();
+    const { t } = useTranslation();
+    const { isRoot, pending, hasBudgets, canRequestBudgets } = useCloudStatus();
+    const { hasPolicy, adminEvents, ownEvents } = useDnsPolicyStatus();
+    // Which of the AI service's areas are visible, and how (ai-areas.jsx, shared with the footer).
+    const { llm, workspaces, llmArea } = useAiAreasVisible();
 
 
 
     const sections = [
-        { id: 'home', label: 'Home', href: '/', items: [] },
+        { id: 'home', label: t('nav.home'), href: '/', items: [] },
+        // One section per concern: Cloud, Workspaces, LLM and DNS each with their
+        // own projects (a project of several areas shows in each), and Budgets
+        // for whoever runs them. The API tokens and documentation of the
+        // services are in the account menu (/developer, developer.jsx), not here.
+        // Docs: docs/bauplan.md 8.14 in aiaas-deployment.
         cloudProjectsEnabled && {
-            id: 'projects',
-            label: 'Cloud Projects',
-            base: '/projects',
-            // A dot, not a count: the budget view can widen its scope, so a
-            // number up here would disagree with the number down there.
-            dot: pending > 0,
+            id: 'cloud',
+            label: t('nav.cloud'),
+            base: '/cloud',
             items: [
-                { label: 'My Projects', href: '/projects/projects' },
-                // Only for someone who manages a budget or may request one —
-                // for everybody else the page is a single "nothing here" box.
-                hasBudgets && { label: 'My Budgets', href: '/projects/budgets', dot: pending > 0 },
-                isRoot && { label: 'Root Admin', href: '/projects/admin-sync' },
-                { label: 'API Documentation', href: '/projects/api-doc' },
-            ].filter(Boolean),
+                { label: t('nav.projects'), href: '/cloud/projects' },
+            ],
         },
+        // Workspaces (Jupyter now, Coder later) from the AI service: for members
+        // of a project, and admins, who manage the projects; for everybody else
+        // the way to a project, when a budget in reach offers one.
+        workspaces === 'member' ? {
+            id: 'workspaces',
+            label: t('nav.workspaces'),
+            base: '/workspaces',
+            items: [
+                { label: t('nav.gpuServers'), href: '/workspaces/servers' },
+                cloudProjectsEnabled && { label: t('nav.projects'), href: '/workspaces/projects' },
+                { label: t('nav.gpuUsage'), href: '/workspaces/usage' },
+                llm.isAdmin && { label: t('nav.gpuFleet'), href: '/workspaces/gpus' },
+            ].filter(Boolean),
+        } : workspaces === 'offer' && { id: 'workspaces', label: t('nav.workspaces'), base: '/workspaces', items: [{ label: t('nav.projects'), href: '/workspaces/projects' }] },
+        // For whoever has LLM tokens through a project (or a role there); for
+        // somebody without, only the way to a project, and only when a budget
+        // in reach offers one. Its API keys are LiteLLM keys for the model
+        // endpoint — a different thing from the API tokens of Cloud and DNS,
+        // which manage this platform.
+        llmArea === 'member' ? {
+            id: 'llm',
+            label: t('nav.llm'),
+            base: '/llm',
+            items: [
+                { label: t('nav.llmOverview'), href: '/llm/overview' },
+                cloudProjectsEnabled && { label: t('nav.projects'), href: '/llm/projects' },
+                { label: t('nav.llmKeys'), href: '/llm/keys' },
+                { label: t('nav.llmUsage'), href: '/llm/usage' },
+                llm.isFleetAdmin && { label: t('nav.llmFleet'), href: '/llm/fleet' },
+                llm.isAdmin && { label: t('nav.llmModels'), href: '/llm/models' },
+            ].filter(Boolean),
+        } : llmArea === 'offer' && { id: 'llm', label: t('nav.llm'), base: '/llm', items: [{ label: t('nav.projects'), href: '/llm/projects' }] },
         dnsZonesEnabled && {
             id: 'dyndns',
-            label: 'DNS Zones',
+            label: t('nav.dnsZones'),
             base: '/dyndns',
+            // Like the projects' pending requests: a dot, not a count, wherever
+            // a zone problem is waiting to be looked at.
+            dot: adminEvents > 0 || ownEvents > 0,
             items: [
-                { label: 'Zone Management', href: '/dyndns/zones' },
+                { label: t('nav.zoneManagement'), href: '/dyndns/zones', dot: ownEvents > 0 },
                 // Read-only for most users, and worth reading only if a rule
                 // actually applies to them; empty for a student. Named for
                 // what the page became: policy rules are one tab among the
                 // administrative ones (delegations, orphaned zones, zone
                 // events). Old /policy links redirect (see dyndns-routes).
-                hasPolicy && { label: 'Administration', href: '/dyndns/administration' },
-                { label: 'API Documentation', href: '/dyndns/api-doc' },
+                hasPolicy && { label: t('nav.administration'), href: '/dyndns/administration', dot: adminEvents > 0 },
             ].filter(Boolean),
         },
-        // Last, and a category of its own with nothing under it: tokens belong
-        // to the account rather than to one of the domains above — both APIs
-        // issue their own, and a credential has to be findable in one place to
-        // be revocable in a hurry. It used to sit under DNS Zones, from when
-        // that was the only API that had them.
-        apiTokensEnabled && {
-            id: 'tokens',
-            label: 'API Tokens',
-            base: '/tokens',
-            // A tab per issuing API, from the same list the page routes on. The
-            // two are not one credential — different prefixes, different
-            // databases — and a tab bar says that more plainly than two boxes
-            // stacked on one page did.
-            items: TOKEN_SCOPES.map(s => ({ label: s.label, href: tokenScopePath(s) })),
-        },
-        // External: opens the App-Store in its own tab/popup via the SSO
-        // handoff (see header.jsx's openWithSso), not a route in this SPA.
-        appstoreEnabled && {
-            id: 'app-store',
-            label: 'DHBW App-Store',
-            href: appstoreBaseUrl,
-            external: true,
-            items: [],
+        // Only for someone who manages a budget, may request a sub-budget somewhere, or is root admin. A dot, not a count: the budget view can widen its scope, so a number up here would disagree with the number down there.
+        cloudProjectsEnabled && (hasBudgets || canRequestBudgets || isRoot) && {
+            id: 'budgets',
+            label: t('nav.budgets'),
+            base: '/budgets',
+            dot: pending > 0,
+            items: [
+                { label: t('nav.myBudgets'), href: '/budgets', dot: pending > 0 },
+                isRoot && { label: t('nav.rootAdmin'), href: '/budgets/admin' },
+            ].filter(Boolean),
         },
     ].filter(Boolean).map(s => ({ ...s, href: s.href ?? s.items[0]?.href ?? '/' }));
 
-    const inSection = (s) => (!s.external && (s.base
+    const inSection = (s) => (s.base
         ? currentPath === s.base || currentPath.startsWith(s.base + '/')
-        : currentPath === '/'));
+        : currentPath === '/');
     const activeSection = sections.find(inSection) ?? null;
 
     // Longest match wins, so /dyndns/zones/example.org still marks "Zone
@@ -111,8 +133,9 @@ export function useNav() {
         sections,
         activeSection,
         activeItem,
-        // Only a section WITH items gets a second bar; Home would otherwise
-        // leave an empty strip under the header.
-        subNavItems: activeSection?.items ?? [],
+        // Only a section with at least two items gets a second bar: Home would
+        // otherwise leave an empty strip under the header, and a single item
+        // is where clicking the section goes anyway (Cloud: Projects).
+        subNavItems: (activeSection?.items?.length ?? 0) > 1 ? activeSection.items : [],
     };
 }

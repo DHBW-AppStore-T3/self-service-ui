@@ -23,3 +23,8 @@ html {
     -webkit-text-fill-color: var(--mantine-color-text);
     opacity: 1;
 }
+
+/* A person offered in the act-as picker (act-as-controls.jsx). */
+.act-as-pick:hover {
+    background: var(--mantine-color-gray-1);
+}

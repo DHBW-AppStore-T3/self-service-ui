@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatError } from '/helper/api-error.js';
+import { actingAsAtLoad } from '/providers/acting-as.js';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -23,10 +24,24 @@ export function ownerEmail(node) {
     return token.startsWith('user:') ? token.slice(5) : token;
 }
 
+// openstackSide is a project's OpenStack side — its project there and what the
+// reconciler measured; an empty object while there is none.
+export const openstackSide = (node) => node?.bindings?.openstack ?? {};
+
+// measuredUse is what a project uses across all its providers, by resource id;
+// null while nothing was measured. A missing id means "not measured", not zero.
+export function measuredUse(node) {
+    const measured = Object.values(node?.bindings ?? {}).map(b => b.in_use).filter(Boolean);
+    return measured.length ? Object.assign({}, ...measured) : null;
+}
+
 // Human-readable title of a node: budgets have names, projects usually only a purpose.
 export function nodeTitle(node) {
     if (!node) return '';
-    if (node.status === 'imported') return node.os_project_name || node.os_project_id || node.name || node.id;
+    if (node.status === 'imported') {
+        const os = openstackSide(node);
+        return os.external_name || os.external_id || node.name || node.id;
+    }
     return node.name || node.reason || node.id;
 }
 
@@ -56,53 +71,166 @@ export const COLOR = {
 
 // Every status also carries the sentence that explains it. A badge is a label,
 // not an explanation, and the words we chose ("Released", "Imported") are ours
-// rather than everyday English — so each one has to say what it means for the
+// rather than everyday language — so each one has to say what it means for the
 // person reading it: what happened, what it costs, what they can do next.
+// The words themselves live in the translations under projects.status.<status>;
+// only the colours are decided here.
 const STATUS_META = {
-    pending: {
-        label: 'Awaiting approval', color: COLOR.attention, variant: 'outline',
-        description: 'Requested, but nothing exists yet. Someone who manages the paying budget has to approve it first.',
-    },
-    approved: {
-        label: 'Active', color: COLOR.positive, variant: 'filled',
-        description: 'Approved and running. The OpenStack project exists and the resources shown here are reserved for you.',
-    },
-    change_pending: {
-        label: 'Change requested', color: COLOR.attention, variant: 'outline',
-        description: 'A change is waiting for a decision. Until it is approved the project keeps running on its previous limits, and those are what it costs.',
-    },
-    rejected: {
-        label: 'Rejected', color: COLOR.negative, variant: 'filled',
-        description: 'The request was turned down. Nothing was created and nothing is charged to the budget.',
-    },
-    released: {
-        // The one people ask about: they gave the project up, expect it gone,
-        // and see it still listed and still charged. Both are true and both are
-        // deliberate — releasing asks for deletion, it does not perform it.
-        label: 'Released', color: COLOR.identity, variant: 'light',
-        description: 'You gave this project up. It stays listed — and keeps using its budget — until OpenStack has actually deleted it, because until then the machines are still running. This cannot be undone.',
-    },
-    imported: {
-        label: 'Imported', color: COLOR.outside, variant: 'light',
-        description: 'Found in OpenStack but not managed here — it was created outside the self-service. It has to be adopted into a budget before it can be changed.',
-    },
+    pending: { color: COLOR.attention, variant: 'outline' },
+    approved: { color: COLOR.positive, variant: 'filled' },
+    change_pending: { color: COLOR.attention, variant: 'outline' },
+    rejected: { color: COLOR.negative, variant: 'filled' },
+    // The one people ask about: they gave the project up, expect it gone, and
+    // see it still listed and still charged. Both are true and both are
+    // deliberate — releasing asks for deletion, it does not perform it.
+    released: { color: COLOR.identity, variant: 'light' },
+    // Released and put away: nobody logs in, servers shelved, volumes kept.
+    archived: { color: COLOR.identity, variant: 'outline' },
+    imported: { color: COLOR.outside, variant: 'light' },
 };
+
+// ── Retirement: released → archived → deleted ───────────────────────────────
+
+// isRetired: given up, but its OpenStack project may still exist.
+export function isRetired(node) {
+    return node?.status === 'released' || node?.status === 'archived';
+}
+
+// deletionRequested: someone asked for it to be deleted for good, and the
+// reconciler is on it.
+export function deletionRequested(node) {
+    return (node?.flags || []).includes('delete_requested');
+}
+
+// pollWhileDeleting is a react-query refetchInterval for a page of nodes: while
+// one of them is being deleted, the page is fetched again every 10 s, so its
+// progress moves and the project disappears once it is gone instead of
+// standing at the step it was at when the page loaded.
+export const DELETING_POLL_MS = 10000;
+export function pollWhileDeleting(query) {
+    return (query?.state?.data?.items ?? []).some(deletionRequested) ? DELETING_POLL_MS : false;
+}
+
+// deletesOnRequest: the deployment deletes a released project when asked.
+export function deletesOnRequest(retirement) {
+    const mode = retirement?.delete;
+    return !!mode && mode !== 'never';
+}
+
+// lastEventAt is when the given history event last happened, or null.
+export function lastEventAt(node, event) {
+    const entry = [...(node?.history || [])].reverse().find(h => h.event === event);
+    return entry?.timestamp ?? null;
+}
+
+// scheduledDeletion is the day a retired project is deleted by itself — only
+// under after-grace: release day plus the grace days, as the reconciler tags it.
+export function scheduledDeletion(node, retirement) {
+    if (retirement?.delete !== 'after-grace' || !isRetired(node)) return null;
+    const released = lastEventAt(node, 'released');
+    if (!released) return null;
+    const d = new Date(released);
+    d.setUTCDate(d.getUTCDate() + (retirement.deleteGraceDays || 30));
+    return d.toISOString();
+}
+
+// labDeletion is the day a project's Lab/AI part — workspaces, homes, shared
+// folder — is deleted by itself: the day after its end (termination date, or
+// release if earlier) plus the grace days, as openstack-management-api's AI
+// service sync counts them. null without Lab/AI resources, without an end, or
+// with the deletion switched off (aiaasDeleteGraceDays 0).
+export function labDeletion(node, resources, retirement) {
+    const grace = retirement?.aiaasDeleteGraceDays || 0;
+    if (!grace || !isLab(projectKinds(node, resources))) return null;
+    const days = [];
+    if (node.termination_date) days.push(node.termination_date.slice(0, 10));
+    const released = isRetired(node) ? lastEventAt(node, 'released') : null;
+    if (released) days.push(released.slice(0, 10));
+    if (!days.length) return null;
+    const d = new Date(`${days.sort()[0]}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + 1 + grace);
+    return d.toISOString();
+}
 
 // A leaf that is approved but has no OpenStack project yet. The reconciler runs
 // on an interval, so "granted" and "usable" are minutes apart — and calling that
 // window "Active" sends people looking for a project that is not there.
 // Only meaningful while provisioning actually runs; with the reconciler off,
 // nothing ever gets an ID and every project would be stuck on "Setting up".
-const PROVISIONING_META = {
-    label: 'Setting up', color: COLOR.attention, variant: 'filled',
-    description: 'Approved. The OpenStack project is being created — this usually takes a few minutes.',
-};
+const PROVISIONING_META = { color: COLOR.attention, variant: 'filled' };
 
-export function isProvisioning(node, provisioningEnabled) {
-    return Boolean(provisioningEnabled)
-        && node?.kind === 'project'
-        && node?.status === 'approved'
-        && !node?.os_project_id;
+// openstackProjectUrl is where a project opens in the OpenStack dashboard, or
+// null when there is nowhere to go: no dashboard configured, no OpenStack
+// project yet, or one that is on its way out. Horizon's project switch keeps
+// its target through the login, so the link works signed out as well.
+export function openstackProjectUrl(dashboardUrl, node) {
+    const osID = openstackSide(node).external_id;
+    if (!dashboardUrl || !osID) return null;
+    if (node.status !== 'approved' && node.status !== 'change_pending') return null;
+    return `${dashboardUrl.replace(/\/+$/, '')}/auth/switch/${encodeURIComponent(osID)}/?next=/project/`;
+}
+
+// isProvisioning: approved, and a provider's side it is owed is not there yet —
+// the provider it waits for ('openstack', 'aiaas'), or false. OpenStack is owed
+// when the project holds an OpenStack resource and the reconciler runs
+// (provisioningEnabled); another provider of `providers` when the project holds
+// one of its resources. Without the catalogue (resources) every approved
+// project is owed an OpenStack project, as before there were other providers.
+export function isProvisioning(node, provisioningEnabled, resources = null, providers = []) {
+    if (node?.kind !== 'project' || node?.status !== 'approved') return false;
+    if (provisioningEnabled && !openstackSide(node).external_id
+        && (!resources || holdsResourceOf(node, resources, 'openstack'))) return 'openstack';
+    if (!resources) return false;
+    return (providers || []).find(p => !node.bindings?.[p]?.external_id && holdsResourceOf(node, resources, p, true)) ?? false;
+}
+
+// holdsResourceOf: the project holds more than zero of a resource of provider
+// (a resource without a provider belongs to every provider).
+export function holdsResourceOf(node, resources, provider, ownOnly = false) {
+    const limit = effectiveLimit(node, node?.limit) || {};
+    return resources.some(r => ((!ownOnly && !r.provider) || r.provider === provider)
+        && ((limit[r.id] ?? 0) > 0 || limit[r.id] === UNLIMITED_QUOTA));
+}
+
+// The kinds of project the UI tells apart, one per area of the catalogue (the
+// `area` of every resource): cloud (OpenStack, virtual machines), workspaces and
+// LLM (both carried out by the AI service). The tree knows no kinds — a project
+// is of every kind it holds resources of, so one may be several.
+export const PROJECT_KINDS = ['cloud', 'workspaces', 'llm'];
+// The kinds the AI service carries out.
+export const LAB_KINDS = ['workspaces', 'llm'];
+
+// kindOfResource: a resource's area; OpenStack's resources are cloud.
+export const kindOfResource = (r) => r?.area || (!r?.provider || r.provider === 'openstack' ? 'cloud' : '');
+
+// isLab: whether kinds include one of the AI service.
+export const isLab = (kinds) => (kinds || []).some(k => LAB_KINDS.includes(k));
+
+// catalogKinds: the kinds the catalogue offers anything of, in PROJECT_KINDS
+// order. One kind means there is nothing to tell apart.
+export function catalogKinds(resources) {
+    return PROJECT_KINDS.filter(k => (resources || []).some(r => kindOfResource(r) === k));
+}
+
+// projectKinds: the kinds a project is — what it holds (allocations included)
+// or asks for in a waiting change. Empty for a project holding nothing.
+export function projectKinds(node, resources) {
+    const limits = [effectiveLimit(node, node?.limit), node?.pending?.limit].filter(Boolean);
+    return PROJECT_KINDS.filter(k => limits.some(limit => (resources || []).some(r => kindOfResource(r) === k
+        && ((limit[r.id] ?? 0) > 0 || limit[r.id] === UNLIMITED_QUOTA))));
+}
+
+// resourcesOfKinds: the resources of these kinds; one without an area belongs
+// to every kind. No kinds — no filter.
+export function resourcesOfKinds(resources, kinds) {
+    if (!kinds?.length) return resources || [];
+    return (resources || []).filter(r => !kindOfResource(r) || kinds.includes(kindOfResource(r)));
+}
+
+// budgetKinds: the kinds a budget offers resources of.
+export function budgetKinds(budget, resources) {
+    const offered = visibleResources(resources, budget);
+    return PROJECT_KINDS.filter(k => offered.some(r => kindOfResource(r) === k));
 }
 
 // Returns Mantine badge color + variant for a node status.
@@ -111,17 +239,20 @@ export function statusStyle(status, provisioning = false) {
     return STATUS_META[status] ?? { color: 'gray', variant: 'outline' };
 }
 
-// Returns the human-readable label for a status string.
-export function statusLabel(status, provisioning = false) {
-    if (provisioning) return PROVISIONING_META.label;
-    return STATUS_META[status]?.label ?? status;
+// Returns the human-readable label for a status string. Takes `t` rather than
+// reaching for the i18n instance: this module is imported by plain functions as
+// well as components, and a parameter keeps both honest.
+export function statusLabel(t, status, provisioning = false) {
+    if (provisioning) return t('projects.status.provisioning.label');
+    return STATUS_META[status] ? t(`projects.status.${status}.label`) : status;
 }
 
 // Returns the sentence explaining a status, or '' for one we have no words for
 // — callers render no tooltip rather than an empty one.
-export function statusDescription(status, provisioning = false) {
-    if (provisioning) return PROVISIONING_META.description;
-    return STATUS_META[status]?.description ?? '';
+export function statusDescription(t, status, provisioning = false) {
+    if (provisioning === 'aiaas') return t('projects.status.provisioning.descriptionAiaas');
+    if (provisioning) return t('projects.status.provisioning.description');
+    return STATUS_META[status] ? t(`projects.status.${status}.description`) : '';
 }
 
 // Returns true for reconciler-imported OpenStack projects that are not yet
@@ -156,13 +287,35 @@ export function visibleResources(resources, node) {
     return all.filter(r => inScope.has(r.id));
 }
 
+// windowName names a window: "30 Tage" for 30d.
+export function windowName(t, window) {
+    return t(`projects.resources.window.${window}`, { defaultValue: window });
+}
+
+// resourceLabel is how a resource is named next to a value: its name, its unit,
+// and for an amount per window the window — "GPU hours (h per 30 days)".
+export function resourceLabel(t, r) {
+    const suffix = resourceUnit(t, r);
+    return suffix ? `${r.name} ${suffix}` : r.name;
+}
+
+// resourceUnit is the unit and window of a resource in brackets ("(GPU h per 30 days)"); '' without either.
+export function resourceUnit(t, r) {
+    const per = r.window ? t('projects.resources.perWindow', { window: windowName(t, r.window) }) : '';
+    const suffix = [r.unit, per].filter(Boolean).join(' ');
+    return suffix ? `(${suffix})` : '';
+}
+
 // groupResources sorts the catalogue into its display groups, keeping the
 // catalogue's own order inside each one so two nodes never reshuffle relative to
 // each other. Resources without a group land in one unnamed bucket at the end.
-export function groupResources(resources) {
+// Once the catalogue spans more than one provider, the provider heads each
+// group ("Workspaces · GPU"); providerLabel names it.
+export function groupResources(resources, providerLabel = (p) => p) {
+    const multi = new Set((resources || []).map(r => r.provider).filter(Boolean)).size > 1;
     const groups = new Map();
     for (const r of resources || []) {
-        const key = r.group || '';
+        const key = multi && r.provider ? [providerLabel(r.provider), r.group].filter(Boolean).join(' · ') : (r.group || '');
         if (!groups.has(key)) groups.set(key, []);
         groups.get(key).push(r);
     }
@@ -188,6 +341,27 @@ export function freeAmount(node, resourceId) {
     return cap - usedAmount(node, resourceId);
 }
 
+// roomIn is what a budget still has free, per quantity — the most a request
+// there could ever be granted.
+export function roomIn(budget, resources) {
+    return Object.fromEntries((resources || [])
+        .filter(r => !isAvailability(r))
+        .map(r => [r.id, freeAmount(budget, r.id)]));
+}
+
+// defaultsWithin fills a request with the catalogue's defaults, each capped to
+// what `room` leaves: a default larger than the budget holds would open the
+// form asking for more than it can grant — 16 GB of RAM from a budget of 8.
+// Where even the minimum does not fit, the default stays and validation says
+// why; a silent zero would read as a choice.
+export function defaultsWithin(resources, room) {
+    return Object.fromEntries((resources || []).map(r => {
+        const value = r.default ?? 0;
+        const cap = isAvailability(r) ? Infinity : (room?.[r.id] ?? Infinity);
+        return [r.id, cap >= (r.min ?? 0) ? Math.min(value, cap) : value];
+    }));
+}
+
 // True when the requested quota fits into the budget's remaining capacity.
 //
 // Availabilities are skipped: they consume nothing, so "does it fit" is not a
@@ -201,54 +375,217 @@ export function quotaFits(budget, requestedQuota, resources) {
         .every(r => (requestedQuota?.[r.id] ?? 0) <= freeAmount(budget, r.id));
 }
 
+// hasAutoApprove reports whether the budget grants requests without a manager.
+export function hasAutoApprove(budget) {
+    return !!budget?.auto_approve;
+}
+
+// isPoolAutoApprove reports whether the budget's auto-approve has no per-person
+// limit: the budget's own free capacity is then the only bound — the shape of
+// a budget handed to one person or shared by a team.
+export function isPoolAutoApprove(budget) {
+    return hasAutoApprove(budget)
+        && Object.keys(budget.auto_approve.per_requester_limit || {}).length === 0;
+}
+
 // autoApproveHeadroom returns the largest request a budget would approve on the
 // spot for this user, or null when the budget has no auto-approve policy.
 //
 // The backend grants instantly while the requester's own ACTIVE usage under the
-// budget stays within its per-requester limit AND every ancestor still has room
-// (see the auto-approve branch of CreateNode). Both halves are mirrored here:
+// budget stays within its per-requester limit (if it has one) AND every ancestor
+// still has room (see autoApprovable in the API). Both halves are mirrored here:
 // the personal cap minus what this user already holds, capped by the budget's
 // own free capacity. Own usage is summed from the caller's projects because the
-// node's `usage` is the total over all owners.
+// node's `usage` is the total over all owners. A pool has no personal cap, so
+// its headroom is the budget's free capacity — Infinity where it has no cap.
 export function autoApproveHeadroom(budget, resources, myProjects) {
-    const perRequester = budget?.auto_approve?.per_requester_limit;
-    if (!perRequester) return null;
-
-    const mine = {};
-    for (const project of myProjects || []) {
-        if (project?.parent_id !== budget.id) continue;
-        // Same definition of "active" the server uses for this sum.
-        if (project.status !== 'approved' && project.status !== 'change_pending') continue;
-        for (const r of resources || []) {
-            if (isAvailability(r)) continue;
-            mine[r.id] = (mine[r.id] || 0) + (project.limit?.[r.id] || 0);
-        }
-    }
+    if (!hasAutoApprove(budget)) return null;
+    const pool = isPoolAutoApprove(budget);
+    const perRequester = budget.auto_approve.per_requester_limit || {};
+    const mine = activeUsageUnder(budget, resources, myProjects);
 
     const out = {};
     for (const r of resources || []) {
         // "How much of this is left for you" means nothing for an availability;
         // it is granted or it is not, and the per-requester cap does not divide.
         if (isAvailability(r)) continue;
-        const personal = Math.max(0, (perRequester[r.id] ?? 0) - (mine[r.id] || 0));
+        const personal = pool ? Infinity : Math.max(0, (perRequester[r.id] ?? 0) - (mine[r.id] || 0));
         const free = freeAmount(budget, r.id);
         out[r.id] = Math.max(0, Math.min(personal, free));
     }
     return out;
 }
 
-// resourceBarSegments turns absolute amounts into the widths of the three
-// stacked segments of a usage bar. Split out of ResourceBar so the arithmetic
+// activeUsageUnder sums what the caller's active projects under this budget
+// hold — the same definition of "active" the server uses for the per-person sum.
+function activeUsageUnder(budget, resources, myProjects) {
+    const mine = {};
+    for (const project of myProjects || []) {
+        if (project?.parent_id !== budget.id) continue;
+        if (project.status !== 'approved' && project.status !== 'change_pending') continue;
+        for (const r of resources || []) {
+            if (isAvailability(r)) continue;
+            mine[r.id] = (mine[r.id] || 0) + (project.limit?.[r.id] || 0);
+        }
+    }
+    return mine;
+}
+
+// requestedBy reports whether a budget was requested (created) by the user with this email. It stays theirs whoever manages it later.
+export function requestedBy(node, email) {
+    return !!email && (node?.created_by || '').toLowerCase() === email.toLowerCase();
+}
+
+// headroomExhaustedBy says why autoApproveHeadroom came out empty: 'share' when
+// the caller's own projects hold their whole per-person share, 'budget' when the
+// budget itself has nothing left, null when there was never anything to take
+// (a share of zero) — the one case where "nothing" is the honest answer.
+export function headroomExhaustedBy(budget, resources, myProjects) {
+    if (!hasAutoApprove(budget)) return null;
+    const counted = (resources || []).filter(r => !isAvailability(r));
+    if (!isPoolAutoApprove(budget)) {
+        const perRequester = budget.auto_approve.per_requester_limit || {};
+        const granted = counted.filter(r => (perRequester[r.id] ?? 0) > 0);
+        if (granted.length === 0) return null;
+        const mine = activeUsageUnder(budget, counted, myProjects);
+        if (granted.every(r => (mine[r.id] || 0) >= perRequester[r.id])) return 'share';
+    }
+    return counted.some(r => freeAmount(budget, r.id) <= 0) ? 'budget' : null;
+}
+
+// beyondAutoApproveRefused reports whether the budget refuses requests its
+// auto-approve does not cover, instead of queueing them for a manager.
+export function beyondAutoApproveRefused(budget) {
+    return hasAutoApprove(budget) && budget.allow_requests_beyond_auto_approve === false;
+}
+
+// autoApproveFacts answers the two questions a budget's auto-approve raises —
+// what it grants without asking, and what happens to the rest — as two separate
+// values rather than one sentence assembled from clauses. null without a policy.
+export function autoApproveFacts(t, resources, budget) {
+    if (!hasAutoApprove(budget)) return null;
+    const amount = isPoolAutoApprove(budget)
+        ? '' : resourceSummaryText(resources, budget.auto_approve.per_requester_limit);
+    return {
+        // A pool grants whatever the budget still has, so it has no figure of
+        // its own to show.
+        grants: amount
+            ? t('projects.autoApprove.perPerson', { amount })
+            : t('projects.autoApprove.whileRoom'),
+        beyond: beyondAutoApproveRefused(budget)
+            ? t('projects.autoApprove.beyondRefused')
+            : t('projects.autoApprove.beyondManager'),
+    };
+}
+
+// What happens when a request is sent — the same decision the API makes, made
+// early so the form can say it before the button is pressed:
+//   'direct'    the viewer manages the budget; created active on the spot
+//   'refused'   the viewer manages the budget, but it has no room: a manager's
+//               own creation is checked on the spot and turned down
+//   'instant'   the budget's auto-approve grants it (or it needs no approval)
+//   'approval'  a manager of the budget decides
+//   'blocked'   beyond what auto-approve grants, and the budget takes no
+//               requests beyond that — the server refuses it
+//
+// requestOutcome is for a NEW project under `budget`.
+export function requestOutcome({ budget, manages, quota, resources, myProjects }) {
+    if (!budget) return null;
+    if (manages) return quotaFits(budget, quota, resources) ? 'direct' : 'refused';
+    const headroom = autoApproveHeadroom(budget, resources, myProjects);
+    if (!headroom) return 'approval';
+    const fits = (resources || [])
+        .filter(r => !isAvailability(r))
+        .every(r => (quota?.[r.id] ?? 0) <= (headroom[r.id] ?? 0));
+    if (fits) return 'instant';
+    return beyondAutoApproveRefused(budget) ? 'blocked' : 'approval';
+}
+
+// changeOutcome is for a proposed change to an active project `node` under
+// `budget` (null when the viewer cannot see it). It mirrors leafChangeDecision
+// in the API: giving back, ending sooner and member changes never wait; growing
+// and extending take effect at once only where the budget's auto-approve covers
+// them — for growth only the DIFFERENCE has to fit, since the project already
+// holds its current size.
+//
+// `manages`: the viewer manages the budget — the hard limit of a budget that
+// takes no requests beyond its auto-approve does not bind them.
+// latestProjectEnd is the latest a project under budget may end at `now`:
+// the budget's end, or now plus the longest term the budget gives its projects
+// (max_project_term_days), whichever comes first. `term` is set when the term is
+// what binds, so a form can say so. Null where neither exists — a project there
+// may run open-ended. Budgets carry the shortest term of their chain, so the
+// budget's own value is the one that applies.
+export function latestProjectEnd(budget, now = Date.now()) {
+    const end = budget?.termination_date ? new Date(budget.termination_date) : null;
+    const term = budget?.max_project_term_days;
+    const byTerm = term ? new Date(now + term * 24 * 60 * 60 * 1000) : null;
+    if (byTerm && (!end || byTerm < end)) return { date: byTerm, term };
+    return end ? { date: end, term: null } : null;
+}
+
+export function changeOutcome({ node, budget, quota, terminationDate, resources, myProjects, manages = false }) {
+    const current = node?.limit || {};
+    const counted = (resources || []).filter(r => !isAvailability(r));
+    const grows = (resources || []).some(r => isAvailability(r)
+        ? (quota?.[r.id] ?? 0) > 0 && (current[r.id] ?? 0) <= 0
+        : (quota?.[r.id] ?? 0) > (current[r.id] ?? 0));
+    const endOf = (d) => (d ? new Date(d).getTime() : null);
+    const currentEnd = endOf(node?.termination_date);
+    const nextEnd = endOf(terminationDate);
+    const extendsEnd = nextEnd !== null && currentEnd !== null && nextEnd > currentEnd;
+
+    if (!grows && !extendsEnd) return 'instant';
+    const beyond = beyondAutoApproveRefused(budget) && !manages ? 'blocked' : 'approval';
+    if (!hasAutoApprove(budget) || budget.status !== 'approved') return 'approval';
+    if (extendsEnd) {
+        const budgetEnd = endOf(budget.termination_date);
+        if (budgetEnd !== null && nextEnd > budgetEnd) return beyond;
+    }
+    if (grows) {
+        // An availability newly switched on is no quantity: the policy grants
+        // it like a new request would (it is in the budget's scope, or the
+        // form would not have offered it).
+        const headroom = autoApproveHeadroom(budget, resources, myProjects);
+        const fits = counted.every(r =>
+            (quota?.[r.id] ?? 0) - (current[r.id] ?? 0) <= (headroom[r.id] ?? 0));
+        if (!fits) return beyond;
+    }
+    // A budget may leave extensions to its managers: they wait, but are not
+    // refused — the hard limit is about resources, not about asking.
+    if (extendsEnd && budget.auto_approve_extensions === false) return 'approval';
+    return 'instant';
+}
+
+// resourceBarSegments turns absolute amounts into the widths of the stacked
+// segments of a usage bar. Split out of ResourceBar so the arithmetic
 // can be checked without rendering anything: the clamping is the whole point.
 // Each segment is capped by what the ones before it left over, so the segments
 // never sum past 100 — otherwise an over-committed budget draws a bar that
 // runs out of its own track.
-export function resourceBarSegments(limit, { approved = 0, changePending = 0, incoming = 0 } = {}) {
+//
+// used is what the projects below actually consume, drawn inside the allocated part (used ⊂ allocated ⊂ budget); usedPct is its width and approvedPct the whole allocated part, used included. A project may use more than the budget in between handed out (the rest came from further up), so the allocated part is never drawn narrower than the used one.
+export function resourceBarSegments(limit, { approved = 0, changePending = 0, incoming = 0, used = 0 } = {}) {
     const pct = (v) => (limit > 0 ? Math.round((v / limit) * 100) : 0);
-    const approvedPct = Math.min(100, pct(approved));
+    const usedPct = Math.min(100, pct(used));
+    const approvedPct = Math.max(usedPct, Math.min(100, pct(approved)));
     const pendingPct = Math.min(100 - approvedPct, pct(changePending));
     const incomingPct = Math.min(100 - approvedPct - pendingPct, pct(incoming));
-    return { approvedPct, pendingPct, incomingPct, totalPct: approvedPct + pendingPct + incomingPct };
+    return { usedPct, approvedPct, pendingPct, incomingPct, totalPct: approvedPct + pendingPct + incomingPct };
+}
+
+// usageState is what a budget's bar says about one resource. Handed out and used are two different things: a budget whose projects hold all of it but use none is full, not short — only consumption at the limit is a shortage.
+//   'open'       room left (or no limit at all)
+//   'full'       everything handed out (taken = allocated + requested + about to be granted), whether used or not
+//   'over'       more handed out than the budget holds
+//   'exhausted'  the projects below use all of it
+// used is undefined where nothing measures the resource.
+export function usageState(limit, { taken = 0, used } = {}) {
+    if (limit === UNLIMITED_QUOTA) return 'open';
+    if (used !== undefined && used > 0 && used >= limit) return 'exhausted';
+    if (taken > limit) return 'over';
+    if (limit > 0 && taken >= limit) return 'full';
+    return 'open';
 }
 
 // limitDelta is one row of the before/after table: what a resource is now, what
@@ -272,8 +609,10 @@ export function limitDelta(limitFrom, limitTo, resourceId) {
 export function nodeChanges({ resources, limitFrom, limitTo, dateFrom, dateTo, usersFrom, usersTo } = {}) {
     const hasLimitChange = Boolean(limitFrom && limitTo && resources &&
         resources.some(r => (limitFrom[r.id] ?? 0) !== (limitTo[r.id] ?? 0)));
-    const hasDateChange = Boolean(dateFrom && dateTo &&
-        new Date(dateFrom).getTime() !== new Date(dateTo).getTime());
+    // An end given to something that had none is a change too — it is what a
+    // budget receiving an end does to everything below it.
+    const hasDateChange = Boolean(dateTo &&
+        (!dateFrom || new Date(dateFrom).getTime() !== new Date(dateTo).getTime()));
 
     const hasUserData = usersTo !== undefined && usersTo !== null;
     const from = usersFrom || [];
@@ -317,12 +656,51 @@ export function resourceSummaryText(resources, quota) {
         .join(' · ');
 }
 
+// "72 / 80 Cores · 288 / 320 GB RAM": what is in use of what was granted, for
+// the quantities OpenStack measures. A resource missing from inUse is not
+// measured — it is shown as granted only, never as zero in use.
+// Availabilities read as their name, as in resourceSummaryText.
+// usageLevel is how full a project is on one resource: 'ok', 'high' from 80 %
+// on, 'full' once everything granted is in use (or more — OpenStack keeps
+// running what a lowered quota no longer covers). null when there is nothing to
+// compare: not measured, nothing granted, or no cap. One rule for the table,
+// the bars on the card and the line under an input field.
+export const USAGE_HIGH = 0.8;
+export function usageLevel(used, limit) {
+    if (typeof used !== 'number' || typeof limit !== 'number' || limit === UNLIMITED_QUOTA || limit < 0) return null;
+    if (limit === 0) return used > 0 ? 'full' : null;
+    const share = used / limit;
+    return share >= 1 ? 'full' : share >= USAGE_HIGH ? 'high' : 'ok';
+}
+
+// USAGE_COLOR is the colour of a level: normal, a hint, a warning.
+export const USAGE_COLOR = { ok: null, high: COLOR.attention, full: COLOR.negative };
+
+export function resourceUsageText(resources, quota, inUse) {
+    return resourceUsageItems(resources, quota, inUse, ' / ').join(' · ');
+}
+
+// resourceUsageItems is the same as a list, one entry per resource, for places
+// that lay the entries out themselves; `sep` goes between used and granted.
+export function resourceUsageItems(resources, quota, inUse, sep = '/') {
+    if (!resources || !quota) return [];
+    return resources
+        .filter(r => (quota[r.id] ?? 0) !== 0)
+        .map(r => {
+            if (isAvailability(r)) return r.name;
+            const limit = quota[r.id] === UNLIMITED_QUOTA ? '∞' : quota[r.id];
+            const used = inUse?.[r.id];
+            const v = used === undefined ? limit : `${used}${sep}${limit}`;
+            return r.unit ? `${v} ${r.unit} ${r.name}` : `${v} ${r.name}`;
+        });
+}
+
 // The resources a project is CHARGED for beyond what it declared, i.e. where
 // OpenStack measures more than the granted limit.
 //
 // Mirrors chargedQuota in the API (internal/tree/service.go) rather than
 // re-inventing the rule, including both of its edge cases: a resource MISSING
-// from os_in_use means "OpenStack does not measure this", not zero, and an
+// from in_use means "OpenStack does not measure this", not zero, and an
 // unlimited limit stays unlimited. Only a measured value strictly above a
 // finite limit is an overage.
 //
@@ -330,7 +708,7 @@ export function resourceSummaryText(resources, quota) {
 // limit — which is exactly the number that is NOT being billed, so the badge
 // states there is a problem while the figures next to it deny it.
 export function overageEntries(resources, node) {
-    const inUse = node?.os_in_use;
+    const inUse = measuredUse(node);
     if (!resources || !inUse) return [];
     return resources.flatMap(r => {
         const limit = node.limit?.[r.id] ?? 0;
@@ -386,12 +764,23 @@ export function normalizeObjectResponse(res, fallback = {}) {
     return fallback;
 }
 
-export function formatRoleLabel(roleId) {
+// The role of a project member: in OpenStack member or reader; in the workspaces of
+// the AI service the same role decides whether the shared folder is writable.
+// kinds (kindsFor) says what the project is, so a project with workspaces names
+// the workspace meaning and one with cloud and workspaces names both.
+const WORKSPACE_ROLE_LABELS = { member: 'Shared Workspace Writer', reader: 'Shared Workspace Reader' };
+
+export function formatRoleLabel(roleId, kinds) {
     if (!roleId) return '';
-    return roleId.charAt(0).toUpperCase() + roleId.slice(1);
+    const openstack = roleId.charAt(0).toUpperCase() + roleId.slice(1);
+    if (!kinds?.includes('workspaces')) return openstack;
+    const workspace = WORKSPACE_ROLE_LABELS[roleId] || openstack;
+    return kinds.includes('cloud') ? `${openstack} · ${workspace}` : workspace;
 }
 
+// getAuthUserEmail is whose view the page shows: the person this tab acts on behalf of (providers/acting-as.js), else the signed-in person. Every caller asks it to tell the viewer's own projects from others' and to fill in the viewer as requester, which while acting on behalf must be the person acted for, as the APIs see it.
 export function getAuthUserEmail(user) {
+    if (actingAsAtLoad) return actingAsAtLoad;
     const profile = user?.profile || {};
     return profile.email || '';
 }
@@ -421,32 +810,56 @@ export function expiryTone(d) {
 // (in a year)" / "Expired 2/8/2026 (2 days ago)". The relative part comes from
 // dayjs' relativeTime plugin, so "in 13 days", "in a month", "in a year" are
 // phrased the way a person would say them.
-export function expiryLabel(d) {
+export function expiryLabel(t, d) {
     if (!d) return '';
-    return `${isExpired(d) ? 'Expired' : 'Valid until'} ${formatRelativeDate(d)}`;
+    return isExpired(d)
+        ? t('projects.expiry.expiredOn', { date: formatRelativeDate(d) })
+        : t('projects.expiry.validUntil', { date: formatRelativeDate(d) });
 }
 
 // expiryValue is the same information without the leading words, for places
 // that already carry a "Valid until:" label of their own.
-export function expiryValue(d) {
+export function expiryValue(t, d) {
     if (!d) return '';
-    return isExpired(d) ? `${formatRelativeDate(d)} — expired` : formatRelativeDate(d);
+    return isExpired(d) ? t('projects.expiry.expiredValue', { date: formatRelativeDate(d) }) : formatRelativeDate(d);
 }
 
 export function isExpired(d) {
     return !!d && dayjs(d).isBefore(dayjs());
 }
 
+// ── Sorting a list of projects ──────────────────────────────────────────────
+
+// PROJECT_SORTS are the orders My Projects offers; the first is the default.
+// Every one falls back to the name, so equal keys still give a fixed order —
+// the API returns the projects by their (random) ID.
+export const PROJECT_SORTS = ['name', 'created', 'expiry', 'status'];
+
+// What needs the owner's attention first, what is over last.
+const STATUS_RANK = { rejected: 0, change_pending: 1, pending: 2, approved: 3, imported: 4, released: 5, archived: 6 };
+
+export function sortProjects(items, key) {
+    const byName = (a, b) => nodeTitle(a).localeCompare(nodeTitle(b), undefined, { sensitivity: 'base', numeric: true });
+    const time = (d) => (d ? dayjs(d).valueOf() : null);
+    const cmp = {
+        // Newest first.
+        created: (a, b) => (time(b.created_at) ?? 0) - (time(a.created_at) ?? 0),
+        // The one ending soonest first; one without an end last.
+        expiry: (a, b) => (time(a.termination_date) ?? Infinity) - (time(b.termination_date) ?? Infinity),
+        status: (a, b) => (STATUS_RANK[a.status] ?? 9) - (STATUS_RANK[b.status] ?? 9),
+    }[key];
+    return [...items].sort((a, b) => (cmp ? cmp(a, b) : 0) || byName(a, b));
+}
+
 // ── Requests waiting for a decision ─────────────────────────────────────────
 
 // The four kinds of thing a manager decides on. Used by the filter in the
-// budget tree; the keys are also what `requestType` returns.
-export const REQUEST_TYPES = [
-    { value: 'project', label: 'New projects' },
-    { value: 'budget', label: 'New budgets' },
-    { value: 'change', label: 'Change requests' },
-    { value: 'imported', label: 'Imported' },
-];
+// budget tree; the values are also what `requestType` returns.
+export const REQUEST_TYPE_VALUES = ['project', 'budget', 'change', 'imported'];
+
+export function requestTypes(t) {
+    return REQUEST_TYPE_VALUES.map(value => ({ value, label: t(`projects.requestTypes.${value}`) }));
+}
 
 // Classifies a node into one of REQUEST_TYPES; null when it waits for nobody.
 export function requestType(node) {
@@ -488,4 +901,61 @@ export function useAsyncRefresh(fetcher, onError) {
     };
 
     return { loading, loaded, refresh };
+}
+
+// ── Allocations ─────────────────────────────────────────────────────────────
+//
+// A project may draw from budgets ABOVE its own on top of its own limit (an
+// allocation, granted by that budget's managers). node.limit stays the own
+// share — what a change request edits; OpenStack gets the sum.
+
+export function hasAllocations(node) {
+    return (node?.allocations || []).length > 0;
+}
+
+// effectiveLimit is the own share (or the given one, e.g. a waiting proposal)
+// plus every allocation. Availabilities come from one place only, so adding
+// their 0s and 1s is the same as "any of them grants it".
+export function effectiveLimit(node, own = node?.limit) {
+    const out = { ...(own || {}) };
+    for (const a of node?.allocations || []) {
+        for (const [id, v] of Object.entries(a.limit || {})) out[id] = (out[id] ?? 0) + v;
+    }
+    return out;
+}
+
+// availabilityElsewhere reports whether the project already gets an
+// availability from somewhere other than budgetId's allocation — its own
+// limit, a waiting proposal, or another allocation. Such an availability is
+// not offered again: it comes from one place.
+export function availabilityElsewhere(node, resourceId, budgetId) {
+    if ((node?.limit?.[resourceId] ?? 0) === 1 || (node?.pending?.limit?.[resourceId] ?? 0) === 1) return true;
+    return (node?.allocations || []).some(a => a.budget_id !== budgetId && (a.limit?.[resourceId] ?? 0) === 1);
+}
+
+// projectActions says which actions a project offers, for its owner or for a
+// manager of the budget it is paid from. One answer for the card and the
+// budget's project table, so the two cannot drift apart.
+//
+// Editing is not an owner privilege: on a pending request a manager's edit
+// amends it in place, on an approved project it becomes a proposal. Release is
+// a manager's to do as well — they carry the budget it is paid from.
+//
+// Deleting for good is offered on a released or archived project wherever the
+// deployment deletes on request (canDelete, from the config), until it is
+// under way.
+export function projectActions(node, { manager = false, canDelete = false } = {}) {
+    const approved = node?.status === 'approved';
+    const pending = node?.status === 'pending';
+    const decidable = pending || node?.status === 'change_pending';
+    // Moving, handing over and allocations are fields and sections of the
+    // project's one dialog (change), not actions of their own.
+    return {
+        details: true,
+        change: approved || pending,
+        release: approved,
+        deleteForGood: canDelete && isRetired(node) && !deletionRequested(node),
+        decide: manager && decidable,
+        adopt: manager && isImported(node) && !(node.flags || []).includes('promote_on_reconcile'),
+    };
 }

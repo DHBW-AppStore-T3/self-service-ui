@@ -1,29 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import {
-    UNLIMITED_QUOTA,
-    autoApproveHeadroom,
-    childrenById,
-    expiryTone,
-    freeAmount,
-    groupResources,
-    isAvailability,
-    isExpired,
-    isProvisioning,
-    limitDelta,
-    nodeChanges,
-    nodeTitle,
-    normalizeObjectResponse,
-    overageEntries,
-    overageText,
-    ownerEmail,
-    quotaFits,
-    requestType,
-    resourceBarSegments,
-    resourceSummaryText,
-    statusLabel,
-    usedAmount,
-    visibleResources,
-} from './util-project.jsx';
+import i18n from '/i18n/index.js';
+
+// The real English resources, so a renamed key fails here rather than showing
+// the key itself on the screen.
+const t = i18n.getFixedT('en');
+import { resourceUsageText, sortProjects, usageLevel, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, isRetired, lastEventAt, scheduledDeletion, autoApproveHeadroom, childrenById, expiryTone, freeAmount, groupResources, headroomExhaustedBy, isAvailability, isExpired, isProvisioning, limitDelta, nodeChanges, nodeTitle, normalizeObjectResponse, openstackProjectUrl, overageEntries, overageText, ownerEmail, quotaFits, requestType, resourceBarSegments, usageState, resourceSummaryText, statusLabel, usedAmount, visibleResources, defaultsWithin, projectActions, effectiveLimit, availabilityElsewhere, hasAllocations, roomIn, resourceLabel, pollWhileDeleting, DELETING_POLL_MS, projectKinds, catalogKinds, resourcesOfKinds, budgetKinds } from './util-project.jsx';
 
 const RESOURCES = [
     { id: 'cpu', name: 'vCPUs' },
@@ -56,9 +37,9 @@ describe('nodeTitle', () => {
     // empty name for it would make it unidentifiable in the very list where
     // someone has to decide whether to adopt it.
     it('prefers the OpenStack name for imported nodes', () => {
-        expect(nodeTitle({ status: 'imported', os_project_name: 'legacy-proj', name: 'ignored' }))
+        expect(nodeTitle({ status: 'imported', bindings: { openstack: { external_name: 'legacy-proj' } }, name: 'ignored' }))
             .toBe('legacy-proj');
-        expect(nodeTitle({ status: 'imported', os_project_id: 'abc123' })).toBe('abc123');
+        expect(nodeTitle({ status: 'imported', bindings: { openstack: { external_id: 'abc123' } } })).toBe('abc123');
     });
 });
 
@@ -105,6 +86,32 @@ describe('quotaFits', () => {
 
     it('treats a resource the request omits as zero', () => {
         expect(quotaFits(budget, { cpu: 6 }, RESOURCES)).toBe(true);
+    });
+});
+
+describe('headroomExhaustedBy', () => {
+    const budget = {
+        id: 'b1',
+        limit: { cpu: 10, ram: 64 },
+        usage: { approved: { limit: { cpu: 4 } } },
+        auto_approve: { per_requester_limit: { cpu: 4, ram: 8 } },
+    };
+
+    it('names the own projects when they hold the whole share', () => {
+        const mine = [{ parent_id: 'b1', status: 'approved', limit: { cpu: 4, ram: 8 } }];
+        expect(headroomExhaustedBy(budget, RESOURCES, mine)).toBe('share');
+    });
+
+    it('names the budget when it has nothing left for anyone', () => {
+        const full = { ...budget, usage: { approved: { limit: { cpu: 10 } } } };
+        expect(headroomExhaustedBy(full, RESOURCES, [])).toBe('budget');
+        const pool = { ...full, auto_approve: {} };
+        expect(headroomExhaustedBy(pool, RESOURCES, [])).toBe('budget');
+    });
+
+    it('has no reason when the share was zero to begin with', () => {
+        const none = { ...budget, auto_approve: { per_requester_limit: { cpu: 0 } } };
+        expect(headroomExhaustedBy(none, RESOURCES, [])).toBeNull();
     });
 });
 
@@ -167,23 +174,30 @@ describe('resourceSummaryText', () => {
 
 describe('statusLabel / isProvisioning', () => {
     it('translates the known statuses and passes an unknown one through', () => {
-        expect(statusLabel('pending')).toBe('Awaiting approval');
-        expect(statusLabel('approved')).toBe('Active');
-        expect(statusLabel('whatever')).toBe('whatever');
+        expect(statusLabel(t, 'pending')).toBe('Awaiting approval');
+        expect(statusLabel(t, 'approved')).toBe('Active');
+        expect(statusLabel(t, 'whatever')).toBe('whatever');
     });
 
     // "Active" for a project OpenStack has not created yet sends people looking
     // for something that is not there; the reconciler runs on an interval.
     it('says "Setting up" for an approved leaf without an OpenStack project', () => {
         const node = { kind: 'project', status: 'approved' };
-        expect(isProvisioning(node, true)).toBe(true);
-        expect(statusLabel('approved', true)).toBe('Setting up');
+        expect(isProvisioning(node, true)).toBe('openstack');
+        expect(statusLabel(t, 'approved', true)).toBe('Setting up');
     });
 
     it('is not provisioning once the project exists, or when nothing provisions', () => {
-        expect(isProvisioning({ kind: 'project', status: 'approved', os_project_id: 'x' }, true)).toBe(false);
+        expect(isProvisioning({ kind: 'project', status: 'approved', bindings: { openstack: { external_id: 'x' } } }, true)).toBe(false);
         expect(isProvisioning({ kind: 'project', status: 'approved' }, false)).toBe(false);
         expect(isProvisioning({ kind: 'budget', status: 'approved' }, true)).toBe(false);
+        // Only owed an OpenStack project when it holds an OpenStack resource.
+        const catalogue = [{ id: 'cores', provider: 'openstack' }, { id: 'ws-gpu-hours', provider: 'aiaas' }];
+        expect(isProvisioning({ kind: 'project', status: 'approved', limit: { cores: 0, 'ws-gpu-hours': 10 } }, true, catalogue)).toBe(false);
+        expect(isProvisioning({ kind: 'project', status: 'approved', limit: { cores: 2, 'ws-gpu-hours': 10 } }, true, catalogue)).toBe('openstack');
+        // The AI service is owed its side where it runs and the project holds its resources.
+        expect(isProvisioning({ kind: 'project', status: 'approved', limit: { cores: 0, 'ws-gpu-hours': 10 } }, true, catalogue, ['aiaas'])).toBe('aiaas');
+        expect(isProvisioning({ kind: 'project', status: 'approved', limit: { 'ws-gpu-hours': 10 }, bindings: { aiaas: { external_id: 't-1' } } }, true, catalogue, ['aiaas'])).toBe(false);
     });
 });
 
@@ -204,7 +218,7 @@ describe('requestType', () => {
 describe('resourceBarSegments', () => {
     it('turns amounts into rounded percentages', () => {
         expect(resourceBarSegments(10, { approved: 5 })).toEqual({
-            approvedPct: 50, pendingPct: 0, incomingPct: 0, totalPct: 50,
+            usedPct: 0, approvedPct: 50, pendingPct: 0, incomingPct: 0, totalPct: 50,
         });
     });
 
@@ -229,8 +243,45 @@ describe('resourceBarSegments', () => {
 
     it('defaults every amount to zero', () => {
         expect(resourceBarSegments(10)).toEqual({
-            approvedPct: 0, pendingPct: 0, incomingPct: 0, totalPct: 0,
+            usedPct: 0, approvedPct: 0, pendingPct: 0, incomingPct: 0, totalPct: 0,
         });
+    });
+
+    // used ⊂ allocated ⊂ budget: the used part is drawn inside the allocated one.
+    it('draws what is used inside what is allocated', () => {
+        expect(resourceBarSegments(200, { approved: 20, used: 5 })).toMatchObject({ usedPct: 3, approvedPct: 10, totalPct: 10 });
+    });
+
+    // A project may use more than the budget in between handed out — the rest came from further up.
+    it('never draws the allocated part narrower than the used one', () => {
+        const s = resourceBarSegments(10, { approved: 2, used: 6, changePending: 8 });
+        expect(s.usedPct).toBe(60);
+        expect(s.approvedPct).toBe(60);
+        expect(s.pendingPct).toBe(40);
+    });
+});
+
+// Handed out is not used: a budget that is fully allocated but idle is full, not short.
+describe('usageState', () => {
+    it('is open while there is room, and always without a limit', () => {
+        expect(usageState(200, { taken: 20, used: 0 })).toBe('open');
+        expect(usageState(-1, { taken: 999, used: 999 })).toBe('open');
+        expect(usageState(0, { taken: 0 })).toBe('open');
+    });
+
+    it('is full, not a shortage, when everything is allocated but unused', () => {
+        expect(usageState(1, { taken: 1, used: 0 })).toBe('full');
+        expect(usageState(1, { taken: 1 })).toBe('full');
+    });
+
+    it('is exhausted only when consumption reaches the limit', () => {
+        expect(usageState(1, { taken: 1, used: 1 })).toBe('exhausted');
+        expect(usageState(10, { taken: 4, used: 12 })).toBe('exhausted');
+    });
+
+    it('is over when more is allocated than the budget holds', () => {
+        expect(usageState(10, { taken: 12, used: 3 })).toBe('over');
+        expect(usageState(0, { taken: 2 })).toBe('over');
     });
 });
 
@@ -271,6 +322,11 @@ describe('nodeChanges', () => {
         expect(nodeChanges({ dateFrom: '2027-01-01T00:00:00Z', dateTo: '2027-01-01T00:00:00.000Z' })
             .hasDateChange).toBe(false);
         expect(nodeChanges({ dateFrom: '2027-01-01', dateTo: '2027-06-01' }).hasDateChange).toBe(true);
+    });
+
+    it('sees an end given where there was none', () => {
+        expect(nodeChanges({ dateFrom: null, dateTo: '2027-06-01' }).hasDateChange).toBe(true);
+        expect(nodeChanges({ dateFrom: '2027-06-01' }).hasDateChange).toBe(false);
     });
 
     it('splits members into added, removed and role-changed', () => {
@@ -358,32 +414,32 @@ describe('overageEntries / overageText', () => {
     ];
 
     it('reports only what OpenStack measures above the limit', () => {
-        const node = { limit: { cores: 4, ram: 2, storage: 5 }, os_in_use: { cores: 8, ram: 1 } };
+        const node = { limit: { cores: 4, ram: 2, storage: 5 }, bindings: { openstack: { in_use: { cores: 8, ram: 1 } } } };
         expect(overageEntries(resources, node).map(r => r.id)).toEqual(['cores']);
         expect(overageText(overageEntries(resources, node))).toBe('8 Cores');
     });
 
-    // A key missing from os_in_use means "not measured", not zero — treating it
+    // A key missing from in_use means "not measured", not zero — treating it
     // as zero would be an overage of nothing and hide the ones that are real.
     it('ignores resources OpenStack does not measure', () => {
-        const node = { limit: { cores: 4, storage: 5 }, os_in_use: { cores: 4 } };
+        const node = { limit: { cores: 4, storage: 5 }, bindings: { openstack: { in_use: { cores: 4 } } } };
         expect(overageEntries(resources, node)).toEqual([]);
     });
 
     // max(-1, n) would turn "no cap" into a finite number and report an overage
     // against a project that cannot have one.
     it('never treats an unlimited limit as exceeded', () => {
-        const node = { limit: { cores: -1 }, os_in_use: { cores: 9999 } };
+        const node = { limit: { cores: -1 }, bindings: { openstack: { in_use: { cores: 9999 } } } };
         expect(overageEntries(resources, node)).toEqual([]);
     });
 
     it('is empty when nothing was measured at all', () => {
         expect(overageEntries(resources, { limit: { cores: 4 } })).toEqual([]);
-        expect(overageEntries(null, { os_in_use: { cores: 8 } })).toEqual([]);
+        expect(overageEntries(null, { bindings: { openstack: { in_use: { cores: 8 } } } })).toEqual([]);
     });
 
     it('formats several resources with their units', () => {
-        const node = { limit: { cores: 4, ram: 2 }, os_in_use: { cores: 8, ram: 5 } };
+        const node = { limit: { cores: 4, ram: 2 }, bindings: { openstack: { in_use: { cores: 8, ram: 5 } } } };
         expect(overageText(overageEntries(resources, node))).toBe('8 Cores · 5 GB RAM');
     });
 });
@@ -545,5 +601,225 @@ describe('resourceSummaryText with availabilities', () => {
         const text = resourceSummaryText(resources, { cores: 4, 'dhbw-ipv4': 0 });
 
         expect(text).toBe('4 Cores');
+    });
+});
+
+describe('openstackProjectUrl', () => {
+    const node = { status: 'approved', bindings: { openstack: { external_id: 'abc123' } } };
+
+    it('switches Horizon to the project, keeping the target through the login', () => {
+        expect(openstackProjectUrl('https://newstack.dhbw.cloud/', node))
+            .toBe('https://newstack.dhbw.cloud/auth/switch/abc123/?next=/project/');
+    });
+
+    it('links nothing without a dashboard or an OpenStack project', () => {
+        expect(openstackProjectUrl('', node)).toBeNull();
+        expect(openstackProjectUrl('https://x', { status: 'approved' })).toBeNull();
+    });
+
+    it('links only projects that are active', () => {
+        expect(openstackProjectUrl('https://x', { ...node, status: 'change_pending' })).not.toBeNull();
+        for (const status of ['pending', 'released', 'rejected', 'imported']) {
+            expect(openstackProjectUrl('https://x', { ...node, status })).toBeNull();
+        }
+    });
+});
+
+describe('defaultsWithin', () => {
+    const catalogue = [
+        { id: 'cores', default: 4, min: 1 },
+        { id: 'ram', default: 16, min: 1 },
+        { id: 'storage', default: 50, min: 1 },
+    ];
+
+    it('caps each default to what the budget has room for', () => {
+        // The Prof-Schwenkreis case: a pool of 4 cores, 8 GB, 50 GB.
+        const budget = { limit: { cores: 4, ram: 8, storage: 50 } };
+        expect(defaultsWithin(catalogue, roomIn(budget, catalogue))).toEqual({ cores: 4, ram: 8, storage: 50 });
+    });
+
+    it('keeps the defaults without a bound, and where not even the minimum fits', () => {
+        expect(defaultsWithin(catalogue, null)).toEqual({ cores: 4, ram: 16, storage: 50 });
+        expect(defaultsWithin(catalogue, { cores: 0, ram: 32 })).toEqual({ cores: 4, ram: 16, storage: 50 });
+    });
+});
+
+describe('projectActions', () => {
+    const on = (a) => Object.keys(a).filter(k => a[k]).sort();
+
+    it('offers an owner editing and releasing, but no decisions', () => {
+        expect(on(projectActions({ status: 'approved' }))).toEqual(['change', 'details', 'release']);
+        expect(on(projectActions({ status: 'pending' }))).toEqual(['change', 'details']);
+    });
+
+    it('lets a manager decide what waits', () => {
+        expect(on(projectActions({ status: 'change_pending' }, { manager: true }))).toEqual(['decide', 'details']);
+        expect(on(projectActions({ status: 'approved' }, { manager: true }))).toEqual(['change', 'details', 'release']);
+    });
+
+    it('offers adopting an imported project unless it is already on its way', () => {
+        expect(projectActions({ status: 'imported' }, { manager: true }).adopt).toBe(true);
+        expect(projectActions({ status: 'imported', flags: ['promote_on_reconcile'] }, { manager: true }).adopt).toBe(false);
+    });
+});
+
+describe('allocations', () => {
+    const node = {
+        limit: { cores: 4, ipv4: 0 },
+        allocations: [
+            { budget_id: 'uni', limit: { cores: 12, gpu: 1, ipv4: 1 } },
+            { budget_id: 'dept', limit: { cores: 2 } },
+        ],
+    };
+
+    it('adds every allocation to the own share', () => {
+        expect(effectiveLimit(node)).toEqual({ cores: 18, gpu: 1, ipv4: 1 });
+        expect(effectiveLimit(node, { cores: 1 })).toEqual({ cores: 15, gpu: 1, ipv4: 1 });
+        expect(effectiveLimit({ limit: { cores: 2 } })).toEqual({ cores: 2 });
+    });
+
+    it('knows where an availability already comes from', () => {
+        expect(availabilityElsewhere(node, 'ipv4', 'dept')).toBe(true);
+        expect(availabilityElsewhere(node, 'ipv4', 'uni')).toBe(false);
+        expect(availabilityElsewhere({ limit: { ipv4: 1 } }, 'ipv4', 'uni')).toBe(true);
+        expect(availabilityElsewhere({ limit: {}, pending: { limit: { ipv4: 1 } } }, 'ipv4', 'uni')).toBe(true);
+        expect(hasAllocations(node)).toBe(true);
+        expect(hasAllocations({})).toBe(false);
+    });
+});
+
+describe('retirement', () => {
+    const released = { status: 'released', history: [{ event: 'released', timestamp: '2026-10-01T10:00:00Z' }] };
+    const archived = { ...released, status: 'archived', history: [...released.history, { event: 'archived', timestamp: '2026-10-01T10:05:00Z' }] };
+    const deleting = { ...archived, flags: ['delete_requested'] };
+
+    it('knows which projects are given up', () => {
+        expect(isRetired(released)).toBe(true);
+        expect(isRetired(archived)).toBe(true);
+        expect(isRetired({ status: 'approved' })).toBe(false);
+        expect(deletionRequested(deleting)).toBe(true);
+        expect(deletionRequested(archived)).toBe(false);
+    });
+
+    it('deletes on request in every mode but never', () => {
+        expect(deletesOnRequest({ delete: 'never' })).toBe(false);
+        expect(deletesOnRequest({})).toBe(false);
+        for (const mode of ['on-request', 'after-grace', 'immediately']) expect(deletesOnRequest({ delete: mode })).toBe(true);
+    });
+
+    it('dates the deletion only under after-grace, from the release', () => {
+        expect(scheduledDeletion(archived, { delete: 'after-grace', deleteGraceDays: 30 })).toBe('2026-10-31T10:00:00.000Z');
+        expect(scheduledDeletion(archived, { delete: 'on-request', deleteGraceDays: 30 })).toBeNull();
+        expect(scheduledDeletion({ status: 'approved' }, { delete: 'after-grace' })).toBeNull();
+        expect(lastEventAt(archived, 'archived')).toBe('2026-10-01T10:05:00Z');
+    });
+
+    it('offers deleting for good on a given-up project, where allowed and not under way', () => {
+        expect(projectActions(archived, { canDelete: true }).deleteForGood).toBe(true);
+        expect(projectActions(released, { canDelete: true }).deleteForGood).toBe(true);
+        expect(projectActions(archived, { canDelete: false }).deleteForGood).toBe(false);
+        expect(projectActions(deleting, { canDelete: true }).deleteForGood).toBe(false);
+        expect(projectActions({ status: 'approved' }, { canDelete: true }).deleteForGood).toBe(false);
+    });
+});
+
+describe('resourceUsageText', () => {
+    const res = [
+        { id: 'cores', name: 'Cores' },
+        { id: 'ram', name: 'RAM', unit: 'GB' },
+        { id: 'net', name: 'DHBW IPv4', kind: 'bool' },
+    ];
+    it('puts what is in use before what was granted', () => {
+        expect(resourceUsageText(res, { cores: 80, ram: 320, net: 1 }, { cores: 72, ram: 288 }))
+            .toBe('72 / 80 Cores · 288 / 320 GB RAM · DHBW IPv4');
+    });
+    it('shows an unmeasured resource as granted only, never as zero', () => {
+        expect(resourceUsageText(res, { cores: 4, ram: 8 }, { cores: 0 })).toBe('0 / 4 Cores · 8 GB RAM');
+    });
+});
+
+describe('usageLevel', () => {
+    it('is normal below 80 %, a hint from 80 %, a warning when all is in use', () => {
+        expect(usageLevel(7, 10)).toBe('ok');
+        expect(usageLevel(8, 10)).toBe('high');
+        expect(usageLevel(10, 10)).toBe('full');
+        expect(usageLevel(12, 10)).toBe('full');
+    });
+    it('has nothing to say without a measurement or a cap', () => {
+        expect(usageLevel(undefined, 10)).toBeNull();
+        expect(usageLevel(5, null)).toBeNull();
+        expect(usageLevel(5, -1)).toBeNull();
+        expect(usageLevel(0, 0)).toBeNull();
+        expect(usageLevel(1, 0)).toBe('full');
+    });
+});
+
+describe('sortProjects', () => {
+    const items = [
+        { id: 'p_1', name: 'beta', status: 'approved', created_at: '2026-01-01', termination_date: '2027-01-01' },
+        { id: 'p_2', name: 'Alpha', status: 'archived', created_at: '2026-03-01' },
+        { id: 'p_3', name: 'gamma', status: 'rejected', created_at: '2026-02-01', termination_date: '2026-11-01' },
+    ];
+    const names = (key) => sortProjects(items, key).map(n => n.name);
+
+    it('orders by name, newest, soonest end and status, ties by name', () => {
+        expect(names('name')).toEqual(['Alpha', 'beta', 'gamma']);
+        expect(names('created')).toEqual(['Alpha', 'gamma', 'beta']);
+        expect(names('expiry')).toEqual(['gamma', 'beta', 'Alpha']);
+        expect(names('status')).toEqual(['gamma', 'beta', 'Alpha']);
+    });
+});
+
+describe('resourceLabel / groupResources with providers', () => {
+    const t = (key, opts) => ({
+        'projects.resources.perWindow': `per ${opts?.window}`,
+        'projects.resources.window.30d': '30 days',
+    })[key] ?? opts?.defaultValue ?? key;
+
+    it('names the window of an amount per window', () => {
+        expect(resourceLabel(t, { name: 'GPU hours', unit: 'h', window: '30d' })).toBe('GPU hours (h per 30 days)');
+        expect(resourceLabel(t, { name: 'Cores' })).toBe('Cores');
+        expect(resourceLabel(t, { name: 'RAM', unit: 'GB' })).toBe('RAM (GB)');
+    });
+
+    it('heads the groups with the provider only once there are several', () => {
+        const os = [{ id: 'cores', group: 'Compute', provider: 'openstack' }];
+        expect(groupResources(os).map(([k]) => k)).toEqual(['Compute']);
+        const both = [...os, { id: 'gpu', group: 'GPU', provider: 'workspaces' }];
+        expect(groupResources(both, p => p.toUpperCase()).map(([k]) => k)).toEqual(['OPENSTACK · Compute', 'WORKSPACES · GPU']);
+    });
+});
+
+describe('pollWhileDeleting', () => {
+    const page = (items) => ({ state: { data: { items } } });
+    it('polls only while a listed project is being deleted', () => {
+        expect(pollWhileDeleting(page([{ id: 'a', flags: ['delete_requested'] }, { id: 'b' }]))).toBe(DELETING_POLL_MS);
+        expect(pollWhileDeleting(page([{ id: 'b' }]))).toBe(false);
+        expect(pollWhileDeleting({ state: {} })).toBe(false);
+    });
+});
+
+describe('project kinds', () => {
+    const RES = [
+        { id: 'cores', provider: 'openstack', area: 'cloud' },
+        { id: 'llm-mtokens', provider: 'aiaas', area: 'llm' },
+        { id: 'ws-storage-gb', provider: 'aiaas', area: 'workspaces' },
+        { id: 'legacy' },
+    ];
+    it('a project is of the areas it holds or asks for', () => {
+        expect(projectKinds({ limit: { cores: 2 } }, RES)).toEqual(['cloud']);
+        expect(projectKinds({ limit: { 'llm-mtokens': -1 } }, RES)).toEqual(['llm']);
+        expect(projectKinds({ limit: { cores: 1 }, pending: { limit: { cores: 1, 'llm-mtokens': 5 } } }, RES)).toEqual(['cloud', 'llm']);
+        expect(projectKinds({ limit: {}, allocations: [{ limit: { 'ws-storage-gb': 3 } }] }, RES)).toEqual(['workspaces']);
+        // Without an area and provider a resource is OpenStack's, so cloud.
+        expect(projectKinds({ limit: { legacy: 4 } }, RES)).toEqual(['cloud']);
+    });
+    it('the catalogue, resources and budgets by area', () => {
+        expect(catalogKinds(RES)).toEqual(['cloud', 'workspaces', 'llm']);
+        expect(catalogKinds([{ id: 'cores', provider: 'openstack' }])).toEqual(['cloud']);
+        expect(resourcesOfKinds(RES, ['llm']).map(r => r.id)).toEqual(['llm-mtokens']);
+        expect(resourcesOfKinds(RES, [])).toHaveLength(4);
+        expect(budgetKinds({ available_resources: ['cores'] }, RES)).toEqual(['cloud']);
+        expect(budgetKinds({}, RES)).toEqual(['cloud', 'workspaces', 'llm']);
     });
 });

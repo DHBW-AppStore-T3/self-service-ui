@@ -1,5 +1,6 @@
 # --- Stage 1: Builder
-FROM node:alpine AS builder
+# The bundle does not depend on the platform, so it is built on the machine that builds (BUILDPLATFORM): native speed on an arm64 Mac instead of emulation.
+FROM --platform=$BUILDPLATFORM node:alpine AS builder
 
 # Set the working directory inside the container
 WORKDIR /app

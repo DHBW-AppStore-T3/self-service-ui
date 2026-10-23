@@ -21,11 +21,13 @@ window.appconfig = {
   cloudResourcesBaseUrl: "${CLOUD_RESOURCES_BASE_URL}",
   cloudResourcesMcpUrl: "${CLOUD_RESOURCES_MCP_URL}",
   dynamicZonesMcpUrl: "${DYN_ZONES_MCP_URL}",
+  llmBaseUrl: "${LLM_BASE_URL}",
   acmeServer: "${ACME_SERVER:-https://certificates.dhbw.cloud}",
   dummyAuth: ${DUMMY_AUTH:-false},
   "oidc": {
     "client_id": "${OIDC_CLIENT_ID}",
     "issuer_url": "${OIDC_ISSUER_URL}",
+    "end_session_url": "${OIDC_END_SESSION_URL}",
   }
 };
 EOF
