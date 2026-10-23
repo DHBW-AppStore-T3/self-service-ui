@@ -44,7 +44,9 @@ EXPOSE 8080
 # kernel refuses to exec a file with capabilities once no_new_privs is set —
 # which is exactly what the pod's allowPrivilegeEscalation: false does. We
 # listen on 8080, so nothing here needs the capability in the first place.
-RUN apk add --no-cache libcap \
+# apk upgrade pulls in fixes for base-image packages (Trivy gate, e.g. brotli-libs).
+RUN apk upgrade --no-cache \
+    && apk add --no-cache libcap \
     && setcap -r /usr/bin/caddy \
     && apk del libcap \
     && chown -R 65532:65532 /srv/www /config /data
