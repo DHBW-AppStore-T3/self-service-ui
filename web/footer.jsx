@@ -1,7 +1,10 @@
 import { Box, Text, Anchor } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import { ExternalLink } from '/helper/external-link.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { useCloudConfig } from '/providers/cloud-config.jsx';
+import { useRemoteConfig } from '/providers/remote-config.jsx';
+import { useAiAreasVisible } from '/ai-areas.jsx';
 
 // Every component this portal is made of links to its own repository, so the
 // separate "Source Code" link is gone: it only ever pointed at the UI, which is
@@ -9,12 +12,17 @@ import { useCloudConfig } from '/providers/cloud-config.jsx';
 const UI_REPO = 'https://github.com/pfisterer/self-service-ui';
 const DYNDNS_REPO = 'https://github.com/pfisterer/dynamic-zones';
 const CLOUD_REPO = 'https://github.com/pfisterer/openstack-management-api';
+const LLM_REPO = 'https://github.com/pfisterer/llm-management-api';
 
 export function Footer({ title, version }) {
+    const { t } = useTranslation();
     // Both versions are reused from the config providers (each loads its API's
     // /config.json once) — the footer does not fetch anything itself.
     const { config: dynDnsConfig } = useDynDnsConfig();
     const { config: cloudConfig } = useCloudConfig();
+    // The AI service (LLM, workspaces) is only there where it is configured, and named only to whoever sees one of its areas in the navigation (same condition, ai-areas.jsx); its base URL may be relative to the portal.
+    const { anyVisible: aiVisible } = useAiAreasVisible();
+    const { config: llmConfig } = useRemoteConfig(aiVisible ? llmBase() : undefined);
 
     // One line, one format for every component: "<name> (<version>)", the name
     // linking to its repository. An API that is not configured (Cloud API on
@@ -23,6 +31,7 @@ export function Footer({ title, version }) {
         { label: title, version, repo: UI_REPO },
         dynDnsConfig?.version && { label: 'Dynamic Zones API', version: dynDnsConfig.version, repo: DYNDNS_REPO },
         cloudConfig?.version && { label: 'Cloud API', version: cloudConfig.version, repo: CLOUD_REPO },
+        aiVisible && llmConfig?.version && { label: 'AI Service API', version: llmConfig.version, repo: LLM_REPO },
     ].filter(Boolean);
 
     return (
@@ -40,9 +49,20 @@ export function Footer({ title, version }) {
                     </span>
                 ))}
                 <ExternalLink href="https://dennis-pfisterer.de" size="sm">
-                    © Dennis Pfisterer, DHBW
+                    {t('footer.copyright')}
                 </ExternalLink>
             </Text>
         </Box>
     );
+}
+
+// llmBase is the AI service's base URL made absolute (the configuration may give "/api/llm/"), or nothing when it is not configured.
+function llmBase() {
+    const base = window?.appconfig?.llmBaseUrl;
+    if (!base) return undefined;
+    try {
+        return new URL(base, window.location.href).toString();
+    } catch {
+        return undefined;
+    }
 }

@@ -6,6 +6,7 @@
 // `['dyndns','records']` drops the records of every zone, `records(zone)` only
 // that zone's.
 export const dyndnsKeys = {
+    me: () => ['dyndns', 'me'],
     zones: () => ['dyndns', 'zones'],
     zone: (name) => ['dyndns', 'zone', name],
     tokens: () => ['dyndns', 'tokens'],

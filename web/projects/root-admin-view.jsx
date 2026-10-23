@@ -1,37 +1,76 @@
 import { useQuery } from '@tanstack/react-query';
+import { Redirect } from 'wouter';
+import { SubNavItem } from '/header.jsx';
+import { SUBNAV_HEIGHT } from '/nav.jsx';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
-import { Alert, Badge, Button, Group, Paper, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { Alert, Badge, Button, Group, Paper, SimpleGrid, Stack, Table, Text, Title, Tooltip } from '@mantine/core';
 import { CodeBlock } from '/helper/codeblock.jsx';
 import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
+import { Trans, useTranslation } from 'react-i18next';
 import { COLOR } from './util-project.jsx';
 import { formatDateTime } from '../format-date.js';
+import { UsageReportPanel } from './component-usage.jsx';
+import { CatalogPanel } from './component-catalog.jsx';
 
 
-// The reconciler publishes each project's termination date as a Keystone tag, so
-// "what has run out" is answerable from a shell with OpenStack credentials — no
-// account here, no database access. The query is shown rather than run: it reads
-// the cloud directly, which is the point of having it, and an admin holding those
+// The reconciler writes each managed project's state as Keystone tags (status,
+// termination date, contact, …), so "what is there and in which state" is
+// answerable from a shell with OpenStack credentials — no account here, no
+// database access. The query is shown rather than run: it reads the cloud
+// directly, which is the point of having it, and an admin holding those
 // credentials is who it is for.
 //
 // Notes on the shape: /v3/projects is used instead of `openstack project list`
-// because the CLI does not print tags; the timestamps are RFC3339 in UTC, which
-// sorts and compares as plain text, so `<` against the current time is enough.
-function overdueQuery(prefix) {
+// because the CLI does not print tags; `prefix:value` tags become an object, the
+// rest stays a list, so nothing here has to know which prefixes exist.
+// OS_AUTH_URL comes with or without /v3, depending on the openrc.
+function managedProjectsQuery(tag) {
     return [
         'TOKEN=$(openstack token issue -f value -c id) &&',
-        'curl -s -H "X-Auth-Token: $TOKEN" "$OS_AUTH_URL/projects" \\',
-        `  | jq -r --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '`,
-        '      .projects[]',
-        `      | (.tags[]? | select(startswith("${prefix}")) | ltrimstr("${prefix}")) as $due`,
-        '      | select($due < $now)',
-        "      | [$due, .name, .description] | @tsv' \\",
-        '  | sort',
+        `curl -s -H "X-Auth-Token: $TOKEN" "\${OS_AUTH_URL%/v3}/v3/projects?tags=${tag}" \\`,
+        "  | jq '[.projects[] | {",
+        '        id, name, enabled, description,',
+        '        tags:   ([.tags[]? | capture("^(?<key>[^:]+):(?<value>.*)$")] | from_entries),',
+        '        labels: [.tags[]? | select(contains(":") | not)]',
+        "      }] | sort_by(.name)'",
     ].join('\n');
 }
 
-export function RootAdminView() {
+// The root admins' pages. Each is a URL of its own (/projects/admin/<page>),
+// so a page can be linked to and survives a reload.
+const ADMIN_PAGES = [
+    { id: 'sync', label: 'projects.rootAdmin.pageSync', component: ReconcilerPanel },
+    { id: 'catalog', label: 'projects.rootAdmin.pageCatalog', component: CatalogPanel },
+    { id: 'usage', label: 'projects.rootAdmin.pageUsage', component: UsageReportPanel },
+];
+
+// RootAdminView: one page per concern — the reconciler's state, the
+// availabilities of the catalogue, and the evaluation of what all projects
+// used — under a third navigation level that looks like the second one in
+// the header, so it reads as the next step down rather than as something
+// belonging to the page.
+export function RootAdminView({ params }) {
+    const { t } = useTranslation();
+    const page = ADMIN_PAGES.find(p => p.id === params?.page);
+    if (!page) return <Redirect to={`/admin/${ADMIN_PAGES[0].id}`} replace />;
+    const Page = page.component;
+    return (
+        <Stack gap="lg">
+            <Group gap="0" wrap="nowrap" h={SUBNAV_HEIGHT}
+                style={{ borderBottom: '1px solid var(--mantine-color-gray-3)', overflowX: 'auto' }}>
+                {ADMIN_PAGES.map(p => (
+                    <SubNavItem key={p.id} item={{ href: `/admin/${p.id}`, label: t(p.label) }}
+                        active={p.id === page.id} />
+                ))}
+            </Group>
+            <Page />
+        </Stack>
+    );
+}
+
+function ReconcilerPanel() {
     const api = useNodesApi();
 
     const statusQuery = useQuery({
@@ -39,6 +78,8 @@ export function RootAdminView() {
         queryFn: () => api.getReconcileStatus(),
         enabled: !!api,
     });
+
+    const { t } = useTranslation();
 
     const trigger = useApiMutation({
         mutationFn: () => api.triggerReconcile(),
@@ -48,12 +89,12 @@ export function RootAdminView() {
     // Loader only until the first status fetch resolves; the manual "Refresh"
     // button re-fetches without blanking the panel.
     if (!api || statusQuery.isPending) return <Loading size="sm" />;
-    if (statusQuery.isError) return <LoadError query={statusQuery} title="Could not load sync status" />;
+    if (statusQuery.isError) return <LoadError query={statusQuery} title={t('projects.rootAdmin.loadError')} />;
 
     // null (a 503 from the API) means the reconciler is switched off here.
     const status = statusQuery.data;
     if (status === null) {
-        return (<Text size="sm" c="dimmed">Reconciler is disabled.</Text>);
+        return (<Text size="sm" c="dimmed">{t('projects.rootAdmin.disabled')}</Text>);
     }
 
     const lastRun = status?.last_run_at ? formatDateTime(status.last_run_at) : '—';
@@ -61,9 +102,9 @@ export function RootAdminView() {
     return (
         <Stack gap="md">
             <Group justify="space-between" align="center">
-                <Title order={4}>OpenStack Sync Status</Title>
+                <Title order={4}>{t('projects.rootAdmin.title')}</Title>
                 <Group gap="xs">
-                    {status?.running ? <Badge color={COLOR.info} variant="light">Running...</Badge> : null}
+                    {status?.running ? <Badge color={COLOR.info} variant="light">{t('projects.rootAdmin.running')}</Badge> : null}
                     <Button
                         size="sm"
                         variant="light"
@@ -71,7 +112,7 @@ export function RootAdminView() {
                         onClick={() => statusQuery.refetch()}
                         loading={statusQuery.isFetching}
                     >
-                        Refresh
+                        {t('projects.rootAdmin.refresh')}
                     </Button>
                     <Button
                         size="sm"
@@ -79,45 +120,45 @@ export function RootAdminView() {
                         onClick={() => trigger.mutate()}
                         disabled={status?.running}
                     >
-                        Trigger Sync
+                        {t('projects.rootAdmin.trigger')}
                     </Button>
                 </Group>
             </Group>
 
             {trigger.isSuccess ? (
                 <Alert color={COLOR.positive}>
-                    Sync triggered. Refresh status in a moment.
+                    {t('projects.rootAdmin.triggered')}
                 </Alert>
             ) : null}
 
             <Paper withBorder p="md" radius="sm">
                 <SimpleGrid cols={3} spacing="md">
                     <Stack gap="2">
-                        <Text size="xs" c="dimmed">Last Run</Text>
+                        <Text size="xs" c="dimmed">{t('projects.rootAdmin.lastRun')}</Text>
                         <Text size="sm" fw={500}>{lastRun}</Text>
                     </Stack>
                     <Stack gap="2">
-                        <Text size="xs" c="dimmed">Projects Synced</Text>
+                        <Text size="xs" c="dimmed">{t('projects.rootAdmin.projectsSynced')}</Text>
                         <Text size="sm" fw={500}>{status?.projects_synced ?? 0}</Text>
                     </Stack>
                     <Stack gap="2">
-                        <Text size="xs" c="dimmed">Projects Created</Text>
+                        <Text size="xs" c="dimmed">{t('projects.rootAdmin.projectsCreated')}</Text>
                         <Text size="sm" fw={500}>{status?.projects_created ?? 0}</Text>
                     </Stack>
                     <Stack gap="2">
-                        <Text size="xs" c="dimmed">OS-Only Imported</Text>
-                        <Text size="sm" fw={500}>{status?.os_only_imported ?? 0}</Text>
+                        <Text size="xs" c="dimmed">{t('projects.rootAdmin.osOnlyImported')}</Text>
+                        <Text size="sm" fw={500}>{status?.imported_leaves ?? 0}</Text>
                     </Stack>
                     <Stack gap="2">
-                        <Text size="xs" c="dimmed">OS-Only Removed</Text>
-                        <Text size="sm" fw={500}>{status?.os_only_removed ?? 0}</Text>
+                        <Text size="xs" c="dimmed">{t('projects.rootAdmin.osOnlyRemoved')}</Text>
+                        <Text size="sm" fw={500}>{status?.imported_removed ?? 0}</Text>
                     </Stack>
                     <Stack gap="2">
-                        <Text size="xs" c="dimmed">Orphaned Users Removed</Text>
+                        <Text size="xs" c="dimmed">{t('projects.rootAdmin.orphanedUsersRemoved')}</Text>
                         <Text size="sm" fw={500}>{status?.orphaned_users_removed ?? 0}</Text>
                     </Stack>
                     <Stack gap="2">
-                        <Text size="xs" c="dimmed">Last Error</Text>
+                        <Text size="xs" c="dimmed">{t('projects.rootAdmin.lastError')}</Text>
                         <Text size="sm" fw={500} c={status?.last_error ? 'red' : 'dimmed'}>
                             {status?.last_error || '—'}
                         </Text>
@@ -125,17 +166,18 @@ export function RootAdminView() {
                 </SimpleGrid>
             </Paper>
 
-            {status?.termination_tag_prefix ? (
+            <ProblemsTable runs={status?.recent_runs ?? []} problems={status?.problems ?? []} />
+
+            {status?.managed_tag ? (
                 <Paper withBorder p="md" radius="sm">
                     <Stack gap="xs">
-                        <Title order={5}>Overdue projects, from the command line</Title>
+                        <Title order={5}>{t('projects.rootAdmin.cliTitle')}</Title>
                         <Text size="sm" c="dimmed">
-                            Every managed project carries its termination date as the tag{' '}
-                            <Text span ff="monospace" size="sm">{status.termination_tag_prefix}&lt;timestamp&gt;</Text>,
-                            so this lists what has run out — straight from OpenStack, with your own
-                            credentials sourced. Projects without a date carry no tag and never appear.
+                            <Trans i18nKey="projects.rootAdmin.cliText"
+                                values={{ tag: status.managed_tag }}
+                                components={{ 1: <Text span ff="monospace" size="sm" /> }} />
                         </Text>
-                        <CodeBlock language="bash" code={overdueQuery(status.termination_tag_prefix)} />
+                        <CodeBlock language="bash" code={managedProjectsQuery(status.managed_tag)} />
                     </Stack>
                 </Paper>
             ) : null}
@@ -145,12 +187,8 @@ export function RootAdminView() {
                 until someone reports missing access. */}
             {status?.preseed_conflicts?.length ? (
                 <Alert color={COLOR.attention} icon={<AlertTriangle size="16" />}
-                    title={`${status.preseed_conflicts.length} user(s) could not be prepared in OpenStack`}>
-                    <Text size="sm" mb="xs">
-                        These people did not get their role. Their OpenStack account is ambiguous — most
-                        often the OIDC username differs from the email address. Assign the role to the
-                        correct account by hand, or correct the username; the next sync retries.
-                    </Text>
+                    title={t('projects.rootAdmin.preseedTitle')}>
+                    <Text size="sm" mb="xs">{t('projects.rootAdmin.preseedText')}</Text>
                     <Stack gap="xs">
                         {status.preseed_conflicts.map((c, i) => (
                             <div key={`${c.email}-${i}`}>
@@ -162,5 +200,87 @@ export function RootAdminView() {
                 </Alert>
             ) : null}
         </Stack>
+    );
+}
+
+// ProblemsTable: what the recent runs logged as warnings and errors. The
+// reconciler carries on past a failed grant or quota, so without this a
+// mismatch between portal and OpenStack only shows up in the pod log.
+function ProblemsTable({ runs, problems }) {
+    const { t } = useTranslation();
+    if (!runs.length) {
+        return <Text size="sm" c="dimmed">{t('projects.rootAdmin.problemsNoRuns')}</Text>;
+    }
+    if (!problems.length) {
+        return (
+            <Text size="sm" c="dimmed">{t('projects.rootAdmin.problemsNone', { count: runs.length })}</Text>
+        );
+    }
+    return (
+        <Paper withBorder p="md" radius="sm">
+            <Stack gap="xs">
+                <Title order={5}>{t('projects.rootAdmin.problemsTitle')}</Title>
+                <Text size="sm" c="dimmed">{t('projects.rootAdmin.problemsText', { count: runs.length })}</Text>
+                <Table.ScrollContainer minWidth={720}>
+                    <Table striped fz="xs" verticalSpacing="xs">
+                        <Table.Thead>
+                            <Table.Tr>
+                                <Table.Th>{t('projects.rootAdmin.problemLastSeen')}</Table.Th>
+                                <Table.Th>
+                                    <Tooltip label={t('projects.rootAdmin.problemRunsHelp', { count: runs.length })}>
+                                        <span>{t('projects.rootAdmin.problemRuns')}</span>
+                                    </Tooltip>
+                                </Table.Th>
+                                <Table.Th>{t('projects.rootAdmin.problemMessage')}</Table.Th>
+                                <Table.Th>{t('projects.rootAdmin.problemProject')}</Table.Th>
+                                <Table.Th>{t('projects.rootAdmin.problemError')}</Table.Th>
+                            </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                            {problems.map((p, i) => (
+                                <ProblemRow key={i} problem={p} total={runs.length} />
+                            ))}
+                        </Table.Tbody>
+                    </Table>
+                </Table.ScrollContainer>
+            </Stack>
+        </Paper>
+    );
+}
+
+function ProblemRow({ problem: p, total }) {
+    const { t } = useTranslation();
+    // Every run means it will not go away by itself.
+    const persistent = p.runs >= total;
+    const fields = Object.entries(p.fields ?? {}).sort(([a], [b]) => a.localeCompare(b));
+    return (
+        <Table.Tr>
+            <Table.Td style={{ whiteSpace: 'nowrap' }}>{formatDateTime(p.last_seen)}</Table.Td>
+            <Table.Td>
+                <Badge size="sm" variant="light" color={persistent ? COLOR.negative : COLOR.attention}>
+                    {p.runs}/{total}
+                </Badge>
+            </Table.Td>
+            <Table.Td>
+                <Group gap={6} wrap="nowrap" align="flex-start">
+                    <Badge size="xs" variant="outline" color={p.level === 'error' ? COLOR.negative : COLOR.attention}>
+                        {t(`projects.rootAdmin.problemLevel_${p.level === 'error' ? 'error' : 'warn'}`)}
+                    </Badge>
+                    <Text size="xs">{p.message}</Text>
+                </Group>
+                {fields.length ? (
+                    <Text size="xs" c="dimmed" ff="monospace">
+                        {fields.map(([k, v]) => `${k}=${v}`).join(' ')}
+                    </Text>
+                ) : null}
+            </Table.Td>
+            <Table.Td>
+                {p.node_id ? <Text size="xs" ff="monospace">{p.node_id}</Text> : null}
+                {p.os_project_id ? <Text size="xs" ff="monospace" c="dimmed">{p.os_project_id}</Text> : null}
+            </Table.Td>
+            <Table.Td>
+                <Text size="xs" c="red" style={{ wordBreak: 'break-word' }}>{p.error}</Text>
+            </Table.Td>
+        </Table.Tr>
     );
 }

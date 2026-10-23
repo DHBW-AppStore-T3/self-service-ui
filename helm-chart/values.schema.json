@@ -56,7 +56,10 @@
         "cloudResourcesMcpUrl": { "type": "string" },
         "acmeServer": { "type": "string" },
         "dynamicZonesUpstream": { "type": "string" },
-        "cloudResourcesUpstream": { "type": "string" }
+        "cloudResourcesUpstream": { "type": "string" },
+        "llmBaseUrl": { "type": "string" },
+        "llmUpstream": { "type": "string" },
+        "llmHost": { "type": "string" }
       }
     },
     "auth": {
@@ -71,7 +74,11 @@
           "required": ["issuerUrl", "clientId"],
           "properties": {
             "issuerUrl": { "type": "string", "minLength": 1 },
-            "clientId": { "type": "string", "minLength": 1 }
+            "clientId": { "type": "string", "minLength": 1 },
+            "authorizationUrl": { "type": "string" },
+            "tokenUrl": { "type": "string" },
+            "jwksUrl": { "type": "string" },
+            "endSessionUrl": { "type": "string" }
           }
         }
       }

@@ -1,4 +1,6 @@
 import { Badge, Button, Group, Modal, Stack, Tabs, Text } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
+import { BarChart3, CheckCheck, Gauge, History, Info, KeyRound, Settings2, Tags, Users } from 'lucide-react';
 import { COLOR } from './util-project.jsx';
 
 // The shell every create/change dialog in this section shares: a modal holding a
@@ -17,17 +19,50 @@ export function TabLabel({ label, hasError }) {
     );
 }
 
+// tabWithError names the first tab that holds a failed field, so a submit can
+// jump there. `fieldsByTab` maps a tab to a test of a field key: the tabs are
+// tried in the order given.
+export function tabWithError(fieldsByTab, errors) {
+    return Object.keys(fieldsByTab).find(tab => Object.keys(errors || {}).some(fieldsByTab[tab])) ?? null;
+}
+
+// tabHasError says whether one tab holds a failed field.
+export function tabHasError(fieldsByTab, tab, errors) {
+    const test = fieldsByTab[tab];
+    return !!test && Object.keys(errors || {}).some(test);
+}
+
 /**
  * FormTabs renders the tab strip plus its panels.
  *
  * tabs: [{ value, label, hasError?, content }]
  */
+// TAB_ICONS gives every tab of the project and budget dialogs its symbol, by the tab's value (resources-<kind> counts as resources), so the strip reads at a glance and looks the same in every dialog.
+const TAB_ICONS = {
+    details: Info,
+    resources: Gauge,
+    workspaces: Settings2,
+    members: Users,
+    attributes: Tags,
+    access: KeyRound,
+    'auto-approve': CheckCheck,
+    usage: BarChart3,
+    history: History,
+};
+
+function tabIcon(value) {
+    const Icon = TAB_ICONS[value] ?? TAB_ICONS[String(value).split('-')[0]];
+    return Icon ? <Icon size={16} /> : null;
+}
+
 export function FormTabs({ value, onChange, tabs }) {
     return (
         <Tabs value={value} onChange={onChange}>
-            <Tabs.List mb="md">
+            {/* Kept in view under the dialog's header while the content
+                scrolls, spanning the dialog's width over what passes behind. */}
+            <Tabs.List mb="md" style={STICKY_TABS}>
                 {tabs.map(t => (
-                    <Tabs.Tab key={t.value} value={t.value}>
+                    <Tabs.Tab key={t.value} value={t.value} leftSection={tabIcon(t.value)} fw={500}>
                         <TabLabel label={t.label} hasError={!!t.hasError} />
                     </Tabs.Tab>
                 ))}
@@ -37,6 +72,52 @@ export function FormTabs({ value, onChange, tabs }) {
                 <Tabs.Panel key={t.value} value={t.value}>{t.content}</Tabs.Panel>
             ))}
         </Tabs>
+    );
+}
+
+// The dialog header (Mantine keeps it at the top) is one line high when its
+// title does not wrap — DIALOG_STYLES sees to that — and the tab strip stays
+// right below it.
+const HEADER_HEIGHT = 60;
+const STICKY_TABS = {
+    position: 'sticky',
+    top: HEADER_HEIGHT,
+    zIndex: 3,
+    background: 'var(--mantine-color-body)',
+    margin: '0 calc(-1 * var(--mb-padding, var(--mantine-spacing-md)))',
+    paddingInline: 'var(--mb-padding, var(--mantine-spacing-md))',
+};
+
+// DIALOG_SIZE is the width of the tabbed project and budget dialogs: wide enough for a quota grid, a member row with its role picker and the Lab/KI workspace settings side by side, capped by the viewport on small screens.
+export const DIALOG_SIZE = '72rem';
+
+// DIALOG_STYLES keeps a dialog's title on one line, cut with an ellipsis, so the
+// header has the height the sticky tabs expect.
+export const DIALOG_STYLES = {
+    title: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 },
+};
+
+// DialogFooter is a dialog's button row, kept in view: it sticks to the bottom
+// of the scrolling dialog, so Save and Cancel never have to be scrolled to.
+// It spans the dialog's width over the content that scrolls behind it.
+// note: what pressing the button will do (e.g. "takes effect right away"), on the left of the same row, so it is read right where the decision is made.
+export function DialogFooter({ children, error, note = null }) {
+    return (
+        <div style={{
+            position: 'sticky',
+            bottom: 0,
+            margin: '0 calc(-1 * var(--mb-padding, var(--mantine-spacing-md))) calc(-1 * var(--mb-padding, var(--mantine-spacing-md)))',
+            padding: 'var(--mantine-spacing-sm) var(--mb-padding, var(--mantine-spacing-md))',
+            background: 'var(--mantine-color-body)',
+            borderTop: '1px solid var(--mantine-color-default-border)',
+            zIndex: 2,
+        }}>
+            {error && <Text c="red" size="sm" mb="xs">{error}</Text>}
+            <Group justify="space-between" wrap="nowrap" align="center" gap="md">
+                <div style={{ flex: 1, minWidth: 0 }}>{note}</div>
+                <Group gap="sm" wrap="nowrap" style={{ flexShrink: 0 }}>{children}</Group>
+            </Group>
+        </div>
     );
 }
 
@@ -53,11 +134,14 @@ export function FormTabs({ value, onChange, tabs }) {
  */
 export function FormModal({
     opened, onClose, title, size = 'lg',
-    onSubmit, submitting, submitError, submitLabel, submitColor,
+    onSubmit, submitting, submitError, submitLabel, submitColor, submitDisabled = false,
+    secondary = null,
+    note = null,
     children,
 }) {
+    const { t } = useTranslation();
     return (
-        <Modal opened={opened} onClose={onClose} size={size} title={title}>
+        <Modal opened={opened} onClose={onClose} size={size} title={title} styles={DIALOG_STYLES}>
             {/* noValidate: these forms live in tabs, so a `required` field on an
                 inactive tab is display:none. The browser then refuses to submit
                 AND cannot focus the offender to say why ("An invalid form control
@@ -68,12 +152,16 @@ export function FormModal({
                 <Stack>
                     {children}
 
-                    {submitError && <Text c="red" size="sm">{submitError}</Text>}
-
-                    <Group justify="flex-end" mt="md">
-                        <Button variant="default" type="button" onClick={onClose}>Cancel</Button>
-                        <Button type="submit" color={submitColor} loading={submitting}>{submitLabel}</Button>
-                    </Group>
+                    <DialogFooter error={submitError} note={note}>
+                        <Button variant="default" type="button" onClick={onClose}>{t('projects.actions.cancel')}</Button>
+                        {/* A second way to finish, e.g. reject next to approve:
+                            { label, color, onClick, loading, disabled }. */}
+                        {secondary && (
+                            <Button type="button" variant="light" color={secondary.color} loading={secondary.loading}
+                                disabled={secondary.disabled} onClick={secondary.onClick}>{secondary.label}</Button>
+                        )}
+                        <Button type="submit" color={submitColor} loading={submitting} disabled={submitDisabled}>{submitLabel}</Button>
+                    </DialogFooter>
                 </Stack>
             </form>
         </Modal>

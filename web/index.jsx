@@ -1,19 +1,27 @@
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
+import '@mantine/dropzone/styles.css';
 import './app.css';
 
 import { createRoot } from 'react-dom/client';
-import { lazy, Suspense, useState } from 'react';
-import { Router, Route, Switch, useLocation } from 'wouter';
+import { lazy, Suspense } from 'react';
+import { Redirect, Router, Route, Switch, useLocation } from 'wouter';
 
-import { apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
+import { appStoreEnabled, cloudProjectsEnabled, dnsZonesEnabled, llmEnabled } from '/features.js';
+// Imported for its side effect: initialising i18next before the first render,
+// so nothing flashes in one language and settles in another.
+import '/i18n/index.js';
+import { useTranslation } from 'react-i18next';
+import { DatesProvider } from '@mantine/dates';
 import { MantineProvider, AppShell, v8CssVariablesResolver } from '@mantine/core';
-import { Container, Paper, Box, Center, Stack, Title, Text, Button, ThemeIcon, TextInput, Anchor, Group } from '@mantine/core';
+import { Container, Paper, Box, Center, Stack, Title, Text, Button, ThemeIcon } from '@mantine/core';
 import { LogIn } from 'lucide-react';
 
 import { DynDnsConfigProvider } from '/providers/dyndns-config.jsx';
 import { CloudConfigProvider } from '/providers/cloud-config.jsx';
 import { useAuth, AuthProvider } from '/providers/auth.jsx';
+import { ActAsProvider } from '/providers/act-as.jsx';
+import { ActAsBanner } from '/act-as-controls.jsx';
 import { SessionProvider } from '/providers/session.jsx';
 import { ErrorModalProvider } from '/providers/error-modal.jsx';
 import { ConfirmProvider } from '/providers/confirm.jsx';
@@ -23,23 +31,30 @@ import { Header } from '/header.jsx';
 import { HEADER_HEIGHT, NAV_BREAKPOINT, SUBNAV_HEIGHT, useNav } from '/nav.jsx';
 import { Footer } from '/footer.jsx';
 import { CloudStatusProvider } from './projects/cloud-status.jsx';
-import { RoleSwitchProvider } from './projects/component-group-role-switcher.jsx';
 import { Home } from '/home/home.jsx';
+import { Developer } from '/developer/developer.jsx';
 import { Delayed } from '/helper/delayed.jsx';
 import { ErrorBoundary } from '/helper/error-boundary.jsx';
+import { SignInOutageBanner } from '/helper/sign-in-status.jsx';
 import { ClientProvider } from './providers/client.jsx';
 
 // Route-level code splitting: the projects and dyndns trees (swagger-ui lives
 // inside the latter) load as separate chunks only when their route is visited.
-const CloudProjectManagement = lazy(() =>
-    import('./projects/projects.jsx').then(m => ({ default: m.CloudProjectManagement })));
+const CloudSection = lazy(() =>
+    import('./projects/projects.jsx').then(m => ({ default: m.CloudSection })));
+const BudgetsSection = lazy(() =>
+    import('./projects/projects.jsx').then(m => ({ default: m.BudgetsSection })));
+const ProjectsStart = lazy(() =>
+    import('./projects/projects.jsx').then(m => ({ default: m.ProjectsStart })));
 const DynamicDnsManagement = lazy(() =>
     import('./dyndns/dyndns-routes.jsx').then(m => ({ default: m.DynamicDnsManagement })));
 // Lazy for the same reason, and one reason more: this page touches BOTH section
 // facades, so eagerly importing it would pull every operation of both SDKs into
 // the main bundle.
-const ApiTokens = lazy(() =>
-    import('./tokens/api-tokens.jsx').then(m => ({ default: m.ApiTokens })));
+const LlmManagement = lazy(() =>
+    import('./llm/llm-routes.jsx').then(m => ({ default: m.LlmManagement })));
+const GpuManagement = lazy(() =>
+    import('./gpu/gpu-routes.jsx').then(m => ({ default: m.GpuManagement })));
 
 createRoot(document.getElementById('app')).render(
     <MantineProvider
@@ -68,10 +83,30 @@ createRoot(document.getElementById('app')).render(
             },
         }}>
         <ErrorBoundary>
-            <App name="Dynamic Zones DNS API" />
+            <Localized>
+                <App name="Dynamic Zones DNS API" />
+            </Localized>
         </ErrorBoundary>
     </MantineProvider>
 )
+
+// Localized hands the chosen language to Mantine's calendars, which format
+// their own month names and weekday headers.
+//
+// The `key` remounts the app when the language changes. Text inside components
+// follows by itself (useTranslation subscribes), but dates do not: they are
+// written by plain functions outside React — format-date.js and dayjs, called
+// from helpers that no hook can reach — so a card showing a date would keep the
+// old spelling until it next rendered for some other reason. Remounting on a
+// deliberate, rare click is the cheap way to make the whole screen agree.
+function Localized({ children }) {
+    const { i18n } = useTranslation();
+    return (
+        <DatesProvider key={i18n.resolvedLanguage} settings={{ locale: i18n.resolvedLanguage }}>
+            {children}
+        </DatesProvider>
+    );
+}
 
 function App() {
     return (
@@ -95,6 +130,8 @@ function App() {
     );
 }
 
+const AppStore = lazy(() => import('./app-store/app-store.jsx').then(m => ({ default: m.AppStore })));
+
 function AppRoutes() {
     const [location] = useLocation();
 
@@ -113,13 +150,19 @@ function AppRoutes() {
     const section = '/' + (location.split('/')[1] || '');
 
     return (
-        <Suspense fallback={<Container size="md" py="xl">Lädt…</Container>}>
+        <Suspense fallback={<Loading />}>
             <ErrorBoundary key={section}>
                 <Switch>
                     <Route path="/" component={Home} />
                     {dnsZonesEnabled && <Route path="/dyndns" component={DynamicDnsManagement} nest />}
-                    {cloudProjectsEnabled && <Route path="/projects" component={CloudProjectManagement} nest />}
-                    {apiTokensEnabled && <Route path="/tokens" component={ApiTokens} nest />}
+                    {cloudProjectsEnabled && <Route path="/cloud" component={CloudSection} nest />}
+                    {cloudProjectsEnabled && <Route path="/budgets" component={BudgetsSection} nest />}
+                    {/* The start page for a project of an area (/projects/start?for=…). */}
+                    {cloudProjectsEnabled && <Route path="/projects" component={ProjectsStart} nest />}
+                    {llmEnabled && <Route path="/llm" component={LlmManagement} nest />}
+                    {llmEnabled && <Route path="/workspaces" component={GpuManagement} nest />}
+                    {appStoreEnabled && <Route path="/app-store" component={AppStore} nest />}
+                    <Route path="/developer" component={Developer} />
                     <Route component={NotFound} />
                 </Switch>
             </ErrorBoundary>
@@ -128,9 +171,8 @@ function AppRoutes() {
 }
 
 function Main() {
-    const { user, login, useDummyAuth, dev_user } = useAuth()
-    // Dev-only: the email to sign in as (dummy auth lets you be ANY user).
-    const [devEmail, setDevEmail] = useState(dev_user || 'dennis.pfisterer@dhbw.de')
+    const { t } = useTranslation();
+    const { user, login } = useAuth()
     const footer = <Footer title={<b>dhbwCloud Self Service</b>} version={__APP_VERSION__} />
 
     // Router and clients wrap the WHOLE shell, not just the routes: the header
@@ -140,12 +182,13 @@ function Main() {
         <Router>
         <ClientProvider>
         <CloudStatusProvider>
-        {/* Above the header, because the role switch is offered IN the header —
-            at the right end of the Cloud Projects nav bar. It stays scoped to
-            that section (only that API knows about impersonation); this is just
-            where the state has to live so the bar can render it. */}
-        <RoleSwitchProvider>
+        {/* Above the header, which offers acting on behalf of somebody, and the
+            banner below it, which says so on every page. */}
+        <ActAsProvider>
         <Shell footer={footer}>
+                    {/* Above the sign-in prompt as well: that is where a person
+                        lands who is about to try a login that cannot work. */}
+                    <SignInOutageBanner />
                     {!user ? (
                         <Delayed waitMs={200}>
                             {/* Prominent, space-filling sign-in prompt: a large card
@@ -157,37 +200,13 @@ function Main() {
                                         <ThemeIcon size={72} radius="xl" variant="light">
                                             <LogIn size={38} />
                                         </ThemeIcon>
-                                        <Title order={2}>Sign in required</Title>
+                                        <Title order={2}>{t('app.signInTitle')}</Title>
                                         <Text c="dimmed" size="lg">
-                                            Please sign in to access and manage your DNS zones and cloud resources.
+                                            {t('app.signInMessage')}
                                         </Text>
-                                        {useDummyAuth ? (
-                                            // Dev/dummy auth: sign in as any user by typing an email.
-                                            <Stack gap="sm" w="100%" maw={320}>
-                                                <TextInput
-                                                    label="Dev login — sign in as any user"
-                                                    placeholder="user@dhbw.de"
-                                                    value={devEmail}
-                                                    onChange={(e) => setDevEmail(e.currentTarget.value)}
-                                                    onKeyDown={(e) => { if (e.key === 'Enter') login(devEmail); }}
-                                                    data-autofocus
-                                                />
-                                                <Button size="lg" onClick={() => login(devEmail)} disabled={!devEmail.trim()} leftSection={<LogIn size={20} />}>
-                                                    Log in
-                                                </Button>
-                                                {/* One-click sign-in as common dev users. */}
-                                                <Stack gap={4} align="center" mt="xs">
-                                                    <Text size="xs" c="dimmed">Quick sign-in:</Text>
-                                                    {['dennis.pfisterer@dhbw.de', 'clemens.martin@dhbw.de'].map(e => (
-                                                        <Anchor key={e} size="sm" onClick={() => login(e)} style={{ cursor: 'pointer' }}>{e}</Anchor>
-                                                    ))}
-                                                </Stack>
-                                            </Stack>
-                                        ) : (
-                                            <Button size="lg" onClick={login} leftSection={<LogIn size={20} />}>
-                                                Log in
-                                            </Button>
-                                        )}
+                                        <Button size="lg" onClick={login} leftSection={<LogIn size={20} />}>
+                                            {t('app.logIn')}
+                                        </Button>
                                     </Stack>
                                 </Paper>
                             </Center>
@@ -196,7 +215,7 @@ function Main() {
                         <AppRoutes />
                     )}
         </Shell>
-        </RoleSwitchProvider>
+        </ActAsProvider>
         </CloudStatusProvider>
         </ClientProvider>
         </Router>
@@ -228,22 +247,27 @@ function Shell({ children, footer }) {
                 its size between tabs (Manage 1223px vs others 1320px). Wrapping
                 restores normal block sizing (always max-width). */}
             <AppShell.Main style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
-                <Box style={{ flexGrow: 1 }}>{children}</Box>
+                <Box style={{ flexGrow: 1 }}>
+                    <ActAsBanner />
+                    {children}
+                </Box>
                 {footer}
             </AppShell.Main>
         </AppShell>
     );
 }
 
-// Shown while a section's client is still being built — see AppRoutes.
+// Shown while a section's chunk is still loading — see AppRoutes.
 function Loading() {
-    return <Container size="md" py="xl">Lädt…</Container>;
+    const { t } = useTranslation();
+    return <Container size="md" py="xl">{t('app.loading')}</Container>;
 }
 
 function NotFound() {
+    const { t } = useTranslation();
     return (
         <Container size="md">
-            <Paper p="lg" withBorder>404: Page not found</Paper>
+            <Paper p="lg" withBorder>{t('app.notFound')}</Paper>
         </Container>
     );
 }

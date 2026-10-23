@@ -1,33 +1,37 @@
-import { Route, Switch, Redirect } from 'wouter';
+import { Trans, useTranslation } from 'react-i18next';
 import { Alert, Container, Stack, Text, Title } from '@mantine/core';
 import { useZonesApi } from '/dyndns/api-zones.jsx';
 import { dyndnsKeys } from '/dyndns/query-keys.js';
+import { useLlmApi } from '/llm/api-llm.jsx';
+import { llmKeys } from '/llm/query-keys.js';
+import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useNodesApi } from '/projects/api-nodes.jsx';
+import { useActAs } from '/providers/act-as.jsx';
 import { projectKeys } from '/projects/query-keys.js';
 import { TOKEN_SCOPES } from '/tokens/scopes.js';
 import { TokenScopePanel } from '/tokens/token-scope-panel.jsx';
 
-// One page for every API token a person holds, rather than one page per API.
-//
-// The sections of this UI are grouped by domain — "what can I do here" — and a
-// token is not a thing you do, it is a credential your account has. But the
-// deciding reason is revocation: "which credentials exist in my name?" must
-// have exactly one place to look. Split across the sections that issue them, a
-// token someone forgot about is a token they cannot find in the one moment it
-// matters. The other half of that is the create flow, which shows a secret
-// exactly once — worth having once, not twice.
+// The API tokens of one API, in the section of the menu that API belongs to,
+// next to its documentation: Cloud for the projects API, DNS for the zones API.
+// `scope` is the scope id (see scopes.js).
 //
 // What this page must NOT suggest is one credential. The tokens are not
 // interchangeable: different prefixes, different databases, different issuers,
 // and the two services do not even agree on which claim identifies their owner.
-// One scope per tab, each with its own prefix, keeps that visible — the scopes
-// were stacked on one page first, which read like one list in two boxes.
-export function ApiTokens() {
+// Each section shows its own, with its own prefix.
+export function ApiTokens({ scope: scopeId }) {
+    const { t } = useTranslation();
     // Both hooks run unconditionally — hooks cannot be called behind a
     // condition, and neither one talks to a server until a query does.
     // useNodesApi returns null where the projects API is not configured.
     const zonesApi = useZonesApi();
     const nodesApi = useNodesApi();
+    // Always an object; whether the AI service exists in this deployment is the scope list's question (llmEnabled).
+    const llmApi = useLlmApi();
+    // Admins of the AI service may issue tokens without expiry there (and anyone a read-only one).
+    const { isAdmin: llmAdmin } = useLlmMe();
+    // Acting on behalf of a person, the AI service issues the token FOR that person (theirs, with their rights). /me then answers with the person's role, but the admin exception is for an admin's own token: on behalf, only a read-only token may be without expiry, whoever the person is (neverAllowed).
+    const { actingAs } = useActAs();
 
     // The API adapter per scope id. Kept next to the hooks rather than in
     // scopes.js, which nav.jsx imports and which therefore has to stay free of
@@ -49,43 +53,41 @@ export function ApiTokens() {
                 remove: (id) => nodesApi.deleteApiToken(id),
             },
         },
+        ai: {
+            isAdmin: llmAdmin,
+            actingAs,
+            queryKey: llmKeys.apiTokens(),
+            api: {
+                list: () => llmApi.listApiTokens(),
+                create: (opts) => llmApi.createApiToken(opts),
+                remove: (id) => llmApi.deleteApiToken(id),
+            },
+        },
     };
 
-    const scopes = TOKEN_SCOPES.filter(s => adapters[s.id]);
+    const scope = TOKEN_SCOPES.find(s => s.id === scopeId && adapters[s.id]);
 
     return (
         <Container size="lg" py="xl">
             <Stack gap="md">
-                <Title order={2}>API Tokens</Title>
+                <Title order={2}>{t('tokens.page.title')}</Title>
 
                 <Text size="sm" c="dimmed">
-                    An API token authenticates a script, a CI job or a device without a browser login.
-                    It carries your identity and nothing more — what it may do is decided per request,
-                    so a token can only narrow your rights, never widen them. Send it
-                    as <Text span inherit ff="monospace">Authorization: Bearer &lt;token&gt;</Text>; it is
-                    shown once, when it is created, and only its hash is stored.
+                    {/* The header is a code sample, so it stays out of the
+                        translations and is passed in as a value. */}
+                    <Trans i18nKey="tokens.page.intro"
+                        values={{ header: 'Authorization: Bearer <token>' }}
+                        components={{ 1: <Text span inherit ff="monospace" /> }} />
                 </Text>
 
-                {scopes.length === 0 ? (
-                    // Reachable only by typing the URL: the route and the menu
-                    // entry are both gated on at least one API being configured.
-                    <Alert color="yellow" title="No API available">
-                        This deployment has neither the DNS nor the Cloud Projects API configured, so
-                        there is nothing to issue a token for.
+                {!scope ? (
+                    // Reachable only by typing the URL: the menu entry is gated
+                    // on the API being configured.
+                    <Alert color="yellow" title={t('tokens.page.noApiTitle')}>
+                        {t('tokens.page.noApiMessage')}
                     </Alert>
                 ) : (
-                    <Switch>
-                        {scopes.map(scope => (
-                            <Route key={scope.id} path={`/${scope.id}`}>
-                                <TokenScopePanel scope={{ ...scope, ...adapters[scope.id] }} />
-                            </Route>
-                        ))}
-                        {/* Bare /tokens lands on the first scope, so the tab bar
-                            always has one tab marked as the current one. */}
-                        <Route>
-                            <Redirect to={`/${scopes[0].id}`} replace />
-                        </Route>
-                    </Switch>
+                    <TokenScopePanel scope={{ ...scope, ...adapters[scope.id] }} />
                 )}
             </Stack>
         </Container>

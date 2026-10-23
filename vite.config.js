@@ -23,11 +23,16 @@ export default defineConfig(({ mode }) => {
       cloudResourcesBaseUrl: env.CLOUD_RESOURCES_BASE_URL || '',
       cloudResourcesMcpUrl: env.CLOUD_RESOURCES_MCP_URL || '',
       dynamicZonesMcpUrl: env.DYNAMIC_ZONE_MCP_URL || '',
+      llmBaseUrl: env.LLM_BASE_URL || '',
+      appStoreBaseUrl: env.APP_STORE_BASE_URL || '/api/app-store',
+      appStoreFrontendUrl: env.APP_STORE_FRONTEND_URL || '',
+      appStoreEnabled: env.APP_STORE_ENABLED === 'true',
       acmeServer: env.ACME_SERVER || 'https://certificates.dhbw.cloud',
       dummyAuth: env.DUMMY_AUTH === 'true',
       oidc: {
         client_id: env.OIDC_CLIENT_ID || '',
         issuer_url: env.OIDC_ISSUER_URL || '',
+        end_session_url: env.OIDC_END_SESSION_URL || '',
       },
     };
     mkdirSync(path.dirname(cfgPath), { recursive: true });
@@ -51,6 +56,10 @@ export default defineConfig(({ mode }) => {
           // async chunk and is intentionally not listed here). vite 8 / rolldown
           // requires manualChunks to be a function, not the object map.
           manualChunks(id) {
+            // Charts only where usage is shown, which imports them lazily: left
+            // to the bundler they stay in that async chunk instead of the one
+            // every page loads.
+            if (id.includes('/node_modules/@mantine/charts/')) return undefined;
             if (id.includes('/node_modules/@mantine/')) return 'mantine';
             if (/\/node_modules\/(react|react-dom|wouter)\//.test(id)) return 'vendor';
           },
@@ -58,7 +67,31 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      port: 8084
+      port: 8084,
+      // The LLM API has no CORS: in production Caddy serves it same-origin
+      // under /api/llm/ (see Caddyfile). The dev server does the same when
+      // LLM_DEV_UPSTREAM names a local llm-management-api, e.g.
+      //   LLM_BASE_URL=http://localhost:8084/api/llm/
+      //   LLM_DEV_UPSTREAM=http://localhost:8086
+      proxy: {
+        ...(env.LLM_DEV_UPSTREAM && {
+          '/api/llm': {
+            target: env.LLM_DEV_UPSTREAM,
+            changeOrigin: true,
+            rewrite: (p) => p.replace(/^\/api\/llm/, ''),
+          },
+        }),
+        // Our App Store backend, prefix stripped like Caddy does. It accepts a
+        // real Keycloak access token only: the dev login's pages render, the
+        // calls answer 401 (see claude_docs/decisions.md for a real login).
+        ...(env.APP_STORE_DEV_UPSTREAM && {
+          '/api/app-store': {
+            target: env.APP_STORE_DEV_UPSTREAM,
+            changeOrigin: true,
+            rewrite: (p) => p.replace(/^\/api\/app-store/, ''),
+          },
+        }),
+      },
     },
     // Unit tests. Two kinds, and the default stays the cheap one.
     //

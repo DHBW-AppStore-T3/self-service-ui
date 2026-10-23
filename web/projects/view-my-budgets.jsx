@@ -1,28 +1,29 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Inbox, Search, X } from 'lucide-react';
-import { ActionIcon, Alert, Badge, Button, Checkbox, Grid, Group, Loader, Paper, ScrollArea, SegmentedControl, Stack, Text, TextInput, useTree } from '@mantine/core';
+import { ChevronsDownUp, ChevronsUpDown, Inbox, Search, X } from 'lucide-react';
+import { ActionIcon, Alert, Anchor, Badge, Box, Button, Checkbox, Flex, Group, Loader, Paper, SegmentedControl, Stack, Text, TextInput, Title, Tooltip, useTree } from '@mantine/core';
 import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useDebouncedValue } from '@mantine/hooks';
+import { useDebouncedValue, useLocalStorage } from '@mantine/hooks';
 import { PAGE_SIZE, useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { BudgetCard } from './card-budget.jsx';
 import { ProjectCard } from './card-project.jsx';
-import { BudgetTree, MORE_SUFFIX, NodeResultList, budgetsToTreeData } from './component-budget-tree.jsx';
-import { AdoptModal } from './modal-adopt.jsx';
-import { ApproveModal } from './modal-approve.jsx';
+import { BudgetTree, MORE_SUFFIX, NodeResultList, budgetsToTreeData, budgetChildCount } from './component-budget-tree.jsx';
+import { BudgetProjectsTable } from './component-budget-projects.jsx';
+import { RetireModal } from './modal-retire.jsx';
+import { DecisionModal } from './modal-decide.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
 import { ProjectFormModal } from './modal-project-form.jsx';
 import { NodeInspectModal } from './modal-inspect.jsx';
-import { MoveModal } from './modal-move.jsx';
-import { RejectModal } from './modal-reject.jsx';
-import { TransferOwnerModal } from './modal-transfer-owner.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
-import { childrenById, COLOR, formatError, getAuthUserEmail, isBudget, ownerEmail, REQUEST_TYPES, requestType } from './util-project.jsx';
+import { useTranslation } from 'react-i18next';
+import { useLocation, useRouter } from 'wouter';
+import { childrenById, COLOR, formatError, getAuthUserEmail, isBudget, projectActions, requestedBy, requestTypes, requestType } from './util-project.jsx';
+import { NodeStatusBadge } from './component-common.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 
 // How long typing pauses before a search is sent.
@@ -35,9 +36,12 @@ const SEARCH_DEBOUNCE_MS = 300;
 const CHILDREN_STALE_MS = 30_000;
 
 // MyBudgetsView is a master-detail tree navigator: the left side shows the
-// budgets the user manages as an expandable tree (sub-budgets and projects
-// load lazily on expand, one page at a time), the right side shows the selected
-// node with its usage, access rules and actions. Delegating resources =
+// budgets the user manages as an expandable tree (sub-budgets load lazily on
+// expand, one page at a time), the right side shows the selected budget with
+// its usage, access rules and actions, and below it a table of the projects
+// paid from it. Projects are not in the tree: a budget for all students of a
+// location holds hundreds, which buried the budget structure and could only be
+// scrolled, not filtered. The table filters, sorts and pages on the server. Delegating resources =
 // creating a sub-budget with someone else in "Managed by" — there is
 // deliberately no separate "delegation" concept.
 //
@@ -50,7 +54,12 @@ const CHILDREN_STALE_MS = 30_000;
 // matches would be slower and harder to read than naming their budget.
 const EMPTY_PAGE = { items: [], total: 0 };
 
-export function MyBudgetsView() {
+// The selected node is in the URL (/budgets/<id>, this view is mounted at /budgets), so a link to a budget or a
+// project can be sent: opening it selects the node and opens the tree down to
+// it. A node that does not exist, or that the viewer may not see, falls back to
+// the first budget with a note saying so.
+export function MyBudgetsView({ params }) {
+    const { t } = useTranslation();
     const api = useNodesApi();
     const queryClient = useQueryClient();
     const { user } = useAuth();
@@ -87,6 +96,9 @@ export function MyBudgetsView() {
     // instead of a pile of pages the view would have to stitch together.
     const [limits, setLimits] = useState({});
     const [selectedNode, setSelectedNode] = useState(null);
+    const [, navigate] = useLocation();
+    const router = useRouter();
+    const linkedId = params?.id ?? null;
     const [search, setSearch] = useState('');
     const [extraResults, setExtraResults] = useState([]);
     // '' = the whole tree; 'waiting' = everything that needs a decision; the
@@ -99,6 +111,10 @@ export function MyBudgetsView() {
     // see the whole organization).
     const dlg = useNodeDialog();
     const [budgetForm, setBudgetForm] = useState(null); // { mode, parent?, node? } | null
+    // Whether the selected budget's table lists the projects it allocated to
+    // further down instead of its own; kept per budget, so choosing another
+    // budget starts with its own projects.
+    const [allocatedFor, setAllocatedFor] = useState(null);
 
     // Which of the managed budgets are drawn at the top.
     //
@@ -140,16 +156,33 @@ export function MyBudgetsView() {
             .map(b => ({ ...b, child_count: 0, request_only: true }));
     }, [myBudgets, eligibleQuery.data]);
 
+    // The node a link names, fetched only when it is not the one in hand —
+    // after a click in the tree the URL already matches the selection.
+    const linkedQuery = useQuery({
+        queryKey: projectKeys.node(linkedId),
+        queryFn: () => api.getNode(linkedId),
+        enabled: !!api && !!linkedId && selectedNode?.id !== linkedId,
+        retry: false,
+    });
+    const linked = linkedId && selectedNode?.id !== linkedId ? linkedQuery.data : null;
+    // A missing node (404) and one the viewer may not see (403) both end here.
+    const linkMissing = !!linkedId && selectedNode?.id !== linkedId && !linkedQuery.isPending && !linkedQuery.data;
+
     // Nothing picked yet falls back to the first root, so the detail panel is
     // never empty for someone who manages something. Derived rather than written
     // into state when the roots arrive: an effect that "selects the first one"
-    // also has to decide what to do when the list changes under it.
-    const selected = selectedNode ?? rootBudgets[0] ?? requestableOnly[0] ?? null;
+    // also has to decide what to do when the list changes under it. While a
+    // linked node is loading nothing is shown, so the first root does not
+    // flash up before it.
+    const linkLoading = !!linkedId && selectedNode?.id !== linkedId && linkedQuery.isPending;
+    const selected = linkLoading ? null
+        : (linked ?? selectedNode ?? rootBudgets[0] ?? requestableOnly[0] ?? null);
+    const linkTo = (node) => `${window.location.origin}${router.base}/${encodeURIComponent(node.id)}`;
 
     const childLimit = (nodeId) => limits[nodeId] ?? PAGE_SIZE;
     const childQuery = (nodeId) => ({
         queryKey: projectKeys.children(nodeId, childLimit(nodeId)),
-        queryFn: () => api.listChildren(nodeId, { limit: childLimit(nodeId) }),
+        queryFn: () => api.listChildren(nodeId, { limit: childLimit(nodeId), kind: 'budget' }),
         // Not a caching nicety, a correctness one for the pair below: with the
         // default of 0 the row that onLoadChildren just fetched is stale the
         // moment it arrives, so the query mounting behind it fetches the same
@@ -217,7 +250,7 @@ export function MyBudgetsView() {
         try {
             await queryClient.fetchQuery({
                 queryKey: projectKeys.children(nodeId, next),
-                queryFn: () => api.listChildren(nodeId, { limit: next }),
+                queryFn: () => api.listChildren(nodeId, { limit: next, kind: 'budget' }),
             });
             setLimits(prev => ({ ...prev, [nodeId]: next }));
         } catch (e) {
@@ -244,7 +277,9 @@ export function MyBudgetsView() {
             // Refresh the selected node too; drop the selection if it vanished
             // (deleted, released, moved out of sight).
             if (selectedNode) {
-                setSelectedNode(await api.getNode(selectedNode.id).catch(() => null));
+                const current = await api.getNode(selectedNode.id).catch(() => null);
+                setSelectedNode(current);
+                if (!current) navigate('/', { replace: true });
             }
         } catch (e) {
             showError(formatError(e));
@@ -265,9 +300,9 @@ export function MyBudgetsView() {
     // changes a root's child_count (a move into one, say) hands back a new array
     // but the same set of roots, and re-running then re-opened what the user had
     // just collapsed.
-    const rootIds = rootBudgets.map(b => b.id).join(' ');
+    const rootIds = rootBudgets.map(b => b.id).join('\u0000');
     useEffect(() => {
-        const openable = rootBudgets.filter(b => b.child_count > 0);
+        const openable = rootBudgets.filter(b => budgetChildCount(b) > 0);
         if (openable.length === 0) return;
         tree.setExpandedState({
             ...tree.expandedState,
@@ -277,6 +312,25 @@ export function MyBudgetsView() {
         // would re-run this on every expand and fight the user's own collapsing.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [rootIds]);
+
+    // A linked node is opened in the tree: every budget on its way down from the
+    // first one the viewer manages. What lies above that is not in their tree.
+    // parent_path leaves out the root, which is open anyway where it is shown.
+    useEffect(() => {
+        if (!linked) return;
+        const shown = new Set(rootBudgets.map(b => b.id));
+        const path = (linked.parent_path || []).map(p => p.id);
+        let from = path.findIndex(id => shown.has(id));
+        if (from < 0 && shown.has('root')) from = 0;
+        if (from < 0) return;
+        tree.setExpandedState({
+            ...tree.expandedState,
+            ...Object.fromEntries(path.slice(from).map(id => [id, true])),
+        });
+        // `tree` is read to keep what is open; listing it would re-run this on
+        // every toggle and re-open what the user just closed.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [linked?.id, rootIds]);
 
     // ── Search ──────────────────────────────────────────────────────────────
     // Server-side: the tree holds only the pages that were opened, so there is
@@ -323,9 +377,42 @@ export function MyBudgetsView() {
     };
 
     const treeData = useMemo(
-        () => budgetsToTreeData([...rootBudgets, ...requestableOnly], childrenMap),
-        [rootBudgets, requestableOnly, childrenMap],
+        () => budgetsToTreeData(t, [...rootBudgets, ...requestableOnly], childrenMap),
+        [t, rootBudgets, requestableOnly, childrenMap],
     );
+
+    // "Expand everything", remembered per browser. The tree loads a branch when
+    // it is opened, so everything cannot be opened at once: each pass opens the
+    // budgets that are loaded and still closed, their children arrive, and the
+    // next pass opens those — level by level until nothing closed is left.
+    const [expandAll, setExpandAll] = useLocalStorage({
+        key: 'self-service.budget-tree.expand-all',
+        defaultValue: false,
+        getInitialValueInEffect: false,
+    });
+    useEffect(() => {
+        if (!expandAll) return;
+        const closed = [];
+        const walk = (rows) => rows.forEach(row => {
+            if (row.hasChildren && !tree.expandedState[row.value]) closed.push(row.value);
+            if (row.children) walk(row.children);
+        });
+        walk(treeData);
+        if (closed.length) {
+            tree.setExpandedState({ ...tree.expandedState, ...Object.fromEntries(closed.map(id => [id, true])) });
+        }
+        // `tree` is read to see what is open; listing it would re-run this on
+        // every toggle, which is the point only while expandAll is on anyway.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [expandAll, treeData]);
+    // Switching it off goes back to the default: the first level open.
+    const toggleExpandAll = () => {
+        if (expandAll) {
+            tree.setExpandedState(Object.fromEntries(
+                rootBudgets.filter(b => budgetChildCount(b) > 0).map(b => [b.id, true])));
+        }
+        setExpandAll(!expandAll);
+    };
 
     // Widening the scope only changes the inbox, not the tree. The scope is part
     // of that list's query key, so switching it IS the reload — no separate
@@ -343,36 +430,26 @@ export function MyBudgetsView() {
         ? waiting.items
         : waiting.items.filter(n => requestType(n) === filter);
 
-    // Clicking a row selects it. Expanding is handled by the tree itself
-    // (expandOnClick), which also triggers onLoadChildren on first open.
-    const select = (node) => setSelectedNode(node);
+    // Clicking a row selects it and puts it in the URL — replacing the entry, so
+    // clicking through the tree does not fill the browser's history. Expanding
+    // is handled by the tree itself (expandOnClick), which also triggers
+    // onLoadChildren on first open.
+    const select = (node) => {
+        setSelectedNode(node);
+        navigate(`/${encodeURIComponent(node.id)}`, { replace: true });
+    };
 
     const handleDelete = async (node) => {
+        // Like deleting a project for good: it cannot be undone, so the name
+        // has to be typed.
         const ok = await confirm({
-            title: `Delete budget “${node.name || node.id}”?`,
-            message: 'Only possible while nothing under it is active or awaiting a decision.',
+            title: t('projects.budgets.deleteTitle', { name: node.name || node.id }),
+            message: t('projects.budgets.deleteMessage'),
+            typeToConfirm: node.name || node.id,
         });
         if (!ok) return;
         try {
             await api.deleteNode(node.id);
-            refresh();
-        } catch (e) {
-            showError(formatError(e));
-        }
-    };
-
-    const handleRelease = async (node) => {
-        const owner = ownerEmail(node);
-        const ok = await confirm({
-            title: `Release project “${node.name || node.id}”?`,
-            confirmLabel: 'Release',
-            message: owner
-                ? `This hands ${owner}'s project back: it and its resources are removed from OpenStack. This cannot be undone.`
-                : 'Releasing removes the project and its resources from OpenStack. This cannot be undone.',
-        });
-        if (!ok) return;
-        try {
-            await api.release(node.id);
             refresh();
         } catch (e) {
             showError(formatError(e));
@@ -384,7 +461,6 @@ export function MyBudgetsView() {
         if (action === 'sub-budget') return setBudgetForm({ mode: 'create', parent: node });
         // From a read-only budget: request under it — `parent` preselects it.
         if (action === 'request-here') return setBudgetForm({ mode: 'request', parent: node });
-        if (action === 'release') return handleRelease(node);
         if (action === 'edit') {
             // Editing a budget IS delegating from its parent, so the form has
             // to offer the PARENT's resource scope: the child's own scope can
@@ -398,11 +474,18 @@ export function MyBudgetsView() {
             return setBudgetForm({ mode: 'edit', node, parent });
         }
         if (action === 'delete') return handleDelete(node);
+        if (action === 'show-allocated') return setAllocatedFor(node.id);
         dlg.open(action, node);
     };
 
     if (!api || !config || myBudgetsQuery.isPending) return <Loading />;
-    if (myBudgetsQuery.isError) return <LoadError query={myBudgetsQuery} title="Could not load your budgets" />;
+    if (myBudgetsQuery.isError) return <LoadError query={myBudgetsQuery} title={t('projects.budgets.loadError')} />;
+
+    // The sub-budgets the viewer asked for, pending ones included — those they still manage; one handed over entirely to others is no longer theirs to see.
+    const myRequests = myBudgets.items.filter(b => requestedBy(b, userEmail));
+    // Somebody who manages nothing but what they requested themselves comes here to request sub-budgets and follow them: for them the page starts with that. Managers keep the view they run budgets with.
+    const requesterView = !cloudStatus.isRoot && myBudgets.items.length === myRequests.length
+        && (budgetRequestTargets.length > 0 || myRequests.length > 0);
 
     const resources = config.resources || [];
     // Move targets: every budget visible in the tree.
@@ -416,23 +499,62 @@ export function MyBudgetsView() {
         <Stack>
             <Group justify="space-between" align="center">
                 <Text size="sm" c="dimmed">
-                    The budgets you manage{requestableOnly.length > 0 ? ' — and, read-only, the ones you may request from —' : ''}, as a tree.
-                    Select a node to inspect it; delegate by creating a sub-budget with someone else in “Managed by”.
+                    {requestableOnly.length > 0
+                        ? t('projects.budgets.introWithRequestable')
+                        : t('projects.budgets.intro')}
+                    {' '}
+                    {t('projects.budgets.introSelect')}
                 </Text>
-                {budgetRequestTargets.length > 0 && (
+                {!requesterView && budgetRequestTargets.length > 0 && (
                     <Button size="xs" variant="light" leftSection={<Inbox size="14" />}
                         onClick={() => setBudgetForm({ mode: 'request' })}>
-                        Request budget
+                        {t('projects.actions.requestBudget')}
                     </Button>
                 )}
             </Group>
 
-            {myBudgets.items.length === 0 && (
+            {requesterView && (
+                <Paper withBorder p="md" radius="md">
+                    <Stack gap="sm">
+                        <Group justify="space-between" align="center" gap="sm">
+                            <Stack gap={0}>
+                                <Title order={5}>{t('projects.budgets.requestTitle')}</Title>
+                                <Text size="xs" c="dimmed">{t('projects.budgets.requestHint')}</Text>
+                            </Stack>
+                            {budgetRequestTargets.length > 0 && (
+                                <Button size="xs" leftSection={<Inbox size="14" />} ml="auto"
+                                    onClick={() => setBudgetForm({ mode: 'request' })}>
+                                    {t('projects.actions.requestBudget')}
+                                </Button>
+                            )}
+                        </Group>
+                        <Text fw={600} size="sm">{t('projects.budgets.myRequests')}</Text>
+                        {myRequests.length === 0 ? (
+                            <Text size="sm" c="dimmed">{t('projects.budgets.myRequestsNone')}</Text>
+                        ) : (
+                            <Stack gap={6}>
+                                {myRequests.map(b => (
+                                    <Group key={b.id} gap="sm" wrap="nowrap" justify="space-between">
+                                        <Box style={{ minWidth: 0 }}>
+                                            <Anchor component="button" type="button" size="sm" onClick={() => select(b)}>{b.name || b.id}</Anchor>
+                                            {b.parent_name && (
+                                                <Text size="xs" c="dimmed" truncate>{t('projects.budgets.requestedFrom', { name: b.parent_name })}</Text>
+                                            )}
+                                        </Box>
+                                        <NodeStatusBadge status={b.status} size="sm" />
+                                    </Group>
+                                ))}
+                            </Stack>
+                        )}
+                    </Stack>
+                </Paper>
+            )}
+
+            {myBudgets.items.length === 0 && !requesterView && (
                 <Alert color={COLOR.info} variant="light">
-                    You don't manage any budgets yet.
                     {budgetRequestTargets.length > 0
-                        ? ' You can request one from a budget that accepts sub-budget requests.'
-                        : ' A manager of a parent budget can delegate one to you.'}
+                        ? t('projects.budgets.noneCanRequest')
+                        : t('projects.budgets.none')}
                 </Alert>
             )}
 
@@ -441,8 +563,7 @@ export function MyBudgetsView() {
                 stops being true. */}
             {myBudgets.items.length < myBudgets.total && (
                 <Alert color={COLOR.attention} variant="light">
-                    Showing {myBudgets.items.length} of {myBudgets.total} budgets you manage.
-                    Use the search to find the ones not listed.
+                    {t('projects.budgets.shown', { shown: myBudgets.items.length, total: myBudgets.total })}
                 </Alert>
             )}
 
@@ -450,9 +571,14 @@ export function MyBudgetsView() {
                 // align="flex-start": tree and detail panel each keep their
                 // natural height — otherwise the panel card stretches to the
                 // tree's height and its action bar floats far below the content.
-                <Grid gutter="md" align="flex-start">
+                // The tree takes the width its rows need, within bounds; the
+                // detail panel gets the rest. A fixed third for the tree left it
+                // half empty on a flat tree and squeezed the project table next
+                // to it into scrolling sideways.
+                <Flex gap="md" align="flex-start" direction={{ base: 'column', md: 'row' }}>
                     {/* ── Tree navigation ────────────────────────────────── */}
-                    <Grid.Col span={{ base: 12, md: 5, lg: 4 }}>
+                    <Box w={{ base: '100%', md: 'fit-content' }} miw={{ md: 240 }} maw={{ md: 380 }}
+                        style={{ flexShrink: 0 }}>
                         <Paper withBorder p="xs" radius="md">
                             {/* Filter first, then search: the filter answers "what
                                 needs me", the search "where is this one thing". */}
@@ -463,12 +589,12 @@ export function MyBudgetsView() {
                                 value={filter}
                                 onChange={changeFilter}
                                 data={[
-                                    { value: '', label: 'All' },
+                                    { value: '', label: t('projects.budgets.filterAll') },
                                     {
                                         value: 'waiting',
                                         label: (
                                             <Group gap="4" wrap="nowrap" justify="center">
-                                                <span>Waiting</span>
+                                                <span>{t('projects.budgets.filterWaiting')}</span>
                                                 {waitingCount('waiting') > 0 && (
                                                     <Badge size="xs" circle color={COLOR.attention}>{waitingCount('waiting')}</Badge>
                                                 )}
@@ -492,11 +618,20 @@ export function MyBudgetsView() {
                                             value={filter}
                                             onChange={changeFilter}
                                             data={[
-                                                { value: 'waiting', label: `All (${waitingCount('waiting')})` },
-                                                ...REQUEST_TYPES.map(t => ({
-                                                    value: t.value,
-                                                    label: `${t.label} (${waitingCount(t.value)})`,
-                                                    disabled: waitingCount(t.value) === 0,
+                                                {
+                                                    value: 'waiting',
+                                                    label: t('projects.budgets.filterCount', {
+                                                        label: t('projects.budgets.filterAll'),
+                                                        count: waitingCount('waiting'),
+                                                    }),
+                                                },
+                                                ...requestTypes(t).map(kind => ({
+                                                    value: kind.value,
+                                                    label: t('projects.budgets.filterCount', {
+                                                        label: kind.label,
+                                                        count: waitingCount(kind.value),
+                                                    }),
+                                                    disabled: waitingCount(kind.value) === 0,
                                                 })),
                                             ]}
                                         />
@@ -504,7 +639,7 @@ export function MyBudgetsView() {
                                     <Checkbox
                                         size="xs"
                                         mb="xs"
-                                        label="Include requests in delegated sub-budgets"
+                                        label={t('projects.budgets.includeSubtree')}
                                         checked={includeSubtree}
                                         onChange={(e) => changeScope(e.currentTarget.checked)}
                                     />
@@ -514,7 +649,7 @@ export function MyBudgetsView() {
                                         because the counts above are then partial. */}
                                     {waiting.items.length < waiting.total && (
                                         <Text size="xs" c={COLOR.attention} mb="xs">
-                                            Showing {waiting.items.length} of {waiting.total} open requests.
+                                            {t('projects.budgets.openShown', { shown: waiting.items.length, total: waiting.total })}
                                         </Text>
                                     )}
                                 </>
@@ -524,23 +659,34 @@ export function MyBudgetsView() {
                                 <TextInput
                                     size="xs"
                                     style={{ flex: 1 }}
-                                    placeholder="Search name, owner, group…"
-                                    aria-label="Search the budget tree"
+                                    placeholder={t('projects.budgets.searchPlaceholder')}
+                                    aria-label={t('projects.budgets.searchLabel')}
                                     leftSection={searchBusy ? <Loader size="12" /> : <Search size="13" />}
                                     value={search}
                                     onChange={(e) => changeSearch(e.currentTarget.value)}
                                     rightSection={search ? (
                                         <ActionIcon size="xs" variant="subtle" color="gray"
-                                            aria-label="Clear search" onClick={() => changeSearch('')}>
+                                            aria-label={t('projects.budgets.clearSearch')} onClick={() => changeSearch('')}>
                                             <X size="12" />
                                         </ActionIcon>
                                     ) : null}
                                 />
+                                {!searching && !filtering && (
+                                    <Tooltip label={t(expandAll ? 'projects.budgets.collapseAll' : 'projects.budgets.expandAll')}>
+                                        <ActionIcon size="sm" variant={expandAll ? 'light' : 'subtle'} color="gray"
+                                            aria-label={t(expandAll ? 'projects.budgets.collapseAll' : 'projects.budgets.expandAll')}
+                                            aria-pressed={expandAll} onClick={toggleExpandAll}>
+                                            {expandAll ? <ChevronsDownUp size="14" /> : <ChevronsUpDown size="14" />}
+                                        </ActionIcon>
+                                    </Tooltip>
+                                )}
                             </Group>
 
                             {/* Searching and filtering each replace the tree with a
                                 flat list — see the note on this component. */}
-                            <ScrollArea.Autosize mah="70vh">
+                            {/* No height of its own: a long tree scrolls with the
+                                page instead of in a box with a second scrollbar. */}
+                            <div>
                                 {searching ? (
                                     <NodeResultList
                                         nodes={results?.items}
@@ -548,14 +694,14 @@ export function MyBudgetsView() {
                                         onMore={loadMoreResults}
                                         selectedId={selected?.id}
                                         onSelect={select}
-                                        emptyText={searchBusy ? 'Searching…' : 'No matches.'}
+                                        emptyText={searchBusy ? t('projects.budgets.searching') : t('projects.budgets.noMatches')}
                                     />
                                 ) : filtering ? (
                                     <NodeResultList
                                         nodes={waitingList}
                                         selectedId={selected?.id}
                                         onSelect={select}
-                                        emptyText="Nothing is waiting for your decision."
+                                        emptyText={t('projects.budgets.nothingWaiting')}
                                     />
                                 ) : (
                                     <BudgetTree
@@ -566,28 +712,51 @@ export function MyBudgetsView() {
                                         onLoadMore={loadMoreChildren}
                                     />
                                 )}
-                            </ScrollArea.Autosize>
+                            </div>
                         </Paper>
-                    </Grid.Col>
+                    </Box>
 
                     {/* ── Detail panel: the selected node ────────────────── */}
-                    <Grid.Col span={{ base: 12, md: 7, lg: 8 }}>
-                        {!selected && (
+                    <Box w="100%" style={{ flex: 1, minWidth: 0 }}>
+                        {linkMissing && (
+                            <Alert color={COLOR.attention} variant="light" mb="md">
+                                {t('projects.budgets.linkMissing')}
+                            </Alert>
+                        )}
+                        {linkLoading && <Loader size="sm" />}
+                        {!selected && !linkLoading && (
                             <Alert color={COLOR.info} variant="light">
-                                Select a budget or project in the tree to see its details.
+                                {t('projects.budgets.selectHint')}
                             </Alert>
                         )}
                         {selected && (isBudget(selected) ? (
-                            <BudgetCard node={selected} resources={resources}
-                                onAction={handleAction}
-                                manageable={!requestableOnly.some(b => b.id === selected.id)} />
+                            <Stack>
+                                <BudgetCard node={selected} resources={resources}
+                                    link={linkTo(selected)}
+                                    onAction={handleAction}
+                                    manageable={!selected.request_only} />
+                                {/* Listing a budget's projects is a manager's view;
+                                    a budget one may only request under has none
+                                    to show. Keyed by budget so its filters reset
+                                    when another budget is picked. */}
+                                {!selected.request_only && (
+                                    <BudgetProjectsTable key={selected.id} budget={selected} resources={resources}
+                                        onAction={handleAction}
+                                        // A row opens the project's one dialog, as its
+                                        // Edit or Details button does.
+                                        onOpen={(node) => handleAction(projectActions(node, { manager: true }).change ? 'change' : 'details', node)}
+                                        allocatedOnly={allocatedFor === selected.id}
+                                        onAllocatedOnlyChange={(on) => setAllocatedFor(on ? selected.id : null)} />
+                                )}
+                            </Stack>
                         ) : (
                             <ProjectCard node={selected} resources={resources} parentName={selected.parent_name}
-                                perspective="manager" onAction={handleAction} />
+                                link={linkTo(selected)} perspective="manager" onAction={handleAction} />
                         ))}
-                    </Grid.Col>
-                </Grid>
+                    </Box>
+                </Flex>
             )}
+
 
             {/* ── Dialogs (one instance per view) ────────────────────────── */}
             {/* Keyed like every other dialog here, and for a sharper reason: this
@@ -608,15 +777,25 @@ export function MyBudgetsView() {
                 node={budgetForm?.node}
                 eligibleBudgets={budgetRequestTargets}
                 currentUserEmail={userEmail}
+                moveTargets={moveTargets}
             />
-            <ApproveModal key={`approvemodal:${dlg.key}`} opened={dlg.is('approve')} onClose={dlg.close} onDone={refresh}
+            <DecisionModal key={`decidemodal:${dlg.key}`} opened={dlg.is('decide')} onClose={dlg.close} onDone={refresh}
                 resources={resources} node={dlg.node} />
-            <RejectModal key={`rejectmodal:${dlg.key}`} opened={dlg.is('reject')} onClose={dlg.close} onDone={refresh} node={dlg.node} />
-            <MoveModal key={`movemodal:${dlg.key}`} opened={dlg.is('move')} onClose={dlg.close} onDone={refresh}
-                node={dlg.node} targetBudgets={moveTargets} />
-            <TransferOwnerModal key={`transferownermodal:${dlg.key}`} opened={dlg.is('transfer')} onClose={dlg.close} onDone={refresh} node={dlg.node} />
-            <AdoptModal key={`adoptmodal:${dlg.key}`} opened={dlg.is('adopt')} onClose={dlg.close} onDone={refresh}
-                resources={resources} node={dlg.node} myBudgets={myBudgets.items} />
+            <RetireModal key={`retiremodal:${dlg.key}`} opened={dlg.is('release') || dlg.is('delete-for-good')}
+                mode={dlg.is('delete-for-good') ? 'delete' : 'release'} onClose={dlg.close} onDone={refresh} node={dlg.node} />
+            {/* Adopting an import is the project dialog with an owner and a
+                paying budget in front — same tabs, members correctable. */}
+            <ProjectFormModal
+                key={`adopt:${dlg.key}`}
+                adopt
+                opened={dlg.is('adopt')}
+                onClose={dlg.close}
+                onDone={refresh}
+                resources={resources}
+                openstackRoles={config.openstackRoles}
+                node={dlg.node}
+                myBudgets={myBudgets.items}
+            />
             {/* A manager may edit a project of theirs, so the change dialog has to
                 exist on this side too — not only in My Projects. On a pending
                 request it amends in place; on an approved one it files a change
@@ -629,6 +808,14 @@ export function MyBudgetsView() {
                 resources={resources}
                 openstackRoles={config.openstackRoles}
                 node={dlg.node}
+                // The budget the project was opened under: its end and its
+                // maximum project term bound the new end date. A sub-budget
+                // managed through an ancestor is not among myBudgets.
+                myBudgets={selected ? [selected, ...myBudgets.items] : myBudgets.items}
+                // Opened from a budget's projects: a manager of it, who says
+                // who pays, moves it and hands it over — the owner does not.
+                asManager
+                moveTargets={moveTargets}
             />
             {/* History is a tab in here, not a button of its own outside. */}
             <NodeInspectModal key={`nodeinspectmodal:${dlg.key}`} opened={dlg.is('details')}
