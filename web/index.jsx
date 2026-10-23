@@ -7,7 +7,7 @@ import { createRoot } from 'react-dom/client';
 import { lazy, Suspense } from 'react';
 import { Redirect, Router, Route, Switch, useLocation } from 'wouter';
 
-import { cloudProjectsEnabled, dnsZonesEnabled, llmEnabled } from '/features.js';
+import { appStoreEnabled, cloudProjectsEnabled, dnsZonesEnabled, llmEnabled } from '/features.js';
 // Imported for its side effect: initialising i18next before the first render,
 // so nothing flashes in one language and settles in another.
 import '/i18n/index.js';
@@ -130,6 +130,8 @@ function App() {
     );
 }
 
+const AppStore = lazy(() => import('./app-store/app-store.jsx').then(m => ({ default: m.AppStore })));
+
 function AppRoutes() {
     const [location] = useLocation();
 
@@ -159,6 +161,7 @@ function AppRoutes() {
                     {cloudProjectsEnabled && <Route path="/projects" component={ProjectsStart} nest />}
                     {llmEnabled && <Route path="/llm" component={LlmManagement} nest />}
                     {llmEnabled && <Route path="/workspaces" component={GpuManagement} nest />}
+                    {appStoreEnabled && <Route path="/app-store" component={AppStore} nest />}
                     <Route path="/developer" component={Developer} />
                     <Route component={NotFound} />
                 </Switch>

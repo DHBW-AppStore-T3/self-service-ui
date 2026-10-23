@@ -27,6 +27,12 @@ export const dnsZonesEnabled = Boolean(window?.appconfig?.dynamicZonesBaseUrl);
 // and the section stays hidden (see llm/use-llm-me.jsx).
 export const llmEnabled = Boolean(window?.appconfig?.llmBaseUrl);
 
+// Our own DHBW App Store (the FastAPI backend of this project) as a section of
+// this UI. Opt-in: only APP_STORE_ENABLED=true in the container's environment
+// writes appStoreEnabled: true into config.js, so a deployment that has no such
+// backend keeps the upstream behaviour.
+export const appStoreEnabled = window?.appconfig?.appStoreEnabled === true;
+
 // At least one API has to be there for a token to be issuable at all.
 export const apiTokensEnabled = dnsZonesEnabled || cloudProjectsEnabled || llmEnabled;
 

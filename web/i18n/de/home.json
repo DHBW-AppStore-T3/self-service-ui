@@ -35,6 +35,14 @@
             "b": "OpenAI-kompatibler Endpunkt für VS Code und eigene Programme",
             "c": "Prompts werden nicht protokolliert und nicht weitergegeben",
             "open": "Zum LLM-Dienst"
+        },
+        "appstore": {
+            "title": "App Store",
+            "lead": "Fertige Anwendungen für Lehre und Studium, bereitgestellt in der DHBW-Cloud.",
+            "a": "Katalog der Apps durchsuchen",
+            "b": "Lehrende stellen eine App mit einem Klick bereit",
+            "c": "Studierende öffnen ihre Umgebungen und erhalten eigene Zugangsdaten",
+            "open": "App Store öffnen"
         }
     },
     "acme": "Zertifikate für die hier vergebenen Namen kommen <1>nur vom ACME-Server der DHBW</1> (<2>{{host}}</2>), öffentliche CAs wie Let's Encrypt funktionieren dafür nicht. Der Server ist kostenlos, hat keine Rate-Limits und stellt auch Zertifikate für Dienste aus, die nur im DHBW-Netz erreichbar sind."

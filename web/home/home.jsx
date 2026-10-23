@@ -1,8 +1,8 @@
 import { Link } from 'wouter';
 import { Container, Stack, Title, Text, Paper, Button, ThemeIcon, SimpleGrid, List, Group } from '@mantine/core';
-import { Globe, ShieldCheck, ArrowRight, FolderKanban, Sparkles, SquareTerminal } from 'lucide-react';
+import { Globe, ShieldCheck, ArrowRight, FolderKanban, Sparkles, SquareTerminal, Store } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
-import { cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
+import { appStoreEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
 import { hasWorkspaces } from '/gpu/access.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useCloudStatus } from '/projects/cloud-status.jsx';
@@ -49,6 +49,12 @@ export function Home() {
             icon: Sparkles,
             color: 'grape',
             to: hasAccess ? '/llm/overview' : '/llm/projects',
+        },
+        appStoreEnabled && {
+            key: 'appstore',
+            icon: Store,
+            color: 'indigo',
+            to: '/app-store/apps',
         },
         dnsZonesEnabled && {
             key: 'dns',

@@ -40,6 +40,16 @@
         reverse_proxy {$CLOUD_RESOURCES_UPSTREAM:openstack-management-api-openstack-management:8083}
     }
 
+    # Our DHBW App Store (the project's FastAPI backend), same-origin under
+    # /api/app-store/ with the prefix stripped, as the backend's routes have none.
+    # The oauth2-proxy in front injects the user's ACCESS token as the Bearer
+    # (see claude_docs/decisions.md). No default upstream: docker-entrypoint.sh
+    # requires APP_STORE_UPSTREAM while the section is enabled.
+    handle_path /api/app-store/* {
+        header Cache-Control "no-store"
+        reverse_proxy {$APP_STORE_UPSTREAM}
+    }
+
     # The LLM service runs in a cluster of its own, behind that cluster's ingress,
     # always over TLS. Two values, because where to connect and whom to ask for
     # are not the same thing there: its public name resolves to IPv6 only, while
@@ -57,6 +67,14 @@
                 tls_server_name {$LLM_HOST:localhost}
             }
         }
+    }
+
+    # config.js is written at container start. CONFIG_DIR moves it off the web
+    # root for a read-only root filesystem (docker-entrypoint.sh).
+    handle /config.js {
+        root * {$CONFIG_DIR:/srv/www}
+        header Cache-Control "no-cache"
+        file_server
     }
 
     # Everything else: the SPA (with client-side routing fallback to index.html).

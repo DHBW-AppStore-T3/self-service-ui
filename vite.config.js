@@ -24,6 +24,9 @@ export default defineConfig(({ mode }) => {
       cloudResourcesMcpUrl: env.CLOUD_RESOURCES_MCP_URL || '',
       dynamicZonesMcpUrl: env.DYNAMIC_ZONE_MCP_URL || '',
       llmBaseUrl: env.LLM_BASE_URL || '',
+      appStoreBaseUrl: env.APP_STORE_BASE_URL || '/api/app-store',
+      appStoreFrontendUrl: env.APP_STORE_FRONTEND_URL || '',
+      appStoreEnabled: env.APP_STORE_ENABLED === 'true',
       acmeServer: env.ACME_SERVER || 'https://certificates.dhbw.cloud',
       dummyAuth: env.DUMMY_AUTH === 'true',
       oidc: {
@@ -70,13 +73,25 @@ export default defineConfig(({ mode }) => {
       // LLM_DEV_UPSTREAM names a local llm-management-api, e.g.
       //   LLM_BASE_URL=http://localhost:8084/api/llm/
       //   LLM_DEV_UPSTREAM=http://localhost:8086
-      proxy: env.LLM_DEV_UPSTREAM ? {
-        '/api/llm': {
-          target: env.LLM_DEV_UPSTREAM,
-          changeOrigin: true,
-          rewrite: (p) => p.replace(/^\/api\/llm/, ''),
-        },
-      } : undefined,
+      proxy: {
+        ...(env.LLM_DEV_UPSTREAM && {
+          '/api/llm': {
+            target: env.LLM_DEV_UPSTREAM,
+            changeOrigin: true,
+            rewrite: (p) => p.replace(/^\/api\/llm/, ''),
+          },
+        }),
+        // Our App Store backend, prefix stripped like Caddy does. It accepts a
+        // real Keycloak access token only: the dev login's pages render, the
+        // calls answer 401 (see claude_docs/decisions.md for a real login).
+        ...(env.APP_STORE_DEV_UPSTREAM && {
+          '/api/app-store': {
+            target: env.APP_STORE_DEV_UPSTREAM,
+            changeOrigin: true,
+            rewrite: (p) => p.replace(/^\/api\/app-store/, ''),
+          },
+        }),
+      },
     },
     // Unit tests. Two kinds, and the default stays the cheap one.
     //

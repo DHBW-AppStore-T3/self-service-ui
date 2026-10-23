@@ -4,6 +4,15 @@ a {
     text-decoration: none;
 }
 
+.app-store-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
 /* Reserve the vertical scrollbar's space permanently. Different zones/tabs have
    different content heights, so the scrollbar would otherwise appear/disappear
    on navigation, changing the viewport width and making the centered header +

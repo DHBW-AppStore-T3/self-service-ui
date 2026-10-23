@@ -4,6 +4,7 @@
         "change": "Sprache wechseln"
     },
     "nav": {
+        "appStore": "App Store",
         "home": "Start",
         "projects": "Projekte",
         "dnsZones": "DNS-Zonen",

@@ -1,8 +1,9 @@
 import { useLocation } from 'wouter';
 import { useTranslation } from 'react-i18next';
-import { cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
+import { appStoreEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
 import { useCloudStatus } from '/projects/cloud-status.jsx';
 import { useDnsPolicyStatus } from '/dyndns/use-policy.jsx';
+import { useRole } from '/app-store/queries.jsx';
 import { useAiAreasVisible } from '/ai-areas.jsx';
 
 // The whole navigation as data, in one place: the header renders it two ways
@@ -38,6 +39,7 @@ export function useNav() {
     const { hasPolicy, adminEvents, ownEvents } = useDnsPolicyStatus();
     // Which of the AI service's areas are visible, and how (ai-areas.jsx, shared with the footer).
     const { llm, workspaces, llmArea } = useAiAreasVisible();
+    const { staff: appStoreStaff } = useRole();
 
 
 
@@ -115,6 +117,18 @@ export function useNav() {
                 { label: t('nav.myBudgets'), href: '/budgets', dot: pending > 0 },
                 isRoot && { label: t('nav.rootAdmin'), href: '/budgets/admin' },
             ].filter(Boolean),
+        },
+        // The DHBW App Store of this project (backend: /api/app-store/*).
+        appStoreEnabled && {
+            id: 'app-store',
+            label: t('nav.appStore'),
+            base: '/app-store',
+            items: [
+                { label: t('appStore.catalog'), href: '/app-store/apps' },
+                // The same list either way; a student only ever sees the
+                // environments a teacher gave them access to.
+                { label: t(appStoreStaff ? 'appStore.deployments' : 'appStore.myEnvironments'), href: '/app-store/deployments' },
+            ],
         },
     ].filter(Boolean).map(s => ({ ...s, href: s.href ?? s.items[0]?.href ?? '/' }));
 

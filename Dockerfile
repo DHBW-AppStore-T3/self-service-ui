@@ -1,6 +1,6 @@
 # --- Stage 1: Builder
 # The bundle does not depend on the platform, so it is built on the machine that builds (BUILDPLATFORM): native speed on an arm64 Mac instead of emulation.
-FROM --platform=$BUILDPLATFORM node:alpine AS builder
+FROM --platform=$BUILDPLATFORM node:24-alpine AS builder
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -9,7 +9,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Install project dependencies
-RUN npm install
+# Exactly what package-lock.json pins; fails if the two disagree.
+RUN npm ci
 
 # Copy the rest of the source code (including 'web' directory)
 COPY . .

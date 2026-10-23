@@ -35,6 +35,14 @@
             "b": "OpenAI-compatible endpoint for VS Code and your own programs",
             "c": "Prompts are neither logged nor passed on",
             "open": "Open the LLM service"
+        },
+        "appstore": {
+            "title": "App Store",
+            "lead": "Ready-made applications for teaching and learning, deployed in the DHBW cloud.",
+            "a": "Browse the catalog of apps",
+            "b": "Lecturers deploy an app with one click",
+            "c": "Students open their environments and get their own access data",
+            "open": "Open the App Store"
         }
     },
     "acme": "Certificates for the names handed out here come <1>only from the DHBW ACME server</1> (<2>{{host}}</2>); public CAs such as Let's Encrypt do not work for them. The server is free, has no rate limits and also issues certificates for services reachable only inside the DHBW network."
