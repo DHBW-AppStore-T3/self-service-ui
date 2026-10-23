@@ -1,9 +1,14 @@
-import { AlertTriangle, ArrowRightLeft, Check, Eye, FolderInput, Pencil, Rocket, X } from 'lucide-react';
-import { Alert, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
-import { FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge } from './component-common.jsx';
-import { COLOR, expiryTone, expiryValue, isImported, isProvisioning, overageEntries, overageText, ownerEmail, resourceSummaryText } from './util-project.jsx';
+import { AlertTriangle, ExternalLink, Eye, Gift, Pencil, Rocket, Scale, Trash2, Users, X } from 'lucide-react';
+import { Alert, Anchor, Badge, Box, Button, Card, Group, Loader, Stack, Text, Tooltip } from '@mantine/core';
+import { CopyLinkButton, DeletingBadge, FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, PurgeProgress, TokenBadgeList } from './component-common.jsx';
+import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, scheduledDeletion, labDeletion, openstackSide, catalogKinds, projectKinds } from './util-project.jsx';
+import { useAuth } from '/providers/auth.jsx';
+import { useTranslation } from 'react-i18next';
 import { useProjectConfig } from './projects.jsx';
 import { formatDate } from '../format-date.js';
+import { BudgetPath } from './component-budget-path.jsx';
+import { ProjectResources } from './component-project-resources.jsx';
+import { LlmLimitHints } from './component-llm-limits.jsx';
 
 // ProjectCard renders one project leaf. It is purely presentational: every
 // button reports an action to the owning view via onAction(actionId, node),
@@ -11,30 +16,62 @@ import { formatDate } from '../format-date.js';
 // dialog per view instead of one per card.
 //
 // perspective:
-//   'owner'    the viewer owns this project (My Projects)
+//   'owner'    the viewer owns or administers this project (My Projects)
+//   'member'   the viewer only works in it as an authorized user (My Projects): read-only, only its details
 //   'manager'  the viewer decides on it (Approvals)
-export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction }) {
+// How many members a card names before it counts the rest.
+const MEMBERS_SHOWN = 5;
+
+//
+// link: when set, a button next to the date copies this link to the project.
+// envBuild: the build of the project's workspace environment from Git while it builds or after it failed ({status, message, hasImage}), else null.
+export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction, link, envBuild }) {
+    const { t } = useTranslation();
     const act = (action) => onAction?.(action, node);
     const config = useProjectConfig();
 
     const imported = isImported(node);
+    // Cloud, AI or both — only where the catalogue has both to tell apart.
+    const kinds = catalogKinds(resources).length > 1 ? projectKinds(node, resources) : [];
     // Approved but not in OpenStack yet — the reconciler runs on an interval.
-    const provisioning = isProvisioning(node, config?.provisioningEnabled);
-    const isApproved = node.status === 'approved';
-    const isPending = node.status === 'pending';
+    const provisioning = isProvisioning(node, config?.provisioningEnabled, resources, config?.providers);
+    const openstackUrl = openstackProjectUrl(config?.openstackDashboardUrl, node);
     const isChangePending = node.status === 'change_pending';
     const isRejected = node.status === 'rejected';
     const hasHistory = (node.history || []).length > 0;
     const isManager = perspective === 'manager';
+    const isMember = perspective === 'member';
+    // A member reads the project and works in it; changing, releasing and deleting it stay with its owner and admins (the API refuses them too).
+    const can = isMember ? { details: true } : projectActions(node, { manager: isManager, canDelete: deletesOnRequest(config?.retirement) });
+    // Given up: when it was put away, and when it goes by itself.
+    const archivedAt = node.status === 'archived' ? lastEventAt(node, 'archived') : null;
+    const deletionAt = deletionRequested(node) ? null : scheduledDeletion(node, config?.retirement);
+    const labDeletionAt = deletionRequested(node) ? null : labDeletion(node, resources, config?.retirement);
 
     const createdDate = node.created_at ? formatDate(node.created_at) : '';
-    const authorizedCount = (node.authorized_users || []).length;
     const owner = ownerEmail(node);
+    // In My Projects a card is either the viewer's own project or one they
+    // administer with its owner — then who that owner is belongs on it too.
+    const { user } = useAuth();
+    const me = getAuthUserEmail(user).toLowerCase();
+    const shared = !isManager && !!owner && owner.toLowerCase() !== me;
+    // Always, also on one's own project: every card then reads the same way.
+    const showOwner = !!owner;
+    const admins = node.admin_scope || [];
+    // A few members by name say more than a count: "Owner + 1" read as if the
+    // owner were one of two people, whoever the one was.
+    const memberTokens = (node.authorized_users || []).map(u => u.token);
+    const shownMembers = memberTokens.slice(0, MEMBERS_SHOWN);
 
     // Resources shown in the summary line: the proposed limit while a change
     // awaits approval, the current limit otherwise.
     const summaryQuota = (isChangePending && node.pending?.limit) ? node.pending.limit : node.limit;
-    const resourceSummary = resourceSummaryText(resources, summaryQuota);
+    // In total, allocations from budgets further up included — that is what
+    // the project has in OpenStack. Where it comes from is the next row.
+    const resourceSummary = resourceSummaryText(resources, effectiveLimit(node, summaryQuota));
+    const allocated = hasAllocations(node);
+    // An LLM project that is still in use: say when its limits keep it from working (no tokens, rates too low).
+    const llmHints = projectKinds(node, resources).includes('llm') && !isRetired(node) && !isRejected && !deletionRequested(node);
 
     // What OpenStack measures where that exceeds the limit above. This is the
     // number the budget is actually charged, so leaving it off turns the
@@ -54,56 +91,115 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                 <Group justify="space-between" mb="xs">
                     <Group gap="xs">
                         <NodeStatusBadge status={node.status} provisioning={provisioning} />
-                        {node.os_overcommitted && (
+                        {kinds.map(k => (
+                            <Badge key={k} color={COLOR.identity} variant="light">{t(`projects.kind.${k}`)}</Badge>
+                        ))}
+                        {deletionRequested(node) && <DeletingBadge size="sm" purge={openstackSide(node).purge} />}
+                        {envBuild && <EnvBuildBadge build={envBuild} />}
+                        {/* Who shared it says it all, so it stands on the badge rather
+                            than behind a hover nobody finds. Not uppercased: an
+                            address in capitals is hard to read. */}
+                        {shared && (
+                            <Tooltip label={t('projects.projectCard.memberTip')} disabled={!isMember} multiline w={280} withArrow>
+                                <Badge color={COLOR.identity} variant="outline" tt="none" leftSection={<Users size="11" />}>
+                                    {t(isMember ? 'projects.projectCard.memberOf' : 'projects.projectCard.sharedBy', { owner })}
+                                </Badge>
+                            </Tooltip>
+                        )}
+                        {openstackSide(node).overcommitted && (
                             <Tooltip label={overage.length > 0
-                                ? `Uses ${overageText(overage)} in OpenStack, more than granted. The budget is charged the larger figure, and creating new resources is blocked.`
-                                : 'The project currently uses more in OpenStack than was granted. Creating new resources is blocked.'}>
+                                ? t('projects.projectCard.overcommittedWithAmount', { amount: overageText(overage) })
+                                : t('projects.projectCard.overcommitted')}>
                                 <Badge color={COLOR.negative} variant="filled" style={{ cursor: 'default' }}>
                                     <AlertTriangle size="11" style={{ marginRight: 3, verticalAlign: 'middle' }} />
-                                    Overcommitted
+                                    {t('projects.projectCard.overcommittedBadge')}
                                 </Badge>
                             </Tooltip>
                         )}
                     </Group>
-                    <Text size="xs" c="dimmed">{createdDate}</Text>
+                    <Group gap={4} wrap="nowrap">
+                        <Text size="xs" c="dimmed">{createdDate}</Text>
+                        {link && <CopyLinkButton link={link} />}
+                    </Group>
                 </Group>
 
+                {/* Emptying before the deletion takes passes; this is how far it got. */}
+                {deletionRequested(node) && <PurgeProgress purge={openstackSide(node).purge} />}
+
                 {/* ── Purpose ────────────────────────────────────────────── */}
+                {/* The name opens the project in OpenStack wherever there is
+                    one to open (see openstackProjectUrl); otherwise it is text. */}
                 <Text fw={700} size="sm" mb="xs">
-                    {imported ? (node.os_project_name || node.os_project_id || node.id) : (node.name || node.reason)}
+                    {openstackUrl ? (
+                        <Anchor href={openstackUrl} target="_blank" rel="noopener noreferrer" inherit
+                            title={t('projects.projectCard.openInOpenStack')}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            {node.name || node.reason} <ExternalLink size="12" />
+                        </Anchor>
+                    ) : (imported ? (openstackSide(node).external_name || openstackSide(node).external_id || node.id) : (node.name || node.reason))}
                 </Text>
 
                 {imported && (
                     <Alert color={COLOR.outside} variant="light" mb="xs" p="xs">
                         {(node.flags || []).includes('promote_on_reconcile')
-                            ? 'Queued for adoption — the next synchronization run will bring this project under management.'
+                            ? t('projects.projectCard.adoptionQueued')
                             : isManager
-                                ? 'This project exists in OpenStack but is not managed here yet. Use “Adopt” to place it under a budget.'
-                                : 'This project exists in OpenStack but is not managed here. It cannot be edited.'}
+                                ? t('projects.projectCard.importedManager')
+                                : t('projects.projectCard.imported')}
                     </Alert>
                 )}
 
                 {/* ── Key facts ──────────────────────────────────────────── */}
                 <Stack gap="6" mb="xs">
-                    {isManager && owner && (
-                        <FactRow label="Owner">
+                    {showOwner && (
+                        <FactRow label={t('projects.fact.owner')}>
                             <PersonBadge email={owner} size="xs" />
                         </FactRow>
                     )}
 
-                    {parentName && (
-                        <FactRow label="Paid from">{parentName}</FactRow>
+                    {admins.length > 0 && (
+                        <FactRow label={t('projects.fact.admins')}>
+                            <TokenBadgeList tokens={admins} size="xs" />
+                        </FactRow>
                     )}
 
                     {resourceSummary && (
-                        <FactRow label="Resources">{resourceSummary}</FactRow>
+                        <FactRow label={t('projects.fact.resources')}>
+                            <ProjectResources node={node} resources={resources}
+                                quota={effectiveLimit(node, summaryQuota)} size="sm" />
+                        </FactRow>
+                    )}
+
+                    {/* With allocations, which budget pays for what: the own
+                        share from the project's budget, the rest from further up. */}
+                    {allocated ? (
+                        <FactRow label={t('projects.fact.paidFrom')}>
+                            <Stack gap={2}>
+                                <Text size="xs">
+                                    <b>{parentName ? <BudgetPath path={node.parent_path} name={parentName} inherit /> : t('projects.allocation.ownBudget')}</b>
+                                    {' · '}{resourceSummaryText(resources, summaryQuota) || '—'}
+                                </Text>
+                                {node.allocations.map(a => (
+                                    <Text size="xs" key={a.budget_id}>
+                                        <Gift size="11" style={{ verticalAlign: '-1px', marginRight: 4, color: `var(--mantine-color-${COLOR.info}-7)` }} />
+                                        <b><BudgetPath path={a.budget_path} name={a.budget_name || a.budget_id} inherit /></b>
+                                        {' · '}{resourceSummaryText(resources, a.limit)}
+                                        <Text span size="xs" c="dimmed">{' '}({t('projects.allocation.badge')})</Text>
+                                    </Text>
+                                ))}
+                            </Stack>
+                        </FactRow>
+                    ) : parentName && (
+                        <FactRow label={t('projects.fact.paidFrom')}>
+                            <BudgetPath path={node.parent_path} name={parentName} />
+                        </FactRow>
                     )}
 
                     {/* Only the resources that exceed their limit, so the row
                         stays short and every figure on it is the reason the
                         badge is there. */}
                     {overage.length > 0 && (
-                        <FactRow label="In use" hint="Charged to the budget instead of the granted amount.">
+                        <FactRow label={t('projects.fact.inUse')} hint={t('projects.projectCard.inUseHint')}>
                             <Text size="xs" c={COLOR.negative} fw={600}>{overageText(overage)}</Text>
                         </FactRow>
                     )}
@@ -111,22 +207,50 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                     {/* Only a date that is close keeps a colour, because then it
                         IS the message; anything further out reads like the rows
                         above it. */}
-                    {node.termination_date && (
-                        <FactRow label="Valid until">
+                    {node.termination_date && !isRetired(node) && (
+                        <FactRow label={t('projects.fact.validUntil')}>
                             <Text size="xs" c={expiryTone(node.termination_date) === 'gray'
                                 ? undefined
                                 : `${expiryTone(node.termination_date)}.7`}>
-                                {expiryValue(node.termination_date)}
+                                {expiryValue(t, node.termination_date)}
                             </Text>
                         </FactRow>
                     )}
 
-                    {authorizedCount > 0 && (
-                        <FactRow label="Members">
-                            {`the owner and ${authorizedCount} other${authorizedCount !== 1 ? 's' : ''}`}
+                    {archivedAt && (
+                        <FactRow label={t('projects.fact.archivedOn')}>{formatDate(archivedAt)}</FactRow>
+                    )}
+                    {deletionAt && (
+                        <FactRow label={t('projects.fact.deletion')}>{formatDate(deletionAt)}</FactRow>
+                    )}
+                    {/* The Lab/AI part goes by itself after the end: from then on the date is the message. */}
+                    {labDeletionAt && (
+                        <FactRow label={t('projects.fact.labDeletion')} hint={t('projects.fact.labDeletionHint')}>
+                            <Text size="xs" c={expiryTone(labDeletionAt) === 'gray' ? undefined : `${expiryTone(labDeletionAt)}.7`}>
+                                {formatDate(labDeletionAt)}
+                            </Text>
+                        </FactRow>
+                    )}
+
+                    {memberTokens.length > 0 && (
+                        <FactRow label={t('projects.fact.members')}>
+                            <Group gap="xs" wrap="wrap">
+                                <TokenBadgeList tokens={shownMembers} size="xs" />
+                                {memberTokens.length > shownMembers.length && (
+                                    <Text size="xs" c="dimmed">
+                                        {t('projects.projectCard.membersMore', { count: memberTokens.length - shownMembers.length })}
+                                    </Text>
+                                )}
+                            </Group>
                         </FactRow>
                     )}
                 </Stack>
+
+                {llmHints && (
+                    <Box mb="xs">
+                        <LlmLimitHints compact resources={resources} limit={effectiveLimit(node, summaryQuota)} />
+                    </Box>
+                )}
 
                 {/* ── Proposed changes while change_pending ──────────────── */}
                 <NodeChangesDiff
@@ -152,61 +276,73 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
             {/* ── Actions ────────────────────────────────────────────────── */}
             <Card.Section withBorder inheritPadding py="xs" mt="auto">
                 <Group grow>
-                    {/* Details carries the history with it, as a tab. Two buttons
-                        for one dialog only made the row longer. */}
-                    <Button variant="light" size="xs" onClick={() => act('details')}>
-                        <Eye size="13" style={{ marginRight: 4 }} />Details
-                    </Button>
-
-                    {/* Editing is not an owner privilege: a manager of the funding
-                        chain may change a project too, and on a request that is
-                        still pending their edit amends it in place — which is how
-                        you trim an over-sized request instead of rejecting it.
-                        On an approved project the same edit becomes a proposal
-                        they then approve, for owners and managers alike. */}
-                    {(isApproved || isPending) && (
+                    {/* One dialog per project, with history and usage as tabs:
+                        editable where it may be changed, read-only otherwise.
+                        Editing is not an owner privilege: a manager of the
+                        funding chain may change a project too, and on a request
+                        that is still pending their edit amends it in place —
+                        which is how you trim an over-sized request instead of
+                        rejecting it. On an approved project the same edit
+                        becomes a proposal they then approve. */}
+                    {can.change ? (
                         <Button variant="light" size="xs" onClick={() => act('change')}>
-                            <Pencil size="13" style={{ marginRight: 4 }} />Edit
+                            <Pencil size="13" style={{ marginRight: 4 }} />{t('projects.actions.edit')}
+                        </Button>
+                    ) : (
+                        <Button variant="light" size="xs" onClick={() => act('details')}>
+                            <Eye size="13" style={{ marginRight: 4 }} />{t('projects.actions.details')}
                         </Button>
                     )}
                     {/* Also a manager's to do: they carry the budget it is paid
                         from, and the API has always allowed a manager of the
                         funding chain to release a leaf. Without the button they
                         had to ask the owner to hand back resources. */}
-                    {isApproved && (
+                    {can.release && (
                         <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('release')}>
-                            Release
+                            {t('projects.actions.release')}
+                        </Button>
+                    )}
+                    {can.deleteForGood && (
+                        <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('delete-for-good')}>
+                            <Trash2 size="13" style={{ marginRight: 4 }} />{t('projects.actions.deleteForGood')}
                         </Button>
                     )}
 
                     {/* Manager actions */}
-                    {isManager && (isPending || isChangePending) && (
+                    {can.decide && (
                         <>
-                            <Button color={COLOR.positive} variant="light" size="xs" onClick={() => act('approve')}>
-                                <Check size="13" style={{ marginRight: 4 }} />Approve
-                            </Button>
-                            <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('reject')}>
-                                <X size="13" style={{ marginRight: 4 }} />Reject
+                            {/* One dialog for both answers: approve or reject,
+                                knowing the same facts. */}
+                            <Button color={COLOR.attention} variant="light" size="xs" onClick={() => act('decide')}>
+                                <Scale size="13" style={{ marginRight: 4 }} />{t('projects.actions.decide')}
                             </Button>
                         </>
                     )}
-                    {isManager && imported && !(node.flags || []).includes('promote_on_reconcile') && (
+                    {can.adopt && (
                         <Button color={COLOR.outside} variant="light" size="xs" onClick={() => act('adopt')}>
-                            <Rocket size="13" style={{ marginRight: 4 }} />Adopt
+                            <Rocket size="13" style={{ marginRight: 4 }} />{t('projects.actions.adopt')}
                         </Button>
-                    )}
-                    {isManager && isApproved && (
-                        <>
-                            <Button variant="light" size="xs" onClick={() => act('transfer')}>
-                                <ArrowRightLeft size="13" style={{ marginRight: 4 }} />Owner
-                            </Button>
-                            <Button variant="light" size="xs" onClick={() => act('move')}>
-                                <FolderInput size="13" style={{ marginRight: 4 }} />Move
-                            </Button>
-                        </>
                     )}
                 </Group>
             </Card.Section>
         </Card>
+    );
+}
+
+// EnvBuildBadge says that the project's environment is being built (servers wait for it, or start with the previous one) or that its build failed, with the reason on hover.
+function EnvBuildBadge({ build }) {
+    const { t } = useTranslation();
+    if (build.status === 'failed') {
+        return (
+            <Tooltip label={t('projects.projectCard.envFailedTip', { message: build.message })} multiline w={320} withArrow>
+                <Badge color="red" variant="light" leftSection={<AlertTriangle size="11" />}>{t('projects.projectCard.envFailed')}</Badge>
+            </Tooltip>
+        );
+    }
+    const key = build.hasImage ? 'envRebuilding' : 'envBuilding';
+    return (
+        <Tooltip label={t(`projects.projectCard.${key}Tip`)} multiline w={320} withArrow>
+            <Badge color="blue" variant="light" leftSection={<Loader size={10} color="blue" />}>{t(`projects.projectCard.${key}`)}</Badge>
+        </Tooltip>
     );
 }

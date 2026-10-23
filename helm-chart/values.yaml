@@ -27,8 +27,8 @@ selfServiceUI:
   # and would answer a bearer token with a login redirect. This has to be the
   # API's own host. Empty -> the UI shows nothing about MCP.
   cloudResourcesMcpUrl: ""
-  # DHBW-internal ACME server (acme2certifier) shown on the "TLS Certificates" tab.
-  acmeServer: https://certificates.dhbw.cloud
+  # The ACME server shown on the "TLS Certificates" tab; set per deployment.
+  acmeServer: https://certificates.example.org
   # In-cluster addresses Caddy forwards the SPA's same-origin /api/<svc>/ calls
   # to. These are Service names of OTHER releases, so this chart cannot derive
   # them — and leaving them as image defaults meant a rename over there broke
@@ -36,12 +36,14 @@ selfServiceUI:
   # default applies.
   dynamicZonesUpstream: ""
   cloudResourcesUpstream: ""
-  # DHBW App-Store base URL, shown as a nav entry. Empty -> nav link hidden
-  # (same "empty -> hidden" convention as cloudResourcesBaseUrl above).
-  appstoreBaseUrl: ""
-  # In-cluster address Caddy forwards /api/appstore/* to. Empty -> the image
-  # default applies (same reasoning as cloudResourcesUpstream above).
-  appstoreUpstream: ""
+  # LLM service (llm-management-api). Empty llmBaseUrl hides the LLM section.
+  # Unlike the two above, it is NOT in this cluster: llmUpstream is the address
+  # of the other cluster's ingress (host:port, always TLS) and llmHost the name
+  # to ask it for, which is also checked against its certificate — see the
+  # Caddyfile for why the two differ.
+  llmBaseUrl: ""
+  llmUpstream: ""
+  llmHost: ""
 
 #------------------------------------
 # OIDC/Auth Configuration
@@ -50,6 +52,19 @@ auth:
   oidc:
     issuerUrl: https://sso.example.cloud/realms/example
     clientId: example-cloud-dns
+    # The provider's endpoints, stated rather than discovered. With all three of
+    # authorizationUrl, tokenUrl and jwksUrl set, the BFF starts without asking
+    # the provider anything — which is what keeps an identity provider that is
+    # down from taking the whole site with it — otherwise oauth2-proxy cannot
+    # start while the provider is unreachable. Leave them empty to discover
+    # them from the issuer at startup, as before.
+    #   Keycloak: <issuer>/protocol/openid-connect/{auth,token,certs,logout}
+    authorizationUrl: ""
+    tokenUrl: ""
+    jwksUrl: ""
+    # Where signing out ends the provider's session. Empty falls back to the
+    # Keycloak path below the issuer.
+    endSessionUrl: ""
 
 #------------------------------------
 # Ingress Configuration
@@ -71,7 +86,7 @@ ingress:
 bff:
   enabled: false
   image: quay.io/oauth2-proxy/oauth2-proxy
-  version: v7.15.3
+  version: v7.15.5
   # Supplies client-id, client-secret and cookie-secret. Created out of band;
   # keeping the cookie-secret stable across a redeploy is what keeps sessions
   # alive.

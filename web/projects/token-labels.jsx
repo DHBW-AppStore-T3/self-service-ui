@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
 
 // Tokens are what the system stores ("group:dept_bio"), but not what a person
@@ -18,6 +19,20 @@ const GROUP_PREFIX = 'group:';
 const USER_PREFIX = 'user:';
 
 const TokenLabelContext = createContext(null);
+
+// splitRelation separates the role in a relation token: "group:wwi23seb#dozent"
+// → ["group:wwi23seb", "dozent"]; a plain group token has no relation.
+export function splitRelation(token) {
+    const i = typeof token === 'string' ? token.indexOf('#') : -1;
+    if (i < 0) return [token, ''];
+    return [token.slice(0, i), token.slice(i + 1)];
+}
+
+// relationLabel names a role the way the UI's language does; a role the UI
+// has no text for is shown as it is stored.
+export function relationLabel(t, relation) {
+    return t(`projects.relations.${relation}`, { defaultValue: relation });
+}
 
 // tokenFallback is what to show while nothing better is known: user tokens carry
 // their own answer (the email), group tokens have to be looked up.
@@ -48,6 +63,7 @@ export function tokenDisplay(token, label) {
 
 export function TokenLabelProvider({ children }) {
     const api = useNodesApi();
+    const { t } = useTranslation();
     // token → label ('' means "asked, no label exists"), so a group without a
     // display name is not looked up again on every render.
     const [labels, setLabels] = useState({});
@@ -68,11 +84,16 @@ export function TokenLabelProvider({ children }) {
         unknown.forEach(async (token) => {
             inFlight.current.add(token);
             try {
-                const id = token.slice(GROUP_PREFIX.length);
+                // A relation token is labelled from its group: "WWI23SEB · Dozent".
+                const [groupToken, relation] = splitRelation(token);
+                const id = groupToken.slice(GROUP_PREFIX.length);
                 const hits = await api.searchPrincipalDetails(id, 10);
-                const hit = hits.find(g => g?.token === token);
+                const hit = hits.find(g => g?.token === groupToken);
+                const label = relation
+                    ? `${hit?.label || id} · ${relationLabel(t, relation)}`
+                    : hit?.label || '';
                 setLabels(prev => {
-                    const next = { ...prev, [token]: hit?.label || '' };
+                    const next = { ...prev, [token]: label };
                     known.current = next;
                     return next;
                 });
@@ -88,7 +109,7 @@ export function TokenLabelProvider({ children }) {
                 inFlight.current.delete(token);
             }
         });
-    }, [api]);
+    }, [api, t]);
 
     const value = useMemo(() => ({ labels, request }), [labels, request]);
     return <TokenLabelContext.Provider value={value}>{children}</TokenLabelContext.Provider>;

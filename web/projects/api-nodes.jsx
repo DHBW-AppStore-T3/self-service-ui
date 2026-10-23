@@ -6,13 +6,13 @@ import { cloudProjectsEnabled } from '/features.js';
 // only wrong at runtime, while a missing named export fails the build — which
 // is the whole point of depending on the client by version (see d6).
 import {
-    approveNode, clearRoleSwitch, createNode, createToken, deleteNode,
-    deleteToken, getAdminReconcileStatus, getConfig, getNode, getRoleSwitch,
-    listEligibleBudgets, listEligibleBudgetsForOwner, listMyBudgets,
+    addCatalogEntry, approveNode, createNode, createToken, deleteNode,
+    deleteToken, getActAs, getAdminReconcileStatus, getCatalogEntry, getConfig, getNode, getNodeUsage, getUsageReport,
+    listAllocationSources, listCatalog, listEligibleBudgets, listEligibleBudgetsForOwner, listMyBudgets,
     listMyNodes, listNodeChildren, listNodesToManage, listTokens, promoteNode,
-    rejectNode, releaseNode, reparentNode, requestNodeChange, searchNodes,
-    searchPrincipals, setRoleSwitch, transferNodeOwner,
-    triggerAdminReconcile, updateNode,
+    rejectNode, releaseNode, removeCatalogEntry, reparentNode, restoreCatalogEntry, requestNodeChange, requestNodeDeletion, searchNodes,
+    removeNodeExternalGroup, searchPrincipals, setNodeAllocation, setNodeAttributes, transferNodeOwner,
+    triggerAdminReconcile, updateCatalogEntry, updateNode, withdrawCatalogEntry,
 } from '@dhbw-cloud/os-mgt-client';
 import { normalizeObjectResponse } from './util-project.jsx';
 
@@ -28,6 +28,12 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' };
 function unwrapObject(res) {
     if (apiErrorMessage(res)) throw apiError(res);
     return normalizeObjectResponse(res);
+}
+
+function unwrapArray(res) {
+    if (apiErrorMessage(res)) throw apiError(res);
+    const data = res?.data ?? res;
+    return Array.isArray(data) ? data : [];
 }
 
 function unwrapVoid(res) {
@@ -78,8 +84,24 @@ export function useNodesApi() {
                 unwrapObject(await getNode({ client, path: { id } })),
             // The one list that has no natural bound: a course budget holds as
             // many projects as it has students. Loaded one page at a time.
-            listChildren: async (id, { limit = PAGE_SIZE, offset = 0 } = {}) =>
-                unwrapPage(await listNodeChildren({ client, path: { id }, query: { limit, offset } })),
+            //
+            // The filters narrow and order on the server (see ChildFilter in
+            // the API): the browser only ever holds the page it shows. Empty
+            // values are left out of the query rather than sent as "".
+            listChildren: async (id, { limit = PAGE_SIZE, offset = 0, kind, q, status, group, groupMode, sort, order, allocated, deep, area } = {}) => {
+                const query = { limit, offset };
+                if (area) query.area = area;
+                if (allocated) query.allocated = true;
+                if (deep) query.deep = true;
+                if (kind) query.kind = kind;
+                if (q) query.q = q;
+                if (status?.length) query.status = status.join(',');
+                if (group) query.group = group;
+                if (group && groupMode) query.group_mode = groupMode;
+                if (sort) query.sort = sort;
+                if (sort && order) query.order = order;
+                return unwrapPage(await listNodeChildren({ client, path: { id }, query }));
+            },
             // Full-text search over everything below the budgets the caller
             // manages. Server-side because the tree is no longer fully loaded.
             searchNodes: async (q, { limit = PAGE_SIZE, offset = 0 } = {}) =>
@@ -108,10 +130,11 @@ export function useNodesApi() {
                 unwrapObject(await requestNodeChange({ client, path: { id }, body, headers: JSON_HEADERS })),
 
             // ── Lifecycle decisions ──────────────────────────────────────
-            approve: async (id, modifiedLimit = null) =>
+            // expectedRevision is the revision of the node the approver saw: the server refuses (409) when the request changed since.
+            approve: async (id, expectedRevision, modifiedLimit = null) =>
                 unwrapObject(await approveNode({
                     client, path: { id },
-                    body: modifiedLimit ? { modified_limit: modifiedLimit } : {},
+                    body: { expected_revision: expectedRevision, ...(modifiedLimit ? { modified_limit: modifiedLimit } : {}) },
                     headers: JSON_HEADERS,
                 })),
             reject: async (id, reason) =>
@@ -120,8 +143,13 @@ export function useNodesApi() {
                     body: reason ? { reason } : {},
                     headers: JSON_HEADERS,
                 })),
-            release: async (id) =>
-                unwrapObject(await releaseNode({ client, path: { id } })),
+            // With deleteNow the project is also marked for deletion for good.
+            release: async (id, { deleteNow = false } = {}) =>
+                unwrapObject(await releaseNode({
+                    client, path: { id }, body: deleteNow ? { delete: true } : {}, headers: JSON_HEADERS,
+                })),
+            requestDeletion: async (id) =>
+                unwrapObject(await requestNodeDeletion({ client, path: { id } })),
 
             // ── Structural operations ────────────────────────────────────
             move: async (id, newParentId) =>
@@ -132,32 +160,44 @@ export function useNodesApi() {
                 unwrapObject(await transferNodeOwner({
                     client, path: { id }, body: { new_owner: newOwner }, headers: JSON_HEADERS,
                 })),
+            // Allocations: what a project draws from a budget above its own.
+            // The limit is the whole allocation from that budget; {} removes it.
+            setAllocation: async (id, { budgetId, limit, reason }) =>
+                unwrapObject(await setNodeAllocation({
+                    client, path: { id }, body: { budget_id: budgetId, limit, reason }, headers: JSON_HEADERS,
+                })),
+            // Takes a group given access in OpenStack off a project.
+            removeExternalGroup: async (id, groupId) =>
+                unwrapObject(await removeNodeExternalGroup({ client, path: { id, groupId } })),
+            // Replaces the node's own attribute groups as a whole.
+            setAttributes: async (id, attributes) =>
+                unwrapObject(await setNodeAttributes({
+                    client, path: { id }, body: { attributes }, headers: JSON_HEADERS,
+                })),
+            listAllocationSources: async (id) =>
+                unwrapArray(await listAllocationSources({ client, path: { id } })),
             adopt: async (id, body) =>
                 unwrapObject(await promoteNode({ client, path: { id }, body, headers: JSON_HEADERS })),
             deleteNode: async (id) =>
                 unwrapVoid(await deleteNode({ client, path: { id } })),
+            // What a project — or everything below a budget — used, per day
+            // and per project; { from, to } are YYYY-MM-DD, both included.
+            nodeUsage: async (id, period) =>
+                unwrapObject(await getNodeUsage({ client, path: { id }, query: period })),
 
             // ── Root-admin surface ───────────────────────────────────────
-            // Role-switch eligibility doubles as "is a root admin".
-            getRoleSwitch: async () => unwrapObject(await getRoleSwitch({ client })),
+            // Whether the signed-in person may act on behalf of others (a root admin) and for whom this request acted.
+            getActAs: async () => unwrapObject(await getActAs({ client })),
             // Only the COUNT is wanted, so ask for one row: the listing reports
             // how many matches it was cut from, which makes the badge exact
             // without fetching a single row it would ever show.
             countToManage: async (scope = 'direct') =>
                 unwrapPage(await listNodesToManage({ client, query: { limit: 1, offset: 0, scope } })).total,
-            // Same trick, for the two questions the header asks about the
-            // budget view: does this user manage anything, and — if not —
-            // could they ask for a budget? Rows are not wanted, only whether
-            // there are any.
+            // Same trick, for the question the header asks about the budget
+            // view: does this user manage anything? Rows are not wanted, only
+            // whether there are any.
             countMyBudgets: async () =>
                 unwrapPage(await listMyBudgets({ client, query: { limit: 1, offset: 0 } })).total,
-            // Counts every budget that would take a request from this user,
-            // including the ones that accept project requests but no
-            // sub-budgets (allow_sub_budget_requests) — that flag sits on the
-            // rows this deliberately does not fetch. Erring towards offering
-            // the view: the worst case is a page that says "nobody to ask".
-            countEligibleForMe: async () =>
-                unwrapPage(await listEligibleBudgets({ client, query: { limit: 1, offset: 0 } })).total,
             getReconcileStatus: async () => {
                 const res = await getAdminReconcileStatus({ client });
                 // 503 = the reconciler is switched off in this environment. Not
@@ -166,13 +206,22 @@ export function useNodesApi() {
                 return unwrapObject(res);
             },
             triggerReconcile: async () => unwrapObject(await triggerAdminReconcile({ client })),
-            clearRoleSwitch: async () => unwrapObject(await clearRoleSwitch({ client })),
-            setRoleSwitch: async (body) =>
-                unwrapObject(await setRoleSwitch({ client, body, headers: JSON_HEADERS })),
-            // Impersonation candidates come from the same principal search that
-            // fills every token field — there is no separate "assumable
-            // identities" list, because it would expose the same addresses
-            // behind a second door.
+            // Every project's consumption, with euro values where prices are set.
+            usageReport: async (period) => unwrapObject(await getUsageReport({ client, query: period })),
+            // The availabilities of the resource catalogue (networks, images,
+            // flavours), managed here instead of in the deployment.
+            listCatalog: async () => unwrapArray(await listCatalog({ client })),
+            catalogEntry: async (id) => unwrapObject(await getCatalogEntry({ client, path: { id } })),
+            addCatalogEntry: async (body) =>
+                unwrapObject(await addCatalogEntry({ client, body, headers: JSON_HEADERS })),
+            updateCatalogEntry: async (id, body) =>
+                unwrapObject(await updateCatalogEntry({ client, path: { id }, body, headers: JSON_HEADERS })),
+            withdrawCatalogEntry: async (id) => unwrapObject(await withdrawCatalogEntry({ client, path: { id } })),
+            restoreCatalogEntry: async (id) => unwrapObject(await restoreCatalogEntry({ client, path: { id } })),
+            removeCatalogEntry: async (id) => unwrapVoid(await removeCatalogEntry({ client, path: { id } })),
+            // The people to act on behalf of come from the same principal search
+            // that fills every token field — there is no separate list, because
+            // it would expose the same addresses behind a second door.
             searchIdentities: async (q, limit) => {
                 const data = unwrapObject(await searchPrincipals({ client, query: { q, limit } }));
                 return (data?.users || []).map(email => ({ email, label: email }));
@@ -188,7 +237,7 @@ export function useNodesApi() {
                 const data = unwrapObject(await searchPrincipals({ client, query: { q, limit } }));
                 return [
                     ...(data?.groups || []).filter(g => g?.token),
-                    ...(data?.users || []).map(email => ({ token: `user:${email}`, description: 'Individual person' })),
+                    ...(data?.users || []).map(email => ({ token: `user:${email}`, description: null })),
                 ];
             },
             searchPrincipals: async (q, limit = 50) => {

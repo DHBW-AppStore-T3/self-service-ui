@@ -21,14 +21,20 @@ export const cloudProjectsEnabled = Boolean(window?.appconfig?.cloudResourcesBas
 // belonging to it.
 export const dnsZonesEnabled = Boolean(window?.appconfig?.dynamicZonesBaseUrl);
 
-// At least one API has to be there for a token to be issuable at all.
-export const apiTokensEnabled = dnsZonesEnabled || cloudProjectsEnabled;
+// The LLM service (llm-management-api) runs in a cluster of its own; this UI
+// only offers its section. Whether a person may SEE it is not decided here but
+// by the service: without an access rule, /v1/me answers with an empty role
+// and the section stays hidden (see llm/use-llm-me.jsx).
+export const llmEnabled = Boolean(window?.appconfig?.llmBaseUrl);
 
-// DHBW App-Store nav entry — same "stated as a fact, not inferred" reasoning
-// as the two sections above. Empty base URL means the deployment has no
-// App-Store integration configured, not that a request failed.
-export const appstoreBaseUrl = window?.appconfig?.appstoreBaseUrl || '';
-export const appstoreEnabled = Boolean(appstoreBaseUrl);
+// Our own DHBW App Store (the FastAPI backend of this project) as a section of
+// this UI. Opt-in: only APP_STORE_ENABLED=true in the container's environment
+// writes appStoreEnabled: true into config.js, so a deployment that has no such
+// backend keeps the upstream behaviour.
+export const appStoreEnabled = window?.appconfig?.appStoreEnabled === true;
+
+// At least one API has to be there for a token to be issuable at all.
+export const apiTokensEnabled = dnsZonesEnabled || cloudProjectsEnabled || llmEnabled;
 
 // Both APIs also speak MCP, so an AI assistant can work on someone's behalf.
 // SEPARATE values, not derived from the base URLs: those may be the BFF paths,

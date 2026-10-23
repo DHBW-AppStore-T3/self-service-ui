@@ -9,16 +9,28 @@ zentrale Freigabe) bereits produktionsreif. Dient aktuell als
 Referenz/Inspiration, nicht als aktiv integrierter Teil des
 AppStore-Systems.
 
-## Integration mit dem AppStore-Backend (supersedes "keine geplante Integration")
+## Zweite UI des AppStore-Backends (supersedes „SSO-Handoff")
 
-Diese Entscheidung wurde durch die 4-Issue-Serie backend#9 / frontend#9 /
-self-service-ui#5 / deployment#43 ersetzt: self-service-ui bekommt einen
-produktionssicheren SSO-Handoff zum AppStore. `openWithSso()`
-(`web/header.jsx`) ruft vor dem Öffnen des App-Store-Popups
-`POST /api/appstore/handoff/mint` auf — von Caddy zum AppStore-Backend
-weitergeleitet (`Caddyfile`, `/api/appstore/*`), das den bereits vom
-oauth2-proxy injizierten Keycloak-Bearer gegen einen kurzlebigen,
-backend-signierten `handoff_token` eintauscht. Der App-Store-Frontend
-vertraut nie einer bloßen E-Mail-Adresse aus einem Query-Parameter,
-nur diesem Token. Helm-Default (`appstoreUpstream`/`appstoreBaseUrl`
-leer) hält das Feature deaktiviert, bis eine Umgebung es explizit setzt.
+Der frühere SSO-Handoff (`openWithSso()`, `/api/appstore/handoff/mint`) ist
+entfernt: das Backend hat den Endpunkt abgeschafft, und ein Popup mit Token in
+der URL war ohnehin die schwächste Lösung. Stattdessen ist die UI selbst eine
+Oberfläche des Backends (`web/app-store/`, aus PR #9 übernommen), mit eigener
+Anmeldung am Keycloak-Realm `dhbw`.
+
+- **Auth: BFF statt Browser-OIDC.** Upstream authentifiziert ausschließlich
+  über einen oauth2-proxy (der Browser hält kein Token). Wir behalten das, statt
+  Browser-OIDC einzubauen: jeder Merge von upstream würde `auth.jsx`,
+  `client.jsx` und `session.jsx` wieder berühren. Der Keycloak-Client
+  `appstore-self-service` ist trotzdem *public* (PKCE S256, kein Secret); der
+  Proxy bekommt nur einen Platzhalter für `client-secret`, den Keycloak
+  ignoriert. Geheim ist allein das Cookie-Secret des Proxys.
+- **Access-Token statt ID-Token.** `injectRequestHeaders` setzt den Access-Token
+  als Bearer; das Backend prüft `azp` (`OIDC_ALLOWED_CLIENTS`) und `aud`.
+- **Opt-in.** `APP_STORE_ENABLED=true` schaltet den Bereich ein; sonst verhält
+  sich die UI wie upstream.
+- **CI.** `docker-image.yml` (Upstream-Release: `:latest`, Helm-Chart-Push, Tags,
+  Retention) entfällt zugunsten von `ci.yml` (Lint, Test, Build, Trivy, Push
+  `ghcr.io/dhbw-appstore-t3/self-service-ui:sha-<commit>`, Roll-out via
+  `deployment/k8s-bump.yml`). Der Upstream-Helm-Chart (`helm-chart/`) bleibt
+  unverändert liegen, wird aber nicht benutzt; unser Chart ist Teil von
+  `deployment/k8s/charts/appstore`.

@@ -1,19 +1,23 @@
 import { useState } from 'react';
 import { Button, Box } from '@mantine/core';
 import { Copy, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import hljs from 'highlight.js/lib/core';
 import yaml from 'highlight.js/lib/languages/yaml';
 import bash from 'highlight.js/lib/languages/bash';
 import ini from 'highlight.js/lib/languages/ini';
+import json from 'highlight.js/lib/languages/json';
 import plaintext from 'highlight.js/lib/languages/plaintext';
 import './codeblock.css';
 
 hljs.registerLanguage('yaml', yaml);
 hljs.registerLanguage('bash', bash);
 hljs.registerLanguage('ini', ini);
+hljs.registerLanguage('json', json);
 hljs.registerLanguage('plaintext', plaintext);
 
 export function CodeBlock({ code, language }) {
+    const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
 
@@ -67,7 +71,7 @@ export function CodeBlock({ code, language }) {
             }}
             role="button"
             tabIndex={0}
-            title={copied ? 'Copied' : 'Click to copy'}
+            title={copied ? t('helper.codeBlock.copied') : t('helper.codeBlock.clickToCopy')}
             style={{ cursor: 'pointer' }}
         >
             <pre style={{
@@ -101,10 +105,10 @@ export function CodeBlock({ code, language }) {
                 // The surface below copies too; without this the click would run
                 // both handlers.
                 onClick={(e) => { e.stopPropagation(); copyToClipboard(code); }}
-                title="Copy code"
+                title={t('helper.codeBlock.copyCode')}
                 leftSection={copied ? <Check size="14" /> : <Copy size="14" />}
             >
-                {copied ? 'Copied' : 'Copy'}
+                {copied ? t('helper.codeBlock.copied') : t('helper.codeBlock.copy')}
             </Button>
         </Box>
     );

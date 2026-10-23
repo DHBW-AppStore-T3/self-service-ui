@@ -1,5 +1,6 @@
 # --- Stage 1: Builder
-FROM node:alpine AS builder
+# The bundle does not depend on the platform, so it is built on the machine that builds (BUILDPLATFORM): native speed on an arm64 Mac instead of emulation.
+FROM --platform=$BUILDPLATFORM node:24-alpine AS builder
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -8,7 +9,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Install project dependencies
-RUN npm install
+# Exactly what package-lock.json pins; fails if the two disagree.
+RUN npm ci
 
 # Copy the rest of the source code (including 'web' directory)
 COPY . .
@@ -42,7 +44,9 @@ EXPOSE 8080
 # kernel refuses to exec a file with capabilities once no_new_privs is set —
 # which is exactly what the pod's allowPrivilegeEscalation: false does. We
 # listen on 8080, so nothing here needs the capability in the first place.
-RUN apk add --no-cache libcap \
+# apk upgrade pulls in fixes for base-image packages (Trivy gate, e.g. brotli-libs).
+RUN apk upgrade --no-cache \
+    && apk add --no-cache libcap \
     && setcap -r /usr/bin/caddy \
     && apk del libcap \
     && chown -R 65532:65532 /srv/www /config /data

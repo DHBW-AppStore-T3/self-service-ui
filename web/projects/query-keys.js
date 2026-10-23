@@ -23,9 +23,19 @@ export const projectKeys = {
     // the first place, and with it the bug that a move left the tree showing
     // two different answers until a reload.
     children: (id, limit) => ['projects', 'tree', 'children', id, limit],
+    // The project table under a budget: one entry per filter, sort and page.
+    budgetProjects: (id, params) => ['projects', 'tree', 'budget-projects', id, params],
     search: (q, offset) => ['projects', 'tree', 'search', q, offset],
     config: () => ['projects', 'config'],
     rootStatus: () => ['projects', 'root-status'],
+    // Root admins' view of the availabilities; a change there also changes
+    // config() (what is offered) and tree() (the stored limits).
+    catalog: () => ['projects', 'catalog'],
+    catalogEntry: (id) => ['projects', 'catalog', id],
+    // Consumption is collected once a day and no write in the tree changes the
+    // past, so it lives outside tree() and is not invalidated by edits.
+    usage: (id, period) => ['projects', 'usage', id, period],
+    usageReport: (period) => ['projects', 'usage-report', period],
     // Deliberately outside tree(): a credential is not a node, and no write in
     // the tree changes the list of tokens.
     apiTokens: () => ['projects', 'api-tokens'],

@@ -36,4 +36,11 @@ if (typeof window !== 'undefined') {
     if (!Element.prototype.scrollIntoView) {
         Element.prototype.scrollIntoView = () => {};
     }
+
+    // An autosizing Textarea re-measures once web fonts have loaded.
+    if (!document.fonts) {
+        Object.defineProperty(document, 'fonts', {
+            value: { addEventListener: () => {}, removeEventListener: () => {} },
+        });
+    }
 }
