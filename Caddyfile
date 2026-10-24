@@ -40,6 +40,14 @@
         reverse_proxy {$CLOUD_RESOURCES_UPSTREAM:openstack-management-api-openstack-management:8083}
     }
 
+    # The API's /internal/ routes (the OpenTofu state backend of the VM
+    # executor) are for the cluster only: never routed from here. More specific
+    # than /api/app-store/*, so Caddy checks it first; the path is matched
+    # decoded and without case, like the frontend's nginx does.
+    handle /api/app-store/internal* {
+        respond 404
+    }
+
     # Our DHBW App Store (the project's FastAPI backend), same-origin under
     # /api/app-store/ with the prefix stripped, as the backend's routes have none.
     # The oauth2-proxy in front injects the user's ACCESS token as the Bearer
