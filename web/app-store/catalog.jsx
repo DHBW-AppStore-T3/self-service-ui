@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
 import { useTranslation } from 'react-i18next';
-import { Badge, Box, Button, Card, Group, Paper, Select, SimpleGrid, Stack, Text, TextInput, Title } from '@mantine/core';
+import { Badge, Box, Button, Card, Chip, Group, Paper, Select, SimpleGrid, Stack, Text, TextInput, Title } from '@mantine/core';
 import { ArrowRight, Search } from 'lucide-react';
-import { filterApps, plainSummary } from './api.js';
+import { DEPARTMENTS, activeCatalogFilter, filterApps, plainSummary } from './api.js';
 import { useApps, useRole } from './queries.jsx';
 import { AppIcon, EmptyState, LegacyLink, StateView } from './shared.jsx';
 
@@ -35,13 +35,24 @@ function AppCard({ app }) {
 export function Catalog() {
     const { t, i18n } = useTranslation();
     const query = useApps();
-    const { staff } = useRole();
+    const { staff, isAdminView } = useRole();
     const [search, setSearch] = useState('');
     const [visibility, setVisibility] = useState('all');
     const [sort, setSort] = useState('name');
+    // null until a chip is clicked: then the default applies (activeCatalogFilter).
+    const [selected, setSelected] = useState(null);
 
-    const apps = filterApps(query.data ?? [], { search, visibility, sort }, i18n.language);
-    const filtered = search.trim() !== '' || visibility !== 'all';
+    const all = query.data ?? [];
+    const filter = activeCatalogFilter(selected, all);
+    // Visibility only matters to whoever manages apps: private ones are the
+    // owner's and the admin's business, a lecturer's catalog has no use for it.
+    const effectiveVisibility = isAdminView ? visibility : 'all';
+    const rules = { search, visibility: effectiveVisibility, sort };
+    const apps = filterApps(all, { ...rules, filter }, i18n.language);
+    const hasRecommended = all.some(app => app.recommended === true);
+    const chips = [...(hasRecommended ? ['recommended'] : []), 'all', ...DEPARTMENTS];
+    const filtered = search.trim() !== '' || effectiveVisibility !== 'all' || filter !== 'all';
+    const departmentEmpty = DEPARTMENTS.includes(filter) && search.trim() === '' && effectiveVisibility === 'all';
 
     return (
         <Stack gap="lg">
@@ -54,16 +65,29 @@ export function Catalog() {
             </Group>
 
             <Paper withBorder p="md">
-                <SimpleGrid cols={{ base: 1, sm: 3 }}>
-                    <TextInput label={t('appStore.search')} placeholder={t('appStore.searchPlaceholder')}
-                        leftSection={<Search size={17} />} value={search} onChange={e => setSearch(e.currentTarget.value)} />
-                    <Select label={t('appStore.visibility')} value={visibility} allowDeselect={false}
-                        onChange={v => setVisibility(v || 'all')}
-                        data={['all', 'public', 'private'].map(value => ({ value, label: t(`appStore.${value}`) }))} />
-                    <Select label={t('appStore.sort')} value={sort} allowDeselect={false}
-                        onChange={v => setSort(v || 'name')}
-                        data={['name', 'newest'].map(value => ({ value, label: t(`appStore.${value}`) }))} />
-                </SimpleGrid>
+                <Stack gap="md">
+                    <SimpleGrid cols={{ base: 1, sm: isAdminView ? 3 : 2 }}>
+                        <TextInput label={t('appStore.search')} placeholder={t('appStore.searchPlaceholder')}
+                            leftSection={<Search size={17} />} value={search} onChange={e => setSearch(e.currentTarget.value)} />
+                        {isAdminView && (
+                            <Select label={t('appStore.visibility')} value={visibility} allowDeselect={false}
+                                onChange={v => setVisibility(v || 'all')}
+                                data={['all', 'public', 'private'].map(value => ({ value, label: t(`appStore.${value}`) }))} />
+                        )}
+                        <Select label={t('appStore.sort')} value={sort} allowDeselect={false}
+                            onChange={v => setSort(v || 'name')}
+                            data={['name', 'newest'].map(value => ({ value, label: t(`appStore.${value}`) }))} />
+                    </SimpleGrid>
+                    <Chip.Group multiple={false} value={filter} onChange={setSelected}>
+                        <Group gap="xs" role="group" aria-label={t('appStore.filterLabel')}>
+                            {chips.map(key => (
+                                <Chip key={key} value={key} variant="outline" size="sm">
+                                    {t(`appStore.categories.${key}`)} ({filterApps(all, { ...rules, filter: key }, i18n.language).length})
+                                </Chip>
+                            ))}
+                        </Group>
+                    </Chip.Group>
+                </Stack>
             </Paper>
 
             <StateView query={query}>
@@ -74,10 +98,12 @@ export function Catalog() {
                     </SimpleGrid>
                 ) : (
                     <EmptyState
-                        title={t(query.data?.length ? 'appStore.noResults' : 'appStore.empty')}
-                        description={t(query.data?.length ? 'appStore.noResultsHint' : 'appStore.emptyHint')}>
+                        title={t(all.length ? 'appStore.noResults' : 'appStore.empty')}
+                        description={departmentEmpty
+                            ? t('appStore.noAppsInDepartment', { department: t(`appStore.categories.${filter}`) })
+                            : t(all.length ? 'appStore.noResultsHint' : 'appStore.emptyHint')}>
                         {filtered && (
-                            <Button variant="subtle" onClick={() => { setSearch(''); setVisibility('all'); }}>
+                            <Button variant="subtle" onClick={() => { setSearch(''); setVisibility('all'); setSelected('all'); }}>
                                 {t('appStore.reset')}
                             </Button>
                         )}

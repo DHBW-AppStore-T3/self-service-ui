@@ -97,5 +97,22 @@
         "intro": "Settings of the App Store section. They apply to your account in this browser only.",
         "adminView": "Admin view",
         "adminViewHint": "Off: you see the App Store the way a lecturer does. On: administrator functions are shown as well."
+    },
+    "categories": {
+        "recommended": "Recommended",
+        "all": "All",
+        "maschinenbau": "Mechanical engineering",
+        "informatik": "Computer science",
+        "elektrotechnik": "Electrical engineering",
+        "wirtschaftsingenieurwesen": "Industrial engineering",
+        "faecheruebergreifend": "Interdisciplinary"
+    },
+    "filterLabel": "Filter by department",
+    "noAppsInDepartment": "No apps are assigned to {{department}} yet.",
+    "recommendedSettings": {
+        "title": "Recommended apps",
+        "description": "Recommended apps appear first in the catalog under the filter “Recommended”.",
+        "empty": "There are no apps to recommend yet.",
+        "switchLabel": "Recommend {{name}}"
     }
 }

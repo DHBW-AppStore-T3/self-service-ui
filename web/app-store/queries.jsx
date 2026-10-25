@@ -159,3 +159,14 @@ export function useCreateDeployment({ onSuccess } = {}) {
         reportErrors: 'inline',
     });
 }
+
+// Admin only: marks an app as recommended or not. Both the list and the
+// detail of apps carry the flag, so both are refetched.
+export function useSetRecommended() {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useApiMutation({
+        mutationFn: ({ appId, recommended }) => api.setRecommended(appId, recommended),
+        invalidates: [[ROOT, userKey, 'apps'], [ROOT, userKey, 'app']],
+    });
+}

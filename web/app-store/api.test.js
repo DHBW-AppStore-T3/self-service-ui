@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
-    accessEntries, createAppStoreApi, deploymentPayload, filterApps, frontendLink, isStaff, plainSummary,
-    quickDeployBlocker, statusColor, versionOptions,
+    accessEntries, activeCatalogFilter, createAppStoreApi, deploymentPayload, departmentsForGitLink, filterApps,
+    frontendLink, isAdmin, isStaff, normalizeGitLink, plainSummary, quickDeployBlocker, statusColor, versionOptions,
 } from './api.js';
 
 const json = (data, init = {}) => new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json' }, ...init });
@@ -70,6 +70,12 @@ describe('roles and status', () => {
         expect(isStaff(undefined)).toBe(false);
     });
 
+    it('counts only admins as admin', () => {
+        expect(isAdmin({ role: 'admin' })).toBe(true);
+        expect(isAdmin({ role: 'teacher' })).toBe(false);
+        expect(isAdmin(undefined)).toBe(false);
+    });
+
     // A deployment without any task has status null; that used to throw.
     it('colours every status, including none', () => {
         expect(statusColor(null)).toBe('gray');
@@ -134,6 +140,74 @@ describe('catalog filter', () => {
         expect(filterApps(apps, { search: '', visibility: 'private', sort: 'name' }, 'de').map(a => a.name)).toEqual(['Alpha']);
         expect(filterApps(apps, { search: '', visibility: 'all', sort: 'name' }, 'de').map(a => a.name)).toEqual(['Alpha', 'Zeta']);
         expect(filterApps(apps, { search: '', visibility: 'all', sort: 'newest' }, 'de').map(a => a.name)).toEqual(['Alpha', 'Zeta']);
+    });
+});
+
+describe('departments', () => {
+    it('brings every spelling of a git link to host/owner/repo', () => {
+        const expected = 'github.com/dhbw-appstore-t3/online-ide';
+        expect(normalizeGitLink('https://github.com/DHBW-AppStore-T3/Online-IDE')).toBe(expected);
+        expect(normalizeGitLink('https://github.com/DHBW-AppStore-T3/Online-IDE.git')).toBe(expected);
+        expect(normalizeGitLink('https://github.com/DHBW-AppStore-T3/Online-IDE.git/')).toBe(expected);
+        expect(normalizeGitLink('https://www.github.com/DHBW-AppStore-T3/Online-IDE/')).toBe(expected);
+        expect(normalizeGitLink('ssh://git@github.com/DHBW-AppStore-T3/Online-IDE.git')).toBe(expected);
+        expect(normalizeGitLink('git@github.com:DHBW-AppStore-T3/Online-IDE.git')).toBe(expected);
+        expect(normalizeGitLink('  ')).toBeNull();
+        expect(normalizeGitLink(null)).toBeNull();
+    });
+
+    it('assigns departments by exact alias, never by name', () => {
+        expect(departmentsForGitLink('https://github.com/DHBW-AppStore-T3/Online-IDE')).toEqual(['informatik']);
+        expect(departmentsForGitLink('https://github.com/DHBW-AppStore/web-latex.git'))
+            .toEqual(['informatik', 'maschinenbau', 'elektrotechnik', 'wirtschaftsingenieurwesen', 'faecheruebergreifend']);
+        // The same repository name under an unknown owner is not the curated app.
+        expect(departmentsForGitLink('https://github.com/someone-else/online-ide')).toEqual([]);
+        expect(departmentsForGitLink(undefined)).toEqual([]);
+    });
+});
+
+describe('catalog filter by department and recommendation', () => {
+    const apps = [
+        { name: 'IDE', git_link: 'https://github.com/DHBW-AppStore-T3/Online-IDE', recommended: true, description: '', is_private: false, created_at: '2026-01-01' },
+        { name: 'LaTeX', git_link: 'https://github.com/DHBW-AppStore-T3/Web-LaTeX', recommended: false, description: '', is_private: false, created_at: '2026-01-02' },
+        { name: 'Unknown', git_link: 'https://example.org/x', recommended: true, description: '', is_private: false, created_at: '2026-01-03' },
+    ];
+    const names = filter => filterApps(apps, { search: '', visibility: 'all', sort: 'name', filter }, 'de').map(a => a.name);
+
+    it('shows everything under all, and only matches under a department or recommended', () => {
+        expect(names('all')).toEqual(['IDE', 'LaTeX', 'Unknown']);
+        expect(names('maschinenbau')).toEqual(['LaTeX']);
+        expect(names('informatik')).toEqual(['IDE', 'LaTeX']);
+        expect(names('recommended')).toEqual(['IDE', 'Unknown']);
+    });
+
+    it('combines the filter with the search', () => {
+        expect(filterApps(apps, { search: 'late', visibility: 'all', sort: 'name', filter: 'informatik' }, 'de').map(a => a.name)).toEqual(['LaTeX']);
+        expect(filterApps(apps, { search: 'late', visibility: 'all', sort: 'name', filter: 'recommended' }, 'de')).toEqual([]);
+    });
+
+    it('treats a missing filter like all', () => {
+        expect(filterApps(apps, { search: '', visibility: 'all', sort: 'name' }, 'de')).toHaveLength(3);
+    });
+
+    it('preselects recommended only while something is recommended and nothing was chosen', () => {
+        expect(activeCatalogFilter(null, apps)).toBe('recommended');
+        expect(activeCatalogFilter(null, apps.map(a => ({ ...a, recommended: false })))).toBe('all');
+        expect(activeCatalogFilter('informatik', apps)).toBe('informatik');
+        expect(activeCatalogFilter('all', apps)).toBe('all');
+        // The last recommendation was withdrawn while the chip was selected.
+        expect(activeCatalogFilter('recommended', apps.map(a => ({ ...a, recommended: false })))).toBe('all');
+    });
+});
+
+describe('recommending an app', () => {
+    it('PUTs the flag to the admin endpoint', async () => {
+        const fetchImpl = vi.fn(async () => json({ appId: 'a/b', recommended: true }));
+        const api = createAppStoreApi({ baseUrl: '/api/app-store', fetchImpl });
+        await api.setRecommended('a/b', true);
+        expect(fetchImpl).toHaveBeenCalledWith('/api/app-store/admin/apps/a%2Fb/recommended', expect.objectContaining({
+            method: 'PUT', body: '{"recommended":true}',
+        }));
     });
 });
 
