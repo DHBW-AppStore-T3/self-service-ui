@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
     accessEntries, activeCatalogFilter, approvedVersionOptions, createAppStoreApi, deployTarget, deploymentPayload,
-    INITIAL_STREAM, applyStreamEvent, cloudNames, credentialState, departmentsForGitLink, filterApps, frontendLink, greetingName, isAdmin, isStaff,
+    INITIAL_STREAM, applyStreamEvent, formatTaskLog, cloudNames, credentialState, departmentsForGitLink, filterApps, frontendLink, greetingName, isAdmin, isStaff,
     normalizeGitLink, plainSummary, quickDeployBlocker, safeNextPath, statusColor, versionOptions,
 } from './api.js';
 
@@ -372,6 +372,31 @@ describe('live log of a deployment', () => {
             '/api/app-store/deployments/d%2F1?include_logs=true',
         ]);
         expect(api.streamUrl('d/1')).toBe('/api/app-store/deployments/d%2F1/stream');
+    });
+});
+
+describe('the stored log of a task', () => {
+    const entries = [
+        { timestamp: '2026-10-24T11:02:44.303Z', level: 'INFO', category: 'phase', message: '=== STARTING ===', correlation_id: 'x' },
+        { timestamp: '2026-10-24T11:02:45.100Z', level: 'ERROR', category: 'tofu', message: 'Error: quota exceeded' },
+    ];
+
+    it('reads the JSON list the worker stores as one line per entry', () => {
+        expect(formatTaskLog(JSON.stringify(entries))).toBe(
+            '2026-10-24 11:02:44 INFO  === STARTING ===\n2026-10-24 11:02:45 ERROR Error: quota exceeded',
+        );
+    });
+
+    it('shows anything else as it is', () => {
+        expect(formatTaskLog('plain text\nsecond line')).toBe('plain text\nsecond line');
+        expect(formatTaskLog('[not json')).toBe('[not json');
+        expect(formatTaskLog('{"a": 1}')).toBe('{"a": 1}');
+        expect(formatTaskLog('[1, 2]')).toBe('[1, 2]');
+        expect(formatTaskLog(null)).toBe('');
+    });
+
+    it('keeps an entry without a message or time readable', () => {
+        expect(formatTaskLog(JSON.stringify([{ level: 'WARN' }, { message: 'hi' }]))).toBe('WARN \nhi');
     });
 });
 

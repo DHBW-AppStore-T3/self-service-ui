@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
-import { act, cleanup, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, within } from '@testing-library/react';
 import { focusManager } from '@tanstack/react-query';
 import '/test/jsdom-stubs.js';
 import { renderView } from '/test/render-harness.jsx';
@@ -226,6 +226,25 @@ describe('deployment detail', () => {
         expect(stream.closed).toBe(true);
         expect(await screen.findByText('Ready')).toBeTruthy();
         expect(calls['/api/app-store/deployments/d1']).toBeGreaterThan(1);
+    });
+
+    it('shows the stored log of a finished task line by line', async () => {
+        const logs = JSON.stringify([
+            { timestamp: '2026-10-24T11:02:44.303Z', level: 'INFO', message: '=== STARTING ===' },
+            { timestamp: '2026-10-24T11:02:50.000Z', level: 'INFO', message: 'Apply complete' },
+        ]);
+        const settled = detail({ permissions: OWNER, status: 'success', latest_task: { ...TASK, status: 'success' } });
+        const { fetch } = server({
+            ...ME('teacher'),
+            '/api/app-store/deployments/d1': settled,
+            '/api/app-store/deployments/d1?include_logs=true': { ...settled, logs },
+            '/api/app-store/tasks/deployment/d1': [],
+        });
+        vi.stubGlobal('fetch', fetch);
+        renderView(<DeploymentDetail params={{ id: 'd1' }} />);
+        fireEvent.click(await screen.findByRole('button', { name: 'Load the full log' }));
+        const log = await screen.findByText(/=== STARTING ===/);
+        expect(log.textContent).toBe('2026-10-24 11:02:44 INFO  === STARTING ===\n2026-10-24 11:02:50 INFO  Apply complete');
     });
 
     it('does not open a stream for a deployment that has settled', async () => {

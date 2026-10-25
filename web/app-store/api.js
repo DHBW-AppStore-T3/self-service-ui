@@ -396,6 +396,29 @@ export function applyStreamEvent(state, name, payload) {
     }
 }
 
+/**
+ * formatTaskLog makes the stored log readable. The worker keeps a task's log as
+ * one JSON list of entries (`timestamp`, `level`, `message`, …), which shown as
+ * it is runs on as a single line; anything that is not such a list is text
+ * already and stays as it is.
+ */
+export function formatTaskLog(logs) {
+    if (!logs) return '';
+    let entries;
+    try {
+        entries = JSON.parse(logs);
+    } catch {
+        return logs;
+    }
+    if (!Array.isArray(entries) || !entries.every(entry => entry && typeof entry === 'object' && !Array.isArray(entry))) return logs;
+    return entries.map(entry => {
+        const time = entry.timestamp ?? entry.iso_timestamp;
+        const stamp = time ? String(time).replace('T', ' ').slice(0, 19) : '';
+        const level = entry.level ? String(entry.level).padEnd(5) : '';
+        return [stamp, level, entry.message ?? ''].filter(part => part !== '').join(' ');
+    }).join('\n');
+}
+
 // ---------------------------------------------------------------------------
 // Access credentials (GET /deployments/{id}/my-access)
 
