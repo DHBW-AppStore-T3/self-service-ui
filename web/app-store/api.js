@@ -151,6 +151,11 @@ export function isStaff(user) {
     return user?.role === 'teacher' || user?.role === 'admin';
 }
 
+// Admins manage the App Store itself: recommendations, versions, approvals.
+export function isAdmin(user) {
+    return user?.role === 'admin';
+}
+
 // ---------------------------------------------------------------------------
 // Deployment status
 

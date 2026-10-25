@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { appStoreEnabled } from '/features.js';
 import { useApiMutation } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useSession } from '/providers/session.jsx';
-import { createAppStoreApi, isStaff, isTransitional } from './api.js';
+import { readAdminView, subscribeAdminView, writeAdminView } from './admin-view.js';
+import { createAppStoreApi, isAdmin, isStaff, isTransitional } from './api.js';
 
 // How often the deployment list refreshes while something is still moving.
 const POLL_MS = 15000;
@@ -51,14 +52,34 @@ export function useMe() {
     });
 }
 
+// The admin-view switch of the signed-in account, as [on, setOn].
+export function useAdminViewSwitch() {
+    const account = useUserKey();
+    const on = useSyncExternalStore(subscribeAdminView, () => readAdminView(account));
+    const setOn = useCallback(value => account && writeAdminView(account, value), [account]);
+    return [on, setOn];
+}
+
 /**
  * useRole answers what the views need to know about the role. While it is
  * unknown (loading, failed), `staff` is false: offering a deploy button the
  * backend would refuse is worse than offering it a moment late.
+ *
+ * `isAdminView` is an admin with the switch on (/app-store/settings). With it
+ * off, an admin is shown the App Store the way a lecturer sees it; the
+ * admin-only parts of a view key off this, not off `admin`.
  */
 export function useRole() {
     const me = useMe();
-    return { staff: isStaff(me.data), student: me.data?.role === 'student', loaded: me.isSuccess };
+    const [adminViewOn] = useAdminViewSwitch();
+    const admin = isAdmin(me.data);
+    return {
+        staff: isStaff(me.data),
+        student: me.data?.role === 'student',
+        admin,
+        isAdminView: admin && adminViewOn,
+        loaded: me.isSuccess,
+    };
 }
 
 export function useApps() {

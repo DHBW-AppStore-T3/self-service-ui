@@ -39,7 +39,7 @@ export function useNav() {
     const { hasPolicy, adminEvents, ownEvents } = useDnsPolicyStatus();
     // Which of the AI service's areas are visible, and how (ai-areas.jsx, shared with the footer).
     const { llm, workspaces, llmArea } = useAiAreasVisible();
-    const { staff: appStoreStaff } = useRole();
+    const { staff: appStoreStaff, admin: appStoreAdmin } = useRole();
 
 
 
@@ -128,7 +128,8 @@ export function useNav() {
                 // The same list either way; a student only ever sees the
                 // environments a teacher gave them access to.
                 { label: t(appStoreStaff ? 'appStore.deployments' : 'appStore.myEnvironments'), href: '/app-store/deployments' },
-            ],
+                appStoreAdmin && { label: t('appStore.settings.title'), href: '/app-store/settings' },
+            ].filter(Boolean),
         },
     ].filter(Boolean).map(s => ({ ...s, href: s.href ?? s.items[0]?.href ?? '/' }));
 

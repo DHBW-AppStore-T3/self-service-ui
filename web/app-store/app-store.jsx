@@ -4,6 +4,7 @@ import { Anchor, Container, Stack, Title } from '@mantine/core';
 import { AppDetail } from './app-detail.jsx';
 import { Catalog } from './catalog.jsx';
 import { Deployments } from './deployments.jsx';
+import { Settings } from './settings.jsx';
 
 // The App Store section, mounted under /app-store (nested router, so the
 // paths below are relative to it). What it covers and what it hands over to
@@ -17,6 +18,7 @@ export function AppStore() {
                 <Route path="/apps" component={Catalog} />
                 <Route path="/apps/:id" component={AppDetail} />
                 <Route path="/deployments" component={Deployments} />
+                <Route path="/settings" component={Settings} />
                 <Route>
                     <Stack>
                         <Title order={2}>{t('app.notFound')}</Title>
