@@ -14,6 +14,8 @@ Jede Session liest dieses Dokument zu Beginn und aktualisiert es vor dem Abschlu
 ---
 
 ## 2. In Arbeit & Nächste Schritte
+- [ ] Epic #22 (App-Store-Bereich auf Stand des Frontends): #15–#20 umgesetzt (siehe `app-store.md`), Doku #21 mit diesem Stand. Offen: echter Live-Lauf des SSE-Logs auf Staging (braucht ein laufendes Deployment und die Rolle Admin/Dozent), Admin-Funktionen auf Staging mit einem Admin-Konto prüfen.
+- [ ] Optional danach: Werthilfen für `@openstack:`-Marker im Wizard, Lifecycle-Aktionen und Pods-Panel auf der Detailseite.
 - [ ] Promotion nach `main`/Prod: Keycloak-Client im Live-Realm `dhbw` von prod anlegen (siehe `deployment/k8s/README.md`, Abschnitt „self-service-ui").
 - [ ] PR #9 (Luminuzz) klären: sein App-Store-Code ist hier übernommen; PR schließen oder auf diesen Stand bringen.
 - [ ] Optional: Playwright-E2E aus PR #9 nachziehen; Upstream-Merge regelmäßig (`git merge upstream/main`).
@@ -28,6 +30,7 @@ Jede Session liest dieses Dokument zu Beginn und aktualisiert es vor dem Abschlu
 ---
 
 ## 4. Letzte Übergaben (Historie)
+- **2026-10-25:** Epic #22: Admin-Ansicht (#15), Fachbereichs-Filter und „Empfohlen“ (#16), Version festlegen (#17), nativer Wizard (#18), Deployment-Detail mit Live-Status (#19), Sie-Form/Begrüßung/Hilfe/Zugangsdaten (#20), Doku (#21). Lokal im Browser mit einem Mock-Backend geprüft; auf Staging als Dozent.
 - **2026-10-23:** upstream 0.8.165 gemerged, SSO-Handoff entfernt, App-Store-Bereich aus PR #9 übernommen, CI + Deployment angelegt.
 - **2026-09-18:** `claude_docs/HANDOVER.md` angelegt und `CLAUDE.md` aktualisiert (Harness System 1.2).
 - **2026-09-17:** GHCR Docker-Tagging in CI auf Lowercase angepasst (#3).
