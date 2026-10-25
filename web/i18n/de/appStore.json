@@ -97,5 +97,22 @@
         "intro": "Einstellungen für den App-Store-Bereich. Sie gelten nur für Ihr Konto in diesem Browser.",
         "adminView": "Admin-Ansicht",
         "adminViewHint": "Aus: Sie sehen den App Store wie eine Lehrperson. An: Zusätzlich werden Funktionen für Administratoren angezeigt."
+    },
+    "categories": {
+        "recommended": "Empfohlen",
+        "all": "Alle",
+        "maschinenbau": "Maschinenbau",
+        "informatik": "Informatik",
+        "elektrotechnik": "Elektrotechnik",
+        "wirtschaftsingenieurwesen": "Wirtschaftsingenieurwesen",
+        "faecheruebergreifend": "Fächerübergreifend"
+    },
+    "filterLabel": "Nach Fachbereich filtern",
+    "noAppsInDepartment": "Für {{department}} sind noch keine Apps zugeordnet.",
+    "recommendedSettings": {
+        "title": "Empfohlene Apps",
+        "description": "Empfohlene Apps erscheinen im Katalog zuerst, unter dem Filter „Empfohlen“.",
+        "empty": "Es gibt noch keine Apps, die empfohlen werden könnten.",
+        "switchLabel": "{{name}} empfehlen"
     }
 }

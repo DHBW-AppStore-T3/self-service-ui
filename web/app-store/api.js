@@ -5,6 +5,10 @@
 // dummy identity is NOT an App Store login — the backend only accepts a real
 // access token, so in that mode every call answers 401.
 
+import { departmentsForGitLink } from './departments.js';
+
+export { DEPARTMENTS, departmentsForGitLink, normalizeGitLink } from './departments.js';
+
 // HTTP statuses the views tell apart.
 export const UNAUTHORIZED = 401;
 export const FORBIDDEN = 403;
@@ -68,6 +72,9 @@ export function createAppStoreApi({ baseUrl, onUnauthorized = () => {}, fetchImp
         deployments: signal => list('/deployments/', signal),
         myAccess: (deploymentId, signal) => request(`/deployments/${id(deploymentId)}/my-access`, { signal }),
         createDeployment: body => request('/deployments/', { method: 'POST', body }),
+        // Admin only (the backend answers 403 to anyone else).
+        setRecommended: (appId, recommended) =>
+            request(`/admin/apps/${id(appId)}/recommended`, { method: 'PUT', body: { recommended } }),
     };
 }
 
@@ -108,11 +115,29 @@ export function frontendLink(baseUrl, path) {
 // ---------------------------------------------------------------------------
 // Catalog
 
-// filterApps applies the search box and the two selects. Search matches name
-// and description, case-insensitively in the UI language.
-export function filterApps(apps, { search, visibility, sort }, locale) {
+// The catalog's first filter: 'recommended', 'all' or one of the departments.
+//
+// `selected` is what the person clicked, or null while they have not. Until they
+// do, recommended is the default — but only while something is recommended: an
+// empty default would be the first thing a lecturer sees.
+export function activeCatalogFilter(selected, apps) {
+    const hasRecommended = apps.some(app => app.recommended === true);
+    if (selected === 'recommended' && !hasRecommended) return 'all';
+    return selected ?? (hasRecommended ? 'recommended' : 'all');
+}
+
+function matchesCatalogFilter(app, filter) {
+    if (filter === 'all') return true;
+    if (filter === 'recommended') return app.recommended === true;
+    return departmentsForGitLink(app.git_link).includes(filter);
+}
+
+// filterApps applies the filter, the search box and the select. Search matches
+// name and description, case-insensitively in the UI language.
+export function filterApps(apps, { search, visibility, sort, filter = 'all' }, locale) {
     const needle = search.trim().toLocaleLowerCase(locale);
     return apps
+        .filter(app => matchesCatalogFilter(app, filter))
         .filter(app => `${app.name} ${app.description || ''}`.toLocaleLowerCase(locale).includes(needle))
         .filter(app => visibility === 'all' || app.is_private === (visibility === 'private'))
         .sort((a, b) => sort === 'newest'
