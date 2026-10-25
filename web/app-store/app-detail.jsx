@@ -37,10 +37,11 @@ function DeployError({ error, appId }) {
  * DeployPanel creates a deployment of this app without teams or inputs.
  *
  * A lecturer chooses no version: they get the one an admin fixed (see
- * deployTarget). Whether that is enough depends on the version: its variables
- * are read from the app's repository, and anything that needs a value hands
- * over to the existing App Store's wizard, which can collect it. Students never
- * see this panel — creating environments is staff work, and the backend refuses it.
+ * deployTarget). Whether one click is enough depends on the version: its
+ * variables are read from the app's repository, and anything that needs a value
+ * leads to the deployment wizard (also offered for teams and other settings).
+ * Students never see this panel — creating environments is staff work, and the
+ * backend refuses it.
  */
 function DeployPanel({ app }) {
     const { t } = useTranslation();
@@ -52,17 +53,10 @@ function DeployPanel({ app }) {
 
     // No version is either "nothing approved yet" or the backend failing to
     // reach the repository (it logs that and answers []). The UI cannot tell
-    // which, so it says both and offers the wizard, which can.
-    if (!version) {
-        return (
-            <Stack gap="sm" align="flex-start">
-                <Text size="sm" c="dimmed">{t('appStore.deploy.noVersions')}</Text>
-                <LegacyLink path={`/apps/${encodeURIComponent(app.appId)}`} size="xs" variant="light">
-                    {t('appStore.deploy.openWizard')}
-                </LegacyLink>
-            </Stack>
-        );
-    }
+    // which, so it says both.
+    if (!version) return <Text size="sm" c="dimmed">{t('appStore.deploy.noVersions')}</Text>;
+
+    const wizardPath = `/apps/${encodeURIComponent(app.appId)}/deploy`;
 
     const blocker = variables.isSuccess ? quickDeployBlocker(variables.data) : null;
     const ready = variables.isSuccess && !blocker && name.trim() !== '';
@@ -82,9 +76,9 @@ function DeployPanel({ app }) {
                 <Alert color="blue" icon={<AlertCircle size={18} />}>
                     <Stack gap="sm">
                         <Text size="sm">{t('appStore.deploy.needsInputs')}</Text>
-                        <LegacyLink path={`/apps/${encodeURIComponent(app.appId)}`} size="xs" variant="light">
+                        <Button component={Link} href={wizardPath} size="xs" variant="light" w="fit-content">
                             {t('appStore.deploy.openWizard')}
-                        </LegacyLink>
+                        </Button>
                     </Stack>
                 </Alert>
             )}
@@ -95,6 +89,7 @@ function DeployPanel({ app }) {
                     onClick={() => create.mutate(deploymentPayload({ name, appId: app.appId, releaseTag: version }))}>
                     {t('appStore.deploy.submit')}
                 </Button>
+                <Button component={Link} href={wizardPath} variant="default">{t('appStore.deploy.wizard')}</Button>
                 <Text size="xs" c="dimmed">{t('appStore.deploy.hint')}</Text>
             </Group>
         </Stack>

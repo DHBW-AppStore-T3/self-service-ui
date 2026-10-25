@@ -75,6 +75,14 @@ export function createAppStoreApi({ baseUrl, onUnauthorized = () => {}, fetchImp
         deployments: signal => list('/deployments/', signal),
         myAccess: (deploymentId, signal) => request(`/deployments/${id(deploymentId)}/my-access`, { signal }),
         createDeployment: body => request('/deployments/', { method: 'POST', body }),
+        // How a version runs: runtime, `scope` ('user' = one VM per person), the
+        // cpu/memory and network choices the author released.
+        appRuntime: (appId, version, signal) => request(`/apps/${id(appId)}/runtime?version=${id(version)}`, { signal }),
+        // Staff only: who can be given access to a deployment.
+        courses: signal => list('/courses/', signal),
+        course: (courseId, signal) => request(`/courses/${id(courseId)}`, { signal }),
+        students: signal => request(`/users/?role=student&limit=1000`, { signal }),
+        searchStudents: (query, signal) => request(`/users/search?query=${encodeURIComponent(query)}&limit=50`, { signal }),
         deployment: (deploymentId, signal) => request(`/deployments/${id(deploymentId)}`, { signal }),
         // Owner view only: every task of the deployment, newest information first.
         deploymentTasks: (deploymentId, signal) => request(`/tasks/deployment/${id(deploymentId)}`, { signal }),
