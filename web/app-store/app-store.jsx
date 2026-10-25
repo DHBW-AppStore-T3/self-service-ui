@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { Anchor, Container, Stack, Title } from '@mantine/core';
 import { AppDetail } from './app-detail.jsx';
 import { Catalog } from './catalog.jsx';
+import { Credentials } from './credentials.jsx';
 import { Deployments } from './deployments.jsx';
+import { Help } from './help.jsx';
 import { Settings } from './settings.jsx';
 
 // The App Store section, mounted under /app-store (nested router, so the
@@ -18,6 +20,8 @@ export function AppStore() {
                 <Route path="/apps" component={Catalog} />
                 <Route path="/apps/:id" component={AppDetail} />
                 <Route path="/deployments" component={Deployments} />
+                <Route path="/credentials" component={Credentials} />
+                <Route path="/help" component={Help} />
                 <Route path="/settings" component={Settings} />
                 <Route>
                     <Stack>

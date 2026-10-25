@@ -6,6 +6,7 @@ import { appStoreEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/feature
 import { hasWorkspaces } from '/gpu/access.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useCloudStatus } from '/projects/cloud-status.jsx';
+import { useGreetingName } from '/app-store/queries.jsx';
 
 // First-run friendly landing page: what this portal offers, one card per
 // service, each with the one button that gets someone started there. Most
@@ -26,6 +27,8 @@ export function Home() {
     const acmeHost = acmeServer.replace(/^https?:\/\//, '').replace(/\/$/, '');
     const { me: llmMe, hasAccess, isAdmin } = useLlmMe();
     const { offered } = useCloudStatus();
+    // "Hello <first name>" where the App Store knows the person; elsewhere the neutral title.
+    const name = useGreetingName();
     // Like the menu: with LLM tokens, or with a budget in reach to get some.
     const withLlm = !!llmMe && (hasAccess || offered.includes('llm'));
     // Like the menu: member of a project with workspaces (or admin), or a budget in reach offers one.
@@ -68,7 +71,7 @@ export function Home() {
         <Container size="lg" py="lg">
             <Stack gap="lg">
                 <div>
-                    <Title order={2}>{t('home.hero.title')}</Title>
+                    <Title order={2}>{name ? t('home.hero.greeting', { name }) : t('home.hero.title')}</Title>
                     <Text size="sm" c="dimmed">{t('home.hero.intro')}</Text>
                 </div>
 
