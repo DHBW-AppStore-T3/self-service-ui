@@ -187,5 +187,41 @@
             "A Windows or VM app does not start? Store your OpenStack credentials first."
         ],
         "credentialsLink": "Store OpenStack credentials"
+    },
+    "detail": {
+        "back": "Back to deployments",
+        "app": "App",
+        "open": "Details",
+        "teams": "Teams",
+        "noTeams": "No teams",
+        "members": "Members",
+        "tasks": "Task history",
+        "taskType": "Task",
+        "taskStatus": "Status",
+        "started": "Started",
+        "finished": "Finished",
+        "taskTypes": {
+            "deploy": "Deploy",
+            "update": "Update",
+            "destroy": "Delete",
+            "pause": "Pause",
+            "resume": "Resume",
+            "redeploy": "Redeploy"
+        },
+        "phase": "Current step: {{phase}}",
+        "progressLabel": "Deployment progress",
+        "credentials": "Your credentials",
+        "waitingStudent": "Your environment is being set up. This page updates by itself.",
+        "failedStudent": "The deployment failed. Please ask your lecturer to look into it.",
+        "failedOwner": "The deployment failed. The log shows why.",
+        "connection": "The connection to the App Store was interrupted. The page shows the last known status and keeps trying.",
+        "liveUnavailable": "The live log is not available right now. The status still updates; the full log can be loaded once the task has ended.",
+        "forbidden": "You have no access to this environment.",
+        "notFound": "This deployment was not found or no longer exists.",
+        "log": "Log",
+        "logWaiting": "Waiting for the first log lines …",
+        "logOverflow": "Only the start of the log is shown live; the full log is available when the task has ended.",
+        "loadLog": "Load the full log",
+        "logEmpty": "There is no log for this deployment yet."
     }
 }

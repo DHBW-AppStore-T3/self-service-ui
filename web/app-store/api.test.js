@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
     accessEntries, activeCatalogFilter, approvedVersionOptions, createAppStoreApi, deployTarget, deploymentPayload,
-    cloudNames, credentialState, departmentsForGitLink, filterApps, frontendLink, greetingName, isAdmin, isStaff,
+    INITIAL_STREAM, applyStreamEvent, cloudNames, credentialState, departmentsForGitLink, filterApps, frontendLink, greetingName, isAdmin, isStaff,
     normalizeGitLink, plainSummary, quickDeployBlocker, safeNextPath, statusColor, versionOptions,
 } from './api.js';
 
@@ -321,6 +321,57 @@ describe('OpenStack credentials', () => {
             ['/api/app-store/me/openstack-credentials/c%2F1/test', 'POST', undefined],
             ['/api/app-store/me/openstack-credentials/c%2F1', 'DELETE', undefined],
         ]);
+    });
+});
+
+describe('live log of a deployment', () => {
+    const apply = (state, ...events) => events.reduce((s, [name, payload]) => applyStreamEvent(s, name, payload), state);
+
+    it('takes phase and progress from the snapshot and from progress events', () => {
+        const state = apply(INITIAL_STREAM,
+            ['snapshot', { status: 'running', current_phase: 'plan', progress_pct: 10 }],
+            ['progress', { current_phase: 'apply', progress_pct: 55 }]);
+        expect(state).toMatchObject({ phase: 'apply', progress: 55, done: null });
+    });
+
+    it('collects log lines and keeps the last ones only', () => {
+        let state = INITIAL_STREAM;
+        for (let i = 0; i < 2100; i++) state = applyStreamEvent(state, 'log', { message: `line ${i}` });
+        expect(state.lines).toHaveLength(2000);
+        expect(state.lines[0]).toBe('line 100');
+        expect(state.lines.at(-1)).toBe('line 2099');
+    });
+
+    it('notes an overflow and the end of the task', () => {
+        expect(apply(INITIAL_STREAM, ['overflow', {}]).overflow).toBe(true);
+        expect(apply(INITIAL_STREAM, ['failed', { message: 'boom' }])).toMatchObject({ done: 'failed' });
+        expect(apply(INITIAL_STREAM, ['succeeded', {}]).done).toBe('succeeded');
+        expect(apply(INITIAL_STREAM, ['revoked', {}]).done).toBe('revoked');
+    });
+
+    it('ends right away on the snapshot of a task that is already over', () => {
+        expect(apply(INITIAL_STREAM, ['snapshot', { status: 'success' }]).done).toBe('succeeded');
+        expect(apply(INITIAL_STREAM, ['snapshot', { status: 'failed' }]).done).toBe('failed');
+        expect(apply(INITIAL_STREAM, ['snapshot', { status: null }]).done).toBe('ended');
+        expect(apply(INITIAL_STREAM, ['snapshot', { status: 'running' }]).done).toBeNull();
+    });
+
+    it('ignores what it does not know', () => {
+        expect(apply(INITIAL_STREAM, ['mystery', { x: 1 }])).toEqual(INITIAL_STREAM);
+    });
+
+    it('reads the deployment and its tasks', async () => {
+        const fetchImpl = vi.fn(async () => json({}));
+        const api = createAppStoreApi({ baseUrl: '/api/app-store/', fetchImpl });
+        await api.deployment('d/1');
+        await api.deploymentTasks('d/1');
+        await api.deploymentLogs('d/1');
+        expect(fetchImpl.mock.calls.map(c => c[0])).toEqual([
+            '/api/app-store/deployments/d%2F1',
+            '/api/app-store/tasks/deployment/d%2F1',
+            '/api/app-store/deployments/d%2F1?include_logs=true',
+        ]);
+        expect(api.streamUrl('d/1')).toBe('/api/app-store/deployments/d%2F1/stream');
     });
 });
 

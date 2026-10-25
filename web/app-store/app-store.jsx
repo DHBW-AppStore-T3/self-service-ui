@@ -4,6 +4,7 @@ import { Anchor, Container, Stack, Title } from '@mantine/core';
 import { AppDetail } from './app-detail.jsx';
 import { Catalog } from './catalog.jsx';
 import { Credentials } from './credentials.jsx';
+import { DeploymentDetail } from './deployment-detail.jsx';
 import { Deployments } from './deployments.jsx';
 import { Help } from './help.jsx';
 import { Settings } from './settings.jsx';
@@ -20,6 +21,7 @@ export function AppStore() {
                 <Route path="/apps" component={Catalog} />
                 <Route path="/apps/:id" component={AppDetail} />
                 <Route path="/deployments" component={Deployments} />
+                <Route path="/deployments/:id" component={DeploymentDetail} />
                 <Route path="/credentials" component={Credentials} />
                 <Route path="/help" component={Help} />
                 <Route path="/settings" component={Settings} />
