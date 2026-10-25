@@ -91,5 +91,11 @@
         "key": "Key",
         "copy": "Copy",
         "none": "There are no credentials for this environment yet – either the deployment is still running, or the app issues no personal accounts."
+    },
+    "settings": {
+        "title": "Settings",
+        "intro": "Settings of the App Store section. They apply to your account in this browser only.",
+        "adminView": "Admin view",
+        "adminViewHint": "Off: you see the App Store the way a lecturer does. On: administrator functions are shown as well."
     }
 }

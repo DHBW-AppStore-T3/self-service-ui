@@ -91,5 +91,11 @@
         "key": "Schlüssel",
         "copy": "Kopieren",
         "none": "Für diese Umgebung gibt es noch keine Zugangsdaten – entweder läuft die Bereitstellung noch, oder die App vergibt keine persönlichen Konten."
+    },
+    "settings": {
+        "title": "Einstellungen",
+        "intro": "Einstellungen für den App-Store-Bereich. Sie gelten nur für Ihr Konto in diesem Browser.",
+        "adminView": "Admin-Ansicht",
+        "adminViewHint": "Aus: Sie sehen den App Store wie eine Lehrperson. An: Zusätzlich werden Funktionen für Administratoren angezeigt."
     }
 }
