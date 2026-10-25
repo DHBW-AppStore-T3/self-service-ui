@@ -130,5 +130,62 @@
         "switchLabel": "Recommend {{name}}"
     },
     "versionsAvailable_one": "{{count}} version available",
-    "versionsAvailable_other": "{{count}} versions available"
+    "versionsAvailable_other": "{{count}} versions available",
+    "credentials": {
+        "title": "OpenStack credentials",
+        "intro": "Deploying virtual machines needs your own OpenStack access. It is stored encrypted and only decrypted while your deployments run.",
+        "guideTitle": "How do I get a clouds.yaml?",
+        "guide1": "Sign in to the OpenStack dashboard.",
+        "guide2": "Open Identity → Application Credentials and create a new one.",
+        "guide3": "Download the clouds.yaml that is offered afterwards; it is shown only once.",
+        "dropTitle": "Drop a clouds.yaml here",
+        "dropHint": "or click to choose the file",
+        "dropReject": "This is not a clouds.yaml, or it is larger than 64 KB.",
+        "chosenFile": "Chosen file: {{name}}",
+        "pasteLabel": "Or paste the contents",
+        "save": "Save and check",
+        "chooseCloud": "This file contains several clouds. Which one should be used?",
+        "cloud": "Cloud",
+        "none": "No credentials stored yet",
+        "noneHint": "Upload your clouds.yaml. It is checked against OpenStack and saved at once.",
+        "stored": "Stored credentials",
+        "project": "Project {{project}}",
+        "states": {
+            "valid": "Valid",
+            "invalid": "Check failed",
+            "unverified": "Not yet verified"
+        },
+        "unverifiedHint": "Stored before projects were checked. Check it once before you deploy.",
+        "activeDeployments_one": "{{count}} active deployment in this project",
+        "activeDeployments_other": "{{count}} active deployments in this project",
+        "test": "Check again",
+        "delete": "Delete",
+        "deleteTitle": "Delete credentials?",
+        "deleteMessage": "The credentials for project {{project}} will be removed.",
+        "saved": "Credentials saved for project {{project}}.",
+        "errors": {
+            "invalid": "OpenStack did not accept these credentials ({{cause}}).",
+            "generic": "The credentials could not be saved: {{message}}",
+            "unreadable": "The file could not be read."
+        }
+    },
+    "help": {
+        "title": "Help",
+        "intro": "Answers to the most common questions about apps, deployments and access data.",
+        "stepsTitle": "How to start a deployment",
+        "steps": [
+            "Open the catalog and choose an app.",
+            "Give the deployment a name. If the app works with teams, assign the students to them.",
+            "Check the settings. The defaults are usually enough; only values without a default must be entered.",
+            "Review the summary and start the deployment.",
+            "Follow the progress under “Deployments”. Students find their access data under “My environments”."
+        ],
+        "problemsTitle": "If something does not work",
+        "problems": [
+            "The deployment does not start? Check whether your quota is used up.",
+            "The deployment failed? Open it under “Deployments” and read the log.",
+            "A Windows or VM app does not start? Store your OpenStack credentials first."
+        ],
+        "credentialsLink": "Store OpenStack credentials"
+    }
 }

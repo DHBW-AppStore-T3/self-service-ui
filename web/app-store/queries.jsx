@@ -5,7 +5,7 @@ import { useApiMutation } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useSession } from '/providers/session.jsx';
 import { readAdminView, subscribeAdminView, writeAdminView } from './admin-view.js';
-import { createAppStoreApi, isAdmin, isStaff, isTransitional } from './api.js';
+import { createAppStoreApi, greetingName, isAdmin, isStaff, isTransitional } from './api.js';
 
 // How often the deployment list refreshes while something is still moving.
 const POLL_MS = 15000;
@@ -196,5 +196,54 @@ export function useSetDeployVersion() {
         mutationFn: ({ appId, versionTag }) => api.setDeployVersion(appId, versionTag),
         // A refusal can mean the approval just ended, so the app is read again.
         onSettled: refresh,
+    });
+}
+
+// What the home page calls the person, or null while the App Store has not
+// answered (or is not part of this deployment): the page keeps its neutral title then.
+export function useGreetingName() {
+    const me = useMe();
+    return greetingName(me.data);
+}
+
+// The caller's stored OpenStack credentials, without secrets.
+export function useCredentials() {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useQuery({
+        queryKey: [ROOT, userKey, 'credentials'],
+        queryFn: ({ signal }) => api.credentials(signal),
+        enabled: Boolean(userKey),
+        retry: false,
+    });
+}
+
+// Errors are shown next to the upload, which is where they can be acted on.
+export function useSaveCredential({ onSuccess } = {}) {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useApiMutation({
+        mutationFn: ({ yaml, cloudName }) => api.saveCredentialFromYaml(yaml, cloudName),
+        invalidates: [[ROOT, userKey, 'credentials']],
+        onSuccess,
+        reportErrors: 'inline',
+    });
+}
+
+export function useTestCredential() {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useApiMutation({
+        mutationFn: credentialId => api.testCredential(credentialId),
+        invalidates: [[ROOT, userKey, 'credentials']],
+    });
+}
+
+export function useDeleteCredential() {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useApiMutation({
+        mutationFn: credentialId => api.deleteCredential(credentialId),
+        invalidates: [[ROOT, userKey, 'credentials']],
     });
 }

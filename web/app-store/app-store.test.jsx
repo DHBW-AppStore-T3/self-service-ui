@@ -250,6 +250,18 @@ describe('App Store views', () => {
             expect(screen.queryByRole('button', { name: /Deploy now/ })).toBeNull();
         });
 
+        it('links a missing OpenStack credential to the native page, back to this app afterwards', async () => {
+            const refusal = new Response(JSON.stringify({ detail: { reason: 'openstack_credentials_missing' } }), { status: 412, headers: { 'content-type': 'application/json' } });
+            const { fetch } = writableBackend('teacher', withVersions(null), () => refusal);
+            vi.stubGlobal('fetch', fetch);
+            renderView(<AppDetail params={{ id: 'ubuntu' }} />);
+            const deploy = await screen.findByRole('button', { name: /Deploy now/ });
+            await vi.waitFor(() => expect(deploy.disabled).toBe(false));
+            fireEvent.click(deploy);
+            const link = await screen.findByRole('link', { name: 'Add credentials' });
+            expect(link.getAttribute('href')).toBe('/credentials?next=%2Fapps%2Fubuntu');
+        });
+
         it('hides versions and the repository from a teacher and from an admin without the admin view', async () => {
             for (const role of ['teacher', 'admin']) {
                 vi.stubGlobal('fetch', backend(role, withVersions(null)));

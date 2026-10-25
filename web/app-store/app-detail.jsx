@@ -14,14 +14,17 @@ import { AppDescription } from './markdown.jsx';
 import { AppIcon, LegacyLink, StateView } from './shared.jsx';
 
 // What a failed create means for the user, and where they can fix it.
-function DeployError({ error }) {
+function DeployError({ error, appId }) {
     const { t } = useTranslation();
     if (error.status === PRECONDITION_FAILED && error.reason === 'openstack_credentials_missing') {
         return (
             <Alert color="yellow" icon={<AlertCircle size={18} />} title={t('appStore.deploy.credentialsMissingTitle')}>
                 <Stack gap="sm">
                     <Text size="sm">{t('appStore.deploy.credentialsMissing')}</Text>
-                    <LegacyLink path="/user/openstack" size="xs" variant="light">{t('appStore.deploy.openCredentials')}</LegacyLink>
+                    <Button component={Link} href={`/credentials?next=${encodeURIComponent(`/apps/${appId}`)}`}
+                        size="xs" variant="light" w="fit-content">
+                        {t('appStore.deploy.openCredentials')}
+                    </Button>
                 </Stack>
             </Alert>
         );
@@ -85,7 +88,7 @@ function DeployPanel({ app }) {
                     </Stack>
                 </Alert>
             )}
-            {create.error && <DeployError error={create.error} />}
+            {create.error && <DeployError error={create.error} appId={app.appId} />}
 
             <Group>
                 <Button leftSection={<Rocket size={16} />} disabled={!ready} loading={create.isPending}

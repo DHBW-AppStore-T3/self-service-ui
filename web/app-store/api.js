@@ -47,6 +47,7 @@ export function createAppStoreApi({ baseUrl, onUnauthorized = () => {}, fetchImp
         });
         if (response.status === UNAUTHORIZED) onUnauthorized();
         if (!response.ok) throw await httpError(response);
+        if (response.status === 204) return null;
         if (!response.headers.get('content-type')?.includes('application/json')) {
             throw new Error('App Store response is not JSON');
         }
@@ -74,6 +75,16 @@ export function createAppStoreApi({ baseUrl, onUnauthorized = () => {}, fetchImp
         deployments: signal => list('/deployments/', signal),
         myAccess: (deploymentId, signal) => request(`/deployments/${id(deploymentId)}/my-access`, { signal }),
         createDeployment: body => request('/deployments/', { method: 'POST', body }),
+        // The caller's OpenStack credentials, one per project, without secrets.
+        credentials: signal => request('/me/openstack-credentials', { signal }),
+        // Keystone checks the credential before anything is stored; 422 says why not.
+        // `cloudName` picks the entry when the file holds several clouds.
+        saveCredentialFromYaml: (cloudsYaml, cloudName) => request('/me/openstack-credentials/from-yaml', {
+            method: 'POST',
+            body: { clouds_yaml: cloudsYaml, ...(cloudName ? { cloud_name: cloudName } : {}) },
+        }),
+        testCredential: credentialId => request(`/me/openstack-credentials/${id(credentialId)}/test`, { method: 'POST' }),
+        deleteCredential: credentialId => request(`/me/openstack-credentials/${id(credentialId)}`, { method: 'DELETE' }),
         // Owner or admin: every approval entry of the app, whatever its status.
         versionApprovals: (appId, signal) => request(`/apps/${id(appId)}/versions`, { signal }),
         // Admin only (the backend answers 403 to anyone else). `null` clears the setting.
@@ -100,6 +111,8 @@ async function httpError(response) {
     const error = new Error(message ? `App Store HTTP ${response.status}: ${message}` : `App Store HTTP ${response.status}`);
     error.status = response.status;
     error.reason = reason;
+    // Structured details beyond the reason, e.g. the `cause` of a refused credential.
+    error.detail = typeof detail === 'object' && detail !== null ? detail : undefined;
     return error;
 }
 
@@ -171,6 +184,57 @@ export function plainSummary(markdown) {
             .trim())
         .filter(Boolean)
         .join(' ');
+}
+
+// ---------------------------------------------------------------------------
+// Greeting
+
+// What the home page calls the person: the first name the App Store has, else
+// the username, else nothing (the page then keeps its neutral title).
+export function greetingName(me) {
+    return me?.firstName?.trim() || me?.username?.trim() || null;
+}
+
+// ---------------------------------------------------------------------------
+// OpenStack credentials
+
+/**
+ * cloudNames lists the clouds a clouds.yaml defines, so the person can pick one
+ * when there are several (the backend wants `cloud_name` then). A plain scan of
+ * the keys under `clouds:`, not a YAML parser: a file it cannot read yields no
+ * names and goes to the backend, which answers with a proper message.
+ */
+export function cloudNames(text) {
+    const lines = String(text ?? '').split(/\r?\n/);
+    const start = lines.findIndex(line => /^clouds:\s*(#.*)?$/.test(line));
+    if (start < 0) return [];
+    const names = [];
+    let indent = null;
+    for (const line of lines.slice(start + 1)) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const lead = line.length - line.trimStart().length;
+        if (lead === 0) break;
+        indent ??= lead;
+        if (lead !== indent) continue;
+        const key = trimmed.match(/^(?:"([^"]+)"|'([^']+)'|([^\s:#"'][^:#]*?))\s*:(?:\s|$)/);
+        if (key) names.push(key[1] ?? key[2] ?? key[3]);
+    }
+    return names;
+}
+
+// 'valid', 'invalid' (Keystone refused it at the last check) or 'unverified'
+// (stored before projects were checked: it cannot be deployed with until it is
+// checked once).
+export function credentialState(credential) {
+    if (credential.last_validation_error) return 'invalid';
+    return credential.project_verified ? 'valid' : 'unverified';
+}
+
+// The page to return to after saving credentials, taken from the address. Only
+// an app page of this section qualifies: the value is whatever the link said.
+export function safeNextPath(path) {
+    return typeof path === 'string' && /^\/apps\/[A-Za-z0-9_.~%-]+(?:\/[a-z-]+)?$/.test(path) ? path : null;
 }
 
 // ---------------------------------------------------------------------------

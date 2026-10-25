@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
     accessEntries, activeCatalogFilter, approvedVersionOptions, createAppStoreApi, deployTarget, deploymentPayload,
-    departmentsForGitLink, filterApps, frontendLink, isAdmin, isStaff, normalizeGitLink, plainSummary,
-    quickDeployBlocker, statusColor, versionOptions,
+    cloudNames, credentialState, departmentsForGitLink, filterApps, frontendLink, greetingName, isAdmin, isStaff,
+    normalizeGitLink, plainSummary, quickDeployBlocker, safeNextPath, statusColor, versionOptions,
 } from './api.js';
 
 const json = (data, init = {}) => new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json' }, ...init });
@@ -266,6 +266,61 @@ describe('the deploy version calls', () => {
         const api = createAppStoreApi({ baseUrl: '/api/app-store', fetchImpl });
         await api.versionApprovals('a/b');
         expect(fetchImpl.mock.calls[0][0]).toBe('/api/app-store/apps/a%2Fb/versions');
+    });
+});
+
+describe('greeting', () => {
+    it('uses the first name, then the username, then nothing', () => {
+        expect(greetingName({ firstName: ' Dozentin ', username: 'dozent.demo' })).toBe('Dozentin');
+        expect(greetingName({ firstName: '  ', username: 'dozent.demo' })).toBe('dozent.demo');
+        expect(greetingName({ firstName: null, username: 'dozent.demo' })).toBe('dozent.demo');
+        expect(greetingName({})).toBeNull();
+        expect(greetingName(undefined)).toBeNull();
+    });
+});
+
+describe('OpenStack credentials', () => {
+    it('names the clouds of a clouds.yaml', () => {
+        const one = 'clouds:\n  openstack:\n    auth:\n      auth_url: https://x\n';
+        const two = '# a comment\nclouds:\n    dhbw:\n        auth:\n            a: b\n    "other-cloud":\n        auth: {}\nextra:\n  nope: 1\n';
+        expect(cloudNames(one)).toEqual(['openstack']);
+        expect(cloudNames(two)).toEqual(['dhbw', 'other-cloud']);
+        expect(cloudNames('nothing: here')).toEqual([]);
+        expect(cloudNames('')).toEqual([]);
+    });
+
+    it('classifies a stored credential', () => {
+        expect(credentialState({ project_verified: true, last_validation_error: null })).toBe('valid');
+        expect(credentialState({ project_verified: false, last_validation_error: null })).toBe('unverified');
+        expect(credentialState({ project_verified: true, last_validation_error: 'auth_failed' })).toBe('invalid');
+    });
+
+    it('lets only app paths through as the place to return to', () => {
+        expect(safeNextPath('/apps/abc')).toBe('/apps/abc');
+        expect(safeNextPath('/apps/a%20b?x=1')).toBeNull();
+        expect(safeNextPath('//evil.example/x')).toBeNull();
+        expect(safeNextPath('https://evil.example')).toBeNull();
+        expect(safeNextPath('javascript:alert(1)')).toBeNull();
+        expect(safeNextPath('apps/abc')).toBeNull();
+        expect(safeNextPath(null)).toBeNull();
+    });
+
+    it('reads, saves from a clouds.yaml, tests and deletes through the backend', async () => {
+        const fetchImpl = vi.fn(async (url, init) => (init?.method === 'DELETE' ? new Response(null, { status: 204 }) : json({ credentialId: 'c1' })));
+        const api = createAppStoreApi({ baseUrl: '/api/app-store', fetchImpl });
+        await api.credentials();
+        await api.saveCredentialFromYaml('clouds: {}', 'dhbw');
+        await api.saveCredentialFromYaml('clouds: {}');
+        await api.testCredential('c/1');
+        expect(await api.deleteCredential('c/1')).toBeNull();
+        const calls = fetchImpl.mock.calls.map(([url, init]) => [url, init.method ?? 'GET', init.body]);
+        expect(calls).toEqual([
+            ['/api/app-store/me/openstack-credentials', 'GET', undefined],
+            ['/api/app-store/me/openstack-credentials/from-yaml', 'POST', '{"clouds_yaml":"clouds: {}","cloud_name":"dhbw"}'],
+            ['/api/app-store/me/openstack-credentials/from-yaml', 'POST', '{"clouds_yaml":"clouds: {}"}'],
+            ['/api/app-store/me/openstack-credentials/c%2F1/test', 'POST', undefined],
+            ['/api/app-store/me/openstack-credentials/c%2F1', 'DELETE', undefined],
+        ]);
     });
 });
 
