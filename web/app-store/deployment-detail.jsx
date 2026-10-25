@@ -3,7 +3,7 @@ import { Link } from 'wouter';
 import { useTranslation } from 'react-i18next';
 import { Alert, Anchor, Badge, Box, Button, Code, Group, Paper, Progress, ScrollArea, Stack, Table, Text, Title } from '@mantine/core';
 import { AlertCircle, ArrowLeft, WifiOff } from 'lucide-react';
-import { isTransitional, statusColor } from './api.js';
+import { formatTaskLog, isTransitional, statusColor } from './api.js';
 import { AccessPanel } from './deployments.jsx';
 import {
     useApps, useDeployment, useDeploymentLogs, useDeploymentStream, useDeploymentTasks,
@@ -90,7 +90,7 @@ function LogPanel({ deploymentId, live, running }) {
     const { t } = useTranslation();
     const [loadFull, setLoadFull] = useState(false);
     const full = useDeploymentLogs(deploymentId, loadFull && !running);
-    const text = running ? live.lines.join('\n') : full.data?.logs;
+    const text = running ? live.lines.join('\n') : formatTaskLog(full.data?.logs);
     return (
         <Paper withBorder p="lg">
             <Stack gap="sm">
