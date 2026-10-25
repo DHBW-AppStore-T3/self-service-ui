@@ -6,7 +6,7 @@ import { Check, Copy, KeyRound, RefreshCw, Server } from 'lucide-react';
 import { CopyableText } from '/helper/copyable-text.jsx';
 import { accessEntries, statusColor } from './api.js';
 import { useApps, useDeployments, useMyAccess, useRole } from './queries.jsx';
-import { EmptyState, LegacyLink, StateView } from './shared.jsx';
+import { EmptyState, StateView } from './shared.jsx';
 
 function CopyIcon({ value }) {
     const { t } = useTranslation();
@@ -60,20 +60,28 @@ function AccessEntry({ entry }) {
     );
 }
 
-// The student's own credentials for one environment. Loaded only while the
-// dialog is open: they are secrets, and most rows are never opened.
+// The caller's own credentials for one environment: one block per account.
+// Loaded only while `enabled`: they are secrets, and most rows are never opened.
+export function AccessPanel({ deploymentId, enabled = true }) {
+    const { t } = useTranslation();
+    const query = useMyAccess(deploymentId, enabled);
+    const entries = accessEntries(query.data);
+    return (
+        <StateView query={query}>
+            {entries.length > 0
+                ? <Stack gap="sm">{entries.map(e => <AccessEntry key={e.key} entry={e} />)}</Stack>
+                : <Text size="sm" c="dimmed">{t('appStore.access.none')}</Text>}
+        </StateView>
+    );
+}
+
+// The student's own credentials for one environment, in a dialog from the list.
 function AccessModal({ deployment, onClose }) {
     const { t } = useTranslation();
-    const query = useMyAccess(deployment?.deploymentId, Boolean(deployment));
-    const entries = accessEntries(query.data);
     return (
         <Modal opened={Boolean(deployment)} onClose={onClose} centered size="lg"
             title={t('appStore.access.title', { name: deployment?.name ?? '' })}>
-            <StateView query={query}>
-                {entries.length > 0
-                    ? <Stack gap="sm">{entries.map(e => <AccessEntry key={e.key} entry={e} />)}</Stack>
-                    : <Text size="sm" c="dimmed">{t('appStore.access.none')}</Text>}
-            </StateView>
+            <AccessPanel deploymentId={deployment?.deploymentId} enabled={Boolean(deployment)} />
         </Modal>
     );
 }
@@ -99,15 +107,16 @@ function DeploymentRow({ deployment, appName, staff, onShowAccess }) {
             </Table.Td>
             <Table.Td>{deployment.created_at ? new Date(deployment.created_at).toLocaleDateString(i18n.language) : '–'}</Table.Td>
             <Table.Td>
-                {staff ? (
-                    <LegacyLink path={`/deployments/${encodeURIComponent(deployment.deploymentId)}`} size="xs" variant="subtle">
-                        {t('appStore.openDeployment')}
-                    </LegacyLink>
-                ) : (
-                    <Button size="xs" variant="light" leftSection={<KeyRound size={14} />} onClick={() => onShowAccess(deployment)}>
-                        {t('appStore.access.show')}
+                <Group gap="xs" wrap="nowrap">
+                    <Button component={Link} href={`/deployments/${encodeURIComponent(deployment.deploymentId)}`} size="xs" variant="subtle">
+                        {t(staff ? 'appStore.openDeployment' : 'appStore.detail.open')}
                     </Button>
-                )}
+                    {!staff && (
+                        <Button size="xs" variant="light" leftSection={<KeyRound size={14} />} onClick={() => onShowAccess(deployment)}>
+                            {t('appStore.access.show')}
+                        </Button>
+                    )}
+                </Group>
             </Table.Td>
         </Table.Tr>
     );

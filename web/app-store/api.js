@@ -75,6 +75,14 @@ export function createAppStoreApi({ baseUrl, onUnauthorized = () => {}, fetchImp
         deployments: signal => list('/deployments/', signal),
         myAccess: (deploymentId, signal) => request(`/deployments/${id(deploymentId)}/my-access`, { signal }),
         createDeployment: body => request('/deployments/', { method: 'POST', body }),
+        deployment: (deploymentId, signal) => request(`/deployments/${id(deploymentId)}`, { signal }),
+        // Owner view only: every task of the deployment, newest information first.
+        deploymentTasks: (deploymentId, signal) => request(`/tasks/deployment/${id(deploymentId)}`, { signal }),
+        // The same detail with the latest task's full log; large, so asked for on demand.
+        deploymentLogs: (deploymentId, signal) =>
+            request(`/deployments/${id(deploymentId)}?include_logs=true`, { signal }),
+        // Server-Sent Events of the latest task (owner view only), for an EventSource.
+        streamUrl: deploymentId => `${root}/deployments/${id(deploymentId)}/stream`,
         // The caller's OpenStack credentials, one per project, without secrets.
         credentials: signal => request('/me/openstack-credentials', { signal }),
         // Keystone checks the credential before anything is stored; 422 says why not.
@@ -335,6 +343,57 @@ export function quickDeployBlocker(variables) {
 // teams and no inputs.
 export function deploymentPayload({ name, appId, releaseTag }) {
     return { name: name.trim(), appId, releaseTag, userInputVar: { tofu: {} }, teams: [] };
+}
+
+// ---------------------------------------------------------------------------
+// Live log (GET /deployments/{id}/stream)
+
+export const INITIAL_STREAM = { phase: null, progress: null, lines: [], overflow: false, done: null };
+
+// More than this and the oldest lines make room: a terraform run can print tens
+// of thousands, and the page only has to show the tail.
+const MAX_LOG_LINES = 2000;
+
+// How a task that is already over ends the stream (its snapshot is all there is).
+const ENDED_BY_TASK_STATUS = { success: 'succeeded', failed: 'failed', cancelled: 'revoked' };
+
+/**
+ * applyStreamEvent folds one Server-Sent Event of the backend into the state of
+ * the live view. Events: `snapshot` (first, with the task's status and phase),
+ * `progress`, `log`, `overflow` (the backend stopped sending log lines),
+ * `started`, and one of `succeeded`/`failed`/`revoked` last. `done` is set by
+ * whatever ends the stream, and is what tells the view to stop listening.
+ */
+export function applyStreamEvent(state, name, payload) {
+    switch (name) {
+        case 'snapshot': {
+            const over = ENDED_BY_TASK_STATUS[payload.status] ?? (payload.status ? null : 'ended');
+            return {
+                ...state,
+                phase: payload.current_phase ?? state.phase,
+                progress: payload.progress_pct ?? state.progress,
+                done: over,
+            };
+        }
+        case 'progress':
+            return {
+                ...state,
+                phase: payload.current_phase ?? payload.phase ?? state.phase,
+                progress: payload.progress_pct ?? payload.percent ?? state.progress,
+            };
+        case 'log': {
+            const lines = [...state.lines, String(payload.message ?? payload.line ?? '')];
+            return { ...state, lines: lines.length > MAX_LOG_LINES ? lines.slice(-MAX_LOG_LINES) : lines };
+        }
+        case 'overflow':
+            return { ...state, overflow: true };
+        case 'succeeded':
+        case 'failed':
+        case 'revoked':
+            return { ...state, done: name };
+        default:
+            return state;
+    }
 }
 
 // ---------------------------------------------------------------------------

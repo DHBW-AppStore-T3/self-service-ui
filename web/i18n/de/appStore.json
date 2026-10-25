@@ -187,5 +187,41 @@
             "Eine Windows- oder VM-App lässt sich nicht starten? Hinterlegen Sie zuerst Ihre OpenStack-Zugangsdaten."
         ],
         "credentialsLink": "OpenStack-Zugangsdaten hinterlegen"
+    },
+    "detail": {
+        "back": "Zurück zu den Deployments",
+        "app": "App",
+        "open": "Details",
+        "teams": "Teams",
+        "noTeams": "Keine Teams",
+        "members": "Mitglieder",
+        "tasks": "Verlauf der Aufgaben",
+        "taskType": "Aufgabe",
+        "taskStatus": "Status",
+        "started": "Gestartet",
+        "finished": "Beendet",
+        "taskTypes": {
+            "deploy": "Bereitstellen",
+            "update": "Aktualisieren",
+            "destroy": "Löschen",
+            "pause": "Pausieren",
+            "resume": "Fortsetzen",
+            "redeploy": "Neu bereitstellen"
+        },
+        "phase": "Aktueller Schritt: {{phase}}",
+        "progressLabel": "Fortschritt der Bereitstellung",
+        "credentials": "Ihre Zugangsdaten",
+        "waitingStudent": "Ihre Umgebung wird eingerichtet. Diese Seite aktualisiert sich von selbst.",
+        "failedStudent": "Die Bereitstellung ist fehlgeschlagen. Bitte wenden Sie sich an Ihre Lehrperson.",
+        "failedOwner": "Die Bereitstellung ist fehlgeschlagen. Das Protokoll zeigt, warum.",
+        "connection": "Die Verbindung zum App-Store wurde unterbrochen. Die Seite zeigt den zuletzt bekannten Stand und versucht es weiter.",
+        "liveUnavailable": "Das Live-Protokoll ist gerade nicht verfügbar. Der Status aktualisiert sich weiter; das vollständige Protokoll lässt sich laden, sobald die Aufgabe beendet ist.",
+        "forbidden": "Sie haben keinen Zugriff auf diese Umgebung.",
+        "notFound": "Dieses Deployment wurde nicht gefunden oder existiert nicht mehr.",
+        "log": "Protokoll",
+        "logWaiting": "Warte auf die ersten Protokollzeilen …",
+        "logOverflow": "Live wird nur der Anfang des Protokolls gezeigt; das vollständige Protokoll gibt es, sobald die Aufgabe beendet ist.",
+        "loadLog": "Vollständiges Protokoll laden",
+        "logEmpty": "Für dieses Deployment gibt es noch kein Protokoll."
     }
 }
