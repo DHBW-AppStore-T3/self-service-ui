@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
-    accessEntries, activeCatalogFilter, createAppStoreApi, deploymentPayload, departmentsForGitLink, filterApps,
-    frontendLink, isAdmin, isStaff, normalizeGitLink, plainSummary, quickDeployBlocker, statusColor, versionOptions,
+    accessEntries, activeCatalogFilter, approvedVersionOptions, createAppStoreApi, deployTarget, deploymentPayload,
+    departmentsForGitLink, filterApps, frontendLink, isAdmin, isStaff, normalizeGitLink, plainSummary,
+    quickDeployBlocker, statusColor, versionOptions,
 } from './api.js';
 
 const json = (data, init = {}) => new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json' }, ...init });
@@ -197,6 +198,74 @@ describe('catalog filter by department and recommendation', () => {
         expect(activeCatalogFilter('all', apps)).toBe('all');
         // The last recommendation was withdrawn while the chip was selected.
         expect(activeCatalogFilter('recommended', apps.map(a => ({ ...a, recommended: false })))).toBe('all');
+    });
+});
+
+describe('which version gets deployed', () => {
+    const versions = [
+        { version: 'v2.0-rc1', name: 'v2.0-rc1', prerelease: 'True' },
+        { version: 'v1.1', name: 'v1.1', prerelease: 'False' },
+        { version: 'v1.0', name: 'v1.0', prerelease: 'False' },
+    ];
+
+    it('takes the version an admin fixed', () => {
+        expect(deployTarget({ versions, deploy_version: 'v1.0' })).toEqual({ version: 'v1.0', fixed: true });
+    });
+
+    it('falls back to the first stable version while nothing is fixed', () => {
+        expect(deployTarget({ versions, deploy_version: null })).toEqual({ version: 'v1.1', fixed: false });
+        expect(deployTarget({ versions })).toEqual({ version: 'v1.1', fixed: false });
+    });
+
+    it('ignores a fixed version the list no longer offers', () => {
+        expect(deployTarget({ versions, deploy_version: 'v0.9' })).toEqual({ version: 'v1.1', fixed: false });
+    });
+
+    it('has no target without any version', () => {
+        expect(deployTarget({ versions: [], deploy_version: 'v1.0' })).toEqual({ version: null, fixed: false });
+        expect(deployTarget({})).toEqual({ version: null, fixed: false });
+    });
+});
+
+describe('versions an admin can fix', () => {
+    const versions = [
+        { version: 'v1.2', name: 'v1.2', prerelease: 'False' },
+        { version: 'v1.1', name: 'Second', prerelease: 'False' },
+        { version: 'v1.0', name: 'v1.0', prerelease: 'False' },
+    ];
+    const approvals = [
+        { version_tag: 'v1.2', status: 'pending' },
+        { version_tag: 'v1.1', status: 'approved' },
+        { version_tag: 'v1.0', status: 'rejected' },
+        { version_tag: 'v0.1', status: 'approved' },
+    ];
+
+    it('offers only approved versions that the repository still lists', () => {
+        expect(approvedVersionOptions(versions, approvals).map(o => o.value)).toEqual(['v1.1']);
+        expect(approvedVersionOptions(versions, approvals)[0].label).toBe('v1.1 – Second');
+    });
+
+    it('offers nothing while the approvals are unknown', () => {
+        expect(approvedVersionOptions(versions, undefined)).toEqual([]);
+    });
+});
+
+describe('the deploy version calls', () => {
+    it('PUTs the version, and null to clear it', async () => {
+        const fetchImpl = vi.fn(async () => json({ appId: 'a' }));
+        const api = createAppStoreApi({ baseUrl: '/api/app-store', fetchImpl });
+        await api.setDeployVersion('a/b', 'v1.1');
+        await api.setDeployVersion('a/b', null);
+        expect(fetchImpl.mock.calls[0][0]).toBe('/api/app-store/admin/apps/a%2Fb/deploy-version');
+        expect(fetchImpl.mock.calls[0][1]).toMatchObject({ method: 'PUT', body: '{"version_tag":"v1.1"}' });
+        expect(fetchImpl.mock.calls[1][1]).toMatchObject({ body: '{"version_tag":null}' });
+    });
+
+    it('reads the approvals of an app', async () => {
+        const fetchImpl = vi.fn(async () => json([]));
+        const api = createAppStoreApi({ baseUrl: '/api/app-store', fetchImpl });
+        await api.versionApprovals('a/b');
+        expect(fetchImpl.mock.calls[0][0]).toBe('/api/app-store/apps/a%2Fb/versions');
     });
 });
 

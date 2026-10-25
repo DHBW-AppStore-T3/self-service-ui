@@ -13,7 +13,9 @@ export { DEPARTMENTS, departmentsForGitLink, normalizeGitLink } from './departme
 export const UNAUTHORIZED = 401;
 export const FORBIDDEN = 403;
 export const NOT_FOUND = 404;
+export const CONFLICT = 409;
 export const PRECONDITION_FAILED = 412;
+export const BAD_GATEWAY = 502;
 
 // The backend's page size limit; `list` walks pages of this size.
 const PAGE_SIZE = 100;
@@ -72,6 +74,11 @@ export function createAppStoreApi({ baseUrl, onUnauthorized = () => {}, fetchImp
         deployments: signal => list('/deployments/', signal),
         myAccess: (deploymentId, signal) => request(`/deployments/${id(deploymentId)}/my-access`, { signal }),
         createDeployment: body => request('/deployments/', { method: 'POST', body }),
+        // Owner or admin: every approval entry of the app, whatever its status.
+        versionApprovals: (appId, signal) => request(`/apps/${id(appId)}/versions`, { signal }),
+        // Admin only (the backend answers 403 to anyone else). `null` clears the setting.
+        setDeployVersion: (appId, versionTag) =>
+            request(`/admin/apps/${id(appId)}/deploy-version`, { method: 'PUT', body: { version_tag: versionTag } }),
         // Admin only (the backend answers 403 to anyone else).
         setRecommended: (appId, recommended) =>
             request(`/admin/apps/${id(appId)}/recommended`, { method: 'PUT', body: { recommended } }),
@@ -215,6 +222,32 @@ export function versionOptions(versions) {
         .filter(v => v && typeof v.version === 'string' && v.version)
         .map(v => ({ value: v.version, label: v.name && v.name !== v.version ? `${v.version} – ${v.name}` : v.version, prerelease: v.prerelease === 'True' }))
         .sort((a, b) => Number(a.prerelease) - Number(b.prerelease));
+}
+
+/**
+ * deployTarget is the version a lecturer deploys: the one an admin fixed, while
+ * the list still offers it, otherwise the first of the list (stable releases
+ * first) — what lecturers got before anything could be fixed, and what keeps
+ * them from being blocked by an admin who has not got round to it. `fixed` says
+ * which of the two it is; `version` is null when there is nothing to deploy.
+ */
+export function deployTarget(app) {
+    const options = versionOptions(app?.versions);
+    const fixed = app?.deploy_version;
+    if (fixed && options.some(option => option.value === fixed)) return { version: fixed, fixed: true };
+    return { version: options[0]?.value ?? null, fixed: false };
+}
+
+/**
+ * approvedVersionOptions lists what an admin may fix as the deploy version:
+ * versions the repository still lists that have an approved entry. The backend
+ * checks again (the tag may have moved) and refuses with 409 if not. Without
+ * the approvals there is nothing to offer.
+ */
+export function approvedVersionOptions(versions, approvals) {
+    if (!approvals) return [];
+    const approved = new Set(approvals.filter(a => a.status === 'approved').map(a => a.version_tag));
+    return versionOptions(versions).filter(option => approved.has(option.value));
 }
 
 /**

@@ -80,7 +80,21 @@
         "credentialsMissing": "Deploying needs your OpenStack credentials on file.",
         "openCredentials": "Add credentials",
         "forbidden": "Your account may not deploy this app.",
-        "failed": "Deployment failed"
+        "failed": "Deployment failed",
+        "versionTitle": "Version for lecturers",
+        "setVersion": "Set version",
+        "clearVersion": "Clear setting",
+        "versionFixed": "Lecturers deploy {{version}}, fixed by an admin.",
+        "versionNotFixed": "No version is fixed. Lecturers deploy {{version}}, the first one in the list.",
+        "versionNone": "There is no approved version to fix yet. Versions are approved in the existing App Store.",
+        "manageVersions": "Manage versions",
+        "setVersionHint": "Saving fixes the version for all lecturers. It does not start a deployment; switch off the admin view to see the deploy form.",
+        "errors": {
+            "version_not_approved": "Only an approved version can be fixed. This one is pending, rejected or from before versions were pinned to a commit.",
+            "version_moved": "The tag now points to a different commit than the approved one. Submit the version again and have it approved.",
+            "notFound": "This version has no approval entry.",
+            "badGateway": "The app's repository could not be read. Please try again later."
+        }
     },
     "access": {
         "title": "Credentials: {{name}}",
@@ -114,5 +128,7 @@
         "description": "Recommended apps appear first in the catalog under the filter “Recommended”.",
         "empty": "There are no apps to recommend yet.",
         "switchLabel": "Recommend {{name}}"
-    }
+    },
+    "versionsAvailable_one": "{{count}} version available",
+    "versionsAvailable_other": "{{count}} versions available"
 }

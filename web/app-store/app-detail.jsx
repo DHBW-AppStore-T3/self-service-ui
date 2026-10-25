@@ -3,8 +3,13 @@ import { Link, useLocation } from 'wouter';
 import { useTranslation } from 'react-i18next';
 import { Alert, Anchor, Badge, Box, Button, Divider, Group, Loader, Paper, Select, Stack, Text, TextInput, Title } from '@mantine/core';
 import { AlertCircle, ArrowLeft, Rocket } from 'lucide-react';
-import { FORBIDDEN, PRECONDITION_FAILED, deploymentPayload, quickDeployBlocker, versionOptions } from './api.js';
-import { useApp, useAppVariables, useCreateDeployment, useRole } from './queries.jsx';
+import {
+    BAD_GATEWAY, CONFLICT, FORBIDDEN, NOT_FOUND, PRECONDITION_FAILED, approvedVersionOptions, deployTarget, deploymentPayload,
+    quickDeployBlocker,
+} from './api.js';
+import {
+    useApp, useAppVariables, useCreateDeployment, useRole, useSetDeployVersion, useVersionApprovals,
+} from './queries.jsx';
 import { AppDescription } from './markdown.jsx';
 import { AppIcon, LegacyLink, StateView } from './shared.jsx';
 
@@ -28,24 +33,24 @@ function DeployError({ error }) {
 /**
  * DeployPanel creates a deployment of this app without teams or inputs.
  *
- * Whether that is enough depends on the version: its variables are read from
- * the app's repository, and anything that needs a value hands over to the
- * existing App Store's wizard, which can collect it. Students never see this
- * panel — creating environments is staff work, and the backend refuses it.
+ * A lecturer chooses no version: they get the one an admin fixed (see
+ * deployTarget). Whether that is enough depends on the version: its variables
+ * are read from the app's repository, and anything that needs a value hands
+ * over to the existing App Store's wizard, which can collect it. Students never
+ * see this panel — creating environments is staff work, and the backend refuses it.
  */
 function DeployPanel({ app }) {
     const { t } = useTranslation();
     const [, navigate] = useLocation();
-    const versions = versionOptions(app.versions);
-    const [version, setVersion] = useState(versions[0]?.value ?? null);
+    const { version } = deployTarget(app);
     const [name, setName] = useState(app.name);
     const variables = useAppVariables(app.appId, version);
     const create = useCreateDeployment({ onSuccess: () => navigate('/deployments') });
 
-    // An empty list is either "nothing approved yet" or the backend failing
-    // to reach the repository (it logs that and answers []). The UI cannot
-    // tell which, so it says both and offers the wizard, which can.
-    if (versions.length === 0) {
+    // No version is either "nothing approved yet" or the backend failing to
+    // reach the repository (it logs that and answers []). The UI cannot tell
+    // which, so it says both and offers the wizard, which can.
+    if (!version) {
         return (
             <Stack gap="sm" align="flex-start">
                 <Text size="sm" c="dimmed">{t('appStore.deploy.noVersions')}</Text>
@@ -61,12 +66,8 @@ function DeployPanel({ app }) {
 
     return (
         <Stack gap="md">
-            <Group grow align="flex-start">
-                <Select label={t('appStore.deploy.version')} data={versions} value={version}
-                    onChange={setVersion} allowDeselect={false} />
-                <TextInput label={t('appStore.deploy.name')} value={name} required
-                    onChange={e => setName(e.currentTarget.value)} />
-            </Group>
+            <TextInput label={t('appStore.deploy.name')} value={name} required
+                onChange={e => setName(e.currentTarget.value)} />
 
             {variables.isPending && (
                 <Group gap="xs"><Loader size="xs" /><Text size="sm" c="dimmed">{t('appStore.deploy.checking')}</Text></Group>
@@ -97,14 +98,79 @@ function DeployPanel({ app }) {
     );
 }
 
+// Why fixing a version was refused, in the words of the cause.
+function versionError(error, t) {
+    if (error.status === CONFLICT && error.reason) {
+        return t(`appStore.deploy.errors.${error.reason}`, { defaultValue: error.message });
+    }
+    if (error.status === NOT_FOUND) return t('appStore.deploy.errors.notFound');
+    if (error.status === BAD_GATEWAY) return t('appStore.deploy.errors.badGateway');
+    if (error.status === FORBIDDEN) return t('appStore.deploy.forbidden');
+    return error.message;
+}
+
+/**
+ * AdminVersionPanel is what the admin view shows instead of the deploy form:
+ * which version lecturers deploy, and the means to change it. Only approved
+ * versions are offered; the backend refuses the rest as well. Approving and
+ * rejecting versions stays in the existing App Store.
+ */
+function AdminVersionPanel({ app }) {
+    const { t } = useTranslation();
+    const approvals = useVersionApprovals(app.appId, true);
+    const save = useSetDeployVersion();
+    const options = approvedVersionOptions(app.versions, approvals.data);
+    const [chosen, setChosen] = useState(null);
+    const wanted = chosen ?? app.deploy_version;
+    const value = options.some(option => option.value === wanted) ? wanted : (options[0]?.value ?? null);
+    const target = deployTarget(app);
+
+    return (
+        <Stack gap="md" align="flex-start">
+            <Text size="sm">
+                {target.version
+                    ? t(target.fixed ? 'appStore.deploy.versionFixed' : 'appStore.deploy.versionNotFixed', { version: target.version })
+                    : t('appStore.deploy.noVersions')}
+            </Text>
+            {approvals.isPending && <Group gap="xs"><Loader size="xs" /><Text size="sm" c="dimmed">{t('appStore.loading')}</Text></Group>}
+            {approvals.isError && <Text size="sm" c="red">{t('appStore.errors.errorMessage')}</Text>}
+            {approvals.isSuccess && options.length === 0 && <Text size="sm" c="dimmed">{t('appStore.deploy.versionNone')}</Text>}
+            {options.length > 0 && (
+                <Select label={t('appStore.deploy.version')} data={options} value={value} allowDeselect={false}
+                    onChange={setChosen} maw={320} w="100%" />
+            )}
+            {save.error && (
+                <Alert color="red" icon={<AlertCircle size={18} />} title={t('appStore.deploy.failed')} role="alert">
+                    {versionError(save.error, t)}
+                </Alert>
+            )}
+            <Group>
+                <Button disabled={!value} loading={save.isPending && save.variables?.versionTag !== null}
+                    onClick={() => save.mutate({ appId: app.appId, versionTag: value })}>
+                    {t('appStore.deploy.setVersion')}
+                </Button>
+                <Button variant="subtle" color="gray" disabled={!app.deploy_version}
+                    loading={save.isPending && save.variables?.versionTag === null}
+                    onClick={() => save.mutate({ appId: app.appId, versionTag: null })}>
+                    {t('appStore.deploy.clearVersion')}
+                </Button>
+                <LegacyLink path={`/apps/${encodeURIComponent(app.appId)}`} size="xs" variant="default">
+                    {t('appStore.deploy.manageVersions')}
+                </LegacyLink>
+            </Group>
+            <Text size="xs" c="dimmed">{t('appStore.deploy.setVersionHint')}</Text>
+        </Stack>
+    );
+}
+
 export function AppDetail({ params }) {
     const { t } = useTranslation();
     const query = useApp(params.id);
-    const { staff, loaded } = useRole();
+    const { staff, loaded, isAdminView } = useRole();
     const app = query.data;
     // Only http(s): the link is rendered as an anchor, and the field is
     // whatever the app's author typed.
-    const repository = app?.git_link && /^https?:\/\//i.test(app.git_link) ? app.git_link : null;
+    const repository = isAdminView && app?.git_link && /^https?:\/\//i.test(app.git_link) ? app.git_link : null;
 
     return (
         <Stack gap="lg">
@@ -121,6 +187,11 @@ export function AppDetail({ params }) {
                                     <Title order={1} size="h2">{app.name}</Title>
                                     <Group mt="xs">
                                         {app.releaseTag && <Badge variant="light">{t('appStore.version')} {app.releaseTag}</Badge>}
+                                        {isAdminView && (
+                                            <Badge color="gray" variant="light">
+                                                {t('appStore.versionsAvailable', { count: app.versions?.length ?? 0 })}
+                                            </Badge>
+                                        )}
                                         <Badge color="gray" variant="light">
                                             {t(app.is_private ? 'appStore.private' : 'appStore.public')}
                                         </Badge>
@@ -142,8 +213,8 @@ export function AppDetail({ params }) {
                             {loaded && (
                                 <>
                                     <Divider />
-                                    <Title order={2} size="h4">{t('appStore.deploy.title')}</Title>
-                                    {staff ? <DeployPanel app={app} /> : (
+                                    <Title order={2} size="h4">{t(isAdminView ? 'appStore.deploy.versionTitle' : 'appStore.deploy.title')}</Title>
+                                    {isAdminView ? <AdminVersionPanel app={app} /> : staff ? <DeployPanel app={app} /> : (
                                         <Stack gap="xs">
                                             <Text size="sm">{t('appStore.deploy.studentHint')}</Text>
                                             <Anchor component={Link} href="/deployments" size="sm">

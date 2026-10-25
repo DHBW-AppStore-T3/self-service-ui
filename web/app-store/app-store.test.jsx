@@ -29,6 +29,28 @@ const CURATED_APPS = [
     { ...APPS[1], appId: 'private', name: 'Private lab', git_link: 'https://example.org/lab', recommended: false },
 ];
 const APP = { ...APPS[0], git_link: 'https://github.com/example/ubuntu', versions: [{ version: 'v1.0', name: 'v1.0', prerelease: 'False' }] };
+const TWO_VERSIONS = [{ version: 'v1.1', name: 'v1.1', prerelease: 'False' }, { version: 'v1.0', name: 'v1.0', prerelease: 'False' }];
+const APPROVALS = [
+    { approvalId: 'x1', version_tag: 'v1.1', status: 'approved' },
+    { approvalId: 'x2', version_tag: 'v1.0', status: 'pending' },
+];
+
+// A backend that also answers writes: PUT and POST bodies are recorded in `sent`.
+function writableBackend(role, overrides = {}, answerFor = () => null) {
+    const sent = [];
+    const base = backend(role, overrides);
+    const fetch = vi.fn(async (url, init = {}) => {
+        if (init.method === 'PUT' || init.method === 'POST') {
+            const path = new URL(url, 'http://localhost').pathname;
+            sent.push({ method: init.method, path, body: JSON.parse(init.body) });
+            const answer = answerFor(path, init);
+            if (answer) return answer;
+            return new Response(JSON.stringify({}), { status: init.method === 'POST' ? 201 : 200, headers: { 'content-type': 'application/json' } });
+        }
+        return base(url, init);
+    });
+    return { fetch, sent };
+}
 const DEPLOYMENTS = [{ deploymentId: 'd1', appId: 'ubuntu', name: 'Linux course', status: 'success', created_at: '2026-09-29' }];
 const ACCESS = { user_accounts: { 'Team-1-anna': { username: 'anna', ip: '10.0.0.5', port: 22, auth: 's3cret', type: 'password', protocol: 'ssh' } }, team_vms: {} };
 
@@ -190,6 +212,103 @@ describe('App Store views', () => {
                 expect(put[0]).toBe('/api/app-store/admin/apps/latex/recommended');
                 expect(JSON.parse(put[1].body)).toEqual({ recommended: true });
             });
+        });
+    });
+
+    describe('which version is deployed', () => {
+        const withVersions = deploy_version => ({
+            '/api/app-store/apps/ubuntu': { ...APP, versions: TWO_VERSIONS, deploy_version },
+        });
+
+        it('does not offer a teacher a version, and deploys the one an admin fixed', async () => {
+            const { fetch, sent } = writableBackend('teacher', withVersions('v1.0'));
+            vi.stubGlobal('fetch', fetch);
+            renderView(<AppDetail params={{ id: 'ubuntu' }} />);
+            const deploy = await screen.findByRole('button', { name: /Deploy now/ });
+            await vi.waitFor(() => expect(deploy.disabled).toBe(false));
+            expect(screen.queryAllByLabelText('Version')).toHaveLength(0);
+
+            fireEvent.click(deploy);
+            await vi.waitFor(() => expect(sent).toHaveLength(1));
+            expect(sent[0]).toMatchObject({ path: '/api/app-store/deployments/', body: { releaseTag: 'v1.0', appId: 'ubuntu' } });
+        });
+
+        it('deploys the first version while none is fixed', async () => {
+            const { fetch, sent } = writableBackend('teacher', withVersions(null));
+            vi.stubGlobal('fetch', fetch);
+            renderView(<AppDetail params={{ id: 'ubuntu' }} />);
+            const deploy = await screen.findByRole('button', { name: /Deploy now/ });
+            await vi.waitFor(() => expect(deploy.disabled).toBe(false));
+            fireEvent.click(deploy);
+            await vi.waitFor(() => expect(sent[0].body.releaseTag).toBe('v1.1'));
+        });
+
+        it('explains instead of failing when the app has no deployable version', async () => {
+            vi.stubGlobal('fetch', backend('teacher', { '/api/app-store/apps/ubuntu': { ...APP, versions: [], deploy_version: null } }));
+            renderView(<AppDetail params={{ id: 'ubuntu' }} />);
+            expect(await screen.findByText(/No deployable version/)).toBeTruthy();
+            expect(screen.queryByRole('button', { name: /Deploy now/ })).toBeNull();
+        });
+
+        it('hides versions and the repository from a teacher and from an admin without the admin view', async () => {
+            for (const role of ['teacher', 'admin']) {
+                vi.stubGlobal('fetch', backend(role, withVersions(null)));
+                const view = renderView(<AppDetail params={{ id: 'ubuntu' }} />);
+                await screen.findByRole('button', { name: /Deploy now/ });
+                expect(screen.queryByText('2 versions available')).toBeNull();
+                expect(screen.queryByText(/Open source repository/)).toBeNull();
+                expect(screen.queryByRole('button', { name: /Set version/ })).toBeNull();
+                view.unmount();
+            }
+        });
+
+        it('lets an admin in the admin view fix an approved version, without starting a deployment', async () => {
+            adminViewOn();
+            const { fetch, sent } = writableBackend('admin', {
+                ...withVersions(null),
+                '/api/app-store/apps/ubuntu/versions': APPROVALS,
+            });
+            vi.stubGlobal('fetch', fetch);
+            renderView(<AppDetail params={{ id: 'ubuntu' }} />);
+
+            expect(await screen.findByText('2 versions available')).toBeTruthy();
+            expect(screen.getByText(/Open source repository/)).toBeTruthy();
+            expect(screen.queryByRole('button', { name: /Deploy now/ })).toBeNull();
+
+            const save = await screen.findByRole('button', { name: /Set version/ });
+            await vi.waitFor(() => expect(save.disabled).toBe(false));
+            fireEvent.click(save);
+            await vi.waitFor(() => expect(sent).toHaveLength(1));
+            expect(sent[0]).toMatchObject({ method: 'PUT', path: '/api/app-store/admin/apps/ubuntu/deploy-version', body: { version_tag: 'v1.1' } });
+        });
+
+        it('tells the admin why a version cannot be fixed', async () => {
+            adminViewOn();
+            const conflict = new Response(JSON.stringify({ detail: { reason: 'version_moved' } }), { status: 409, headers: { 'content-type': 'application/json' } });
+            const { fetch } = writableBackend('admin', {
+                ...withVersions(null),
+                '/api/app-store/apps/ubuntu/versions': APPROVALS,
+            }, () => conflict);
+            vi.stubGlobal('fetch', fetch);
+            renderView(<AppDetail params={{ id: 'ubuntu' }} />);
+            const save = await screen.findByRole('button', { name: /Set version/ });
+            await vi.waitFor(() => expect(save.disabled).toBe(false));
+            fireEvent.click(save);
+            expect(await screen.findByText(/points to a different commit/)).toBeTruthy();
+        });
+
+        it('shows the admin which version is fixed and lets them clear it', async () => {
+            adminViewOn();
+            const { fetch, sent } = writableBackend('admin', {
+                ...withVersions('v1.1'),
+                '/api/app-store/apps/ubuntu/versions': APPROVALS,
+            });
+            vi.stubGlobal('fetch', fetch);
+            renderView(<AppDetail params={{ id: 'ubuntu' }} />);
+            expect(await screen.findByText(/Lecturers deploy v1\.1/)).toBeTruthy();
+            fireEvent.click(screen.getByRole('button', { name: /Clear/ }));
+            await vi.waitFor(() => expect(sent).toHaveLength(1));
+            expect(sent[0].body).toEqual({ version_tag: null });
         });
     });
 });

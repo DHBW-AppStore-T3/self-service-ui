@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { appStoreEnabled } from '/features.js';
 import { useApiMutation } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
@@ -168,5 +168,33 @@ export function useSetRecommended() {
     return useApiMutation({
         mutationFn: ({ appId, recommended }) => api.setRecommended(appId, recommended),
         invalidates: [[ROOT, userKey, 'apps'], [ROOT, userKey, 'app']],
+    });
+}
+
+// Approval entries of one app; the backend answers owners and admins only, so
+// the caller says when it is one.
+export function useVersionApprovals(appId, enabled) {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useQuery({
+        queryKey: [ROOT, userKey, 'approvals', appId],
+        queryFn: ({ signal }) => api.versionApprovals(appId, signal),
+        enabled: Boolean(enabled && userKey && appId),
+        retry: false,
+    });
+}
+
+// Fixes (or, with null, clears) the version lecturers deploy. Not through
+// useApiMutation: a 409 here means one of two specific things the view
+// explains next to the button, not the generic "someone else was faster" dialog.
+export function useSetDeployVersion() {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    const queryClient = useQueryClient();
+    const refresh = () => queryClient.invalidateQueries({ queryKey: [ROOT, userKey, 'app'] });
+    return useMutation({
+        mutationFn: ({ appId, versionTag }) => api.setDeployVersion(appId, versionTag),
+        // A refusal can mean the approval just ended, so the app is read again.
+        onSettled: refresh,
     });
 }
