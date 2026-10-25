@@ -80,7 +80,21 @@
         "credentialsMissing": "Zum Bereitstellen brauchst du hinterlegte OpenStack-Zugangsdaten.",
         "openCredentials": "Zugangsdaten hinterlegen",
         "forbidden": "Dein Konto darf diese App nicht bereitstellen.",
-        "failed": "Bereitstellung fehlgeschlagen"
+        "failed": "Bereitstellung fehlgeschlagen",
+        "versionTitle": "Version für Dozenten",
+        "setVersion": "Version festlegen",
+        "clearVersion": "Festlegung aufheben",
+        "versionFixed": "Dozenten stellen {{version}} bereit, von einem Admin festgelegt.",
+        "versionNotFixed": "Es ist keine Version festgelegt. Dozenten stellen {{version}} bereit, die erste der Liste.",
+        "versionNone": "Es gibt noch keine freigegebene Version, die festgelegt werden könnte. Versionen werden im bestehenden App-Store freigegeben.",
+        "manageVersions": "Versionen verwalten",
+        "setVersionHint": "Das Speichern legt die Version für alle Dozenten fest. Es startet keine Bereitstellung; mit ausgeschalteter Admin-Ansicht sehen Sie das Bereitstellungsformular.",
+        "errors": {
+            "version_not_approved": "Nur eine freigegebene Version kann festgelegt werden. Diese ist ausstehend, abgelehnt oder stammt aus der Zeit vor der Bindung an einen Commit.",
+            "version_moved": "Das Tag zeigt jetzt auf einen anderen Commit als den freigegebenen. Reichen Sie die Version erneut ein und lassen Sie sie freigeben.",
+            "notFound": "Für diese Version gibt es keinen Freigabe-Eintrag.",
+            "badGateway": "Das Repository der App konnte nicht gelesen werden. Bitte versuchen Sie es später erneut."
+        }
     },
     "access": {
         "title": "Zugangsdaten: {{name}}",
@@ -114,5 +128,7 @@
         "description": "Empfohlene Apps erscheinen im Katalog zuerst, unter dem Filter „Empfohlen“.",
         "empty": "Es gibt noch keine Apps, die empfohlen werden könnten.",
         "switchLabel": "{{name}} empfehlen"
-    }
+    },
+    "versionsAvailable_one": "{{count}} Version verfügbar",
+    "versionsAvailable_other": "{{count}} Versionen verfügbar"
 }
