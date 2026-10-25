@@ -8,6 +8,7 @@ import { DeploymentDetail } from './deployment-detail.jsx';
 import { Deployments } from './deployments.jsx';
 import { Help } from './help.jsx';
 import { Settings } from './settings.jsx';
+import { Wizard } from './wizard/wizard.jsx';
 
 // The App Store section, mounted under /app-store (nested router, so the
 // paths below are relative to it). What it covers and what it hands over to
@@ -20,6 +21,7 @@ export function AppStore() {
                 <Route path="/"><Redirect to="/apps" replace /></Route>
                 <Route path="/apps" component={Catalog} />
                 <Route path="/apps/:id" component={AppDetail} />
+                <Route path="/apps/:id/deploy" component={Wizard} />
                 <Route path="/deployments" component={Deployments} />
                 <Route path="/deployments/:id" component={DeploymentDetail} />
                 <Route path="/credentials" component={Credentials} />

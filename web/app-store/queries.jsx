@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { appStoreEnabled } from '/features.js';
 import { useApiMutation } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
@@ -344,4 +344,75 @@ export function useDeploymentStream(deploymentId, enabled) {
     }, [url, deploymentId, enabled, queryClient, userKey]);
 
     return { ...state, broken };
+}
+
+// How one version runs (pods, VMs, one VM per person, the sizes people may choose).
+export function useAppRuntime(appId, version) {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useQuery({
+        queryKey: [ROOT, userKey, 'runtime', appId, version],
+        queryFn: ({ signal }) => api.appRuntime(appId, version, signal),
+        enabled: Boolean(userKey && appId && version),
+        retry: false,
+        staleTime: 10 * 60 * 1000,
+    });
+}
+
+export function useCourses() {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useQuery({
+        queryKey: [ROOT, userKey, 'courses'],
+        queryFn: ({ signal }) => api.courses(signal),
+        enabled: Boolean(userKey),
+        retry: false,
+        staleTime: 5 * 60 * 1000,
+    });
+}
+
+// The members of every course, one query each: a course is selected as a whole,
+// so the wizard has to know who is in it.
+export function useCourseMembers(courseIds) {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useQueries({
+        queries: courseIds.map(courseId => ({
+            queryKey: [ROOT, userKey, 'course', courseId],
+            queryFn: ({ signal }) => api.course(courseId, signal),
+            enabled: Boolean(userKey),
+            retry: false,
+            staleTime: 5 * 60 * 1000,
+        })),
+    });
+}
+
+// Students to choose from: everybody, or — for a search of two letters or more —
+// the matches (which the backend finds in Keycloak, so people who never signed in
+// to the App Store are found as well).
+export function useStudents(search) {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    const term = search.trim();
+    const searching = term.length >= 2;
+    return useQuery({
+        queryKey: [ROOT, userKey, 'students', searching ? term : ''],
+        queryFn: ({ signal }) => (searching ? api.searchStudents(term, signal) : api.students(signal)),
+        enabled: Boolean(userKey),
+        retry: false,
+        staleTime: 60 * 1000,
+        placeholderData: previous => previous,
+    });
+}
+
+// The deployment is created from the wizard, which then leads to its page.
+export function useCreateWizardDeployment({ onSuccess } = {}) {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useApiMutation({
+        mutationFn: body => api.createDeployment(body),
+        invalidates: [[ROOT, userKey, 'deployments']],
+        onSuccess,
+        reportErrors: 'inline',
+    });
 }

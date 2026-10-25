@@ -100,15 +100,21 @@ describe('App Store views', () => {
         await vi.waitFor(() => expect(button.disabled).toBe(false));
     });
 
-    it('hands a version that needs inputs over to the existing wizard', async () => {
+    it('sends a version that needs inputs to the deployment wizard', async () => {
         vi.stubGlobal('fetch', backend('teacher', {
             '/api/app-store/apps/ubuntu/variables': [{ name: 'admin_password', type: 'string', required: true }],
         }));
         renderView(<AppDetail params={{ id: 'ubuntu' }} />);
         expect(await screen.findByText(/needs inputs/)).toBeTruthy();
-        expect(screen.getByRole('link', { name: /Configure in App Store/ }).getAttribute('href'))
-            .toBe('http://store.example/apps/ubuntu');
+        expect(screen.getByRole('link', { name: 'Configure and deploy' }).getAttribute('href')).toBe('/apps/ubuntu/deploy');
         expect(screen.getByRole('button', { name: /Deploy now/ }).disabled).toBe(true);
+    });
+
+    it('always offers the wizard for teams and settings', async () => {
+        vi.stubGlobal('fetch', backend('teacher'));
+        renderView(<AppDetail params={{ id: 'ubuntu' }} />);
+        const link = await screen.findByRole('link', { name: 'Deploy with teams and settings' });
+        expect(link.getAttribute('href')).toBe('/apps/ubuntu/deploy');
     });
 
     it('never offers a student the deploy form', async () => {
