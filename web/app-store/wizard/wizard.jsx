@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Link, useLocation } from 'wouter';
+import { Link, Redirect, useLocation } from 'wouter';
 import { useTranslation } from 'react-i18next';
 import { Alert, Anchor, Button, Group, Paper, Stack, Stepper, Title } from '@mantine/core';
 import { AlertCircle, ArrowLeft, Rocket } from 'lucide-react';
 import { deployTarget } from '../api.js';
 import {
-    useApp, useAppRuntime, useAppVariables, useCreateWizardDeployment, useCredentials, useMe,
+    useApp, useAppRuntime, useAppVariables, useCreateWizardDeployment, useCredentials, useMe, useRole,
 } from '../queries.jsx';
 import { StateView } from '../shared.jsx';
 import { useDirectory } from './directory.js';
@@ -168,6 +168,10 @@ function WizardBody({ app }) {
 export function Wizard({ params }) {
     const { t } = useTranslation();
     const query = useApp(params.id);
+    const { staff, loaded } = useRole();
+    // The backend refuses everything this page does to anybody else; once the
+    // role is known, they are sent back to the app instead.
+    if (loaded && !staff) return <Redirect to={`/apps/${encodeURIComponent(params.id)}`} replace />;
     return (
         <Stack gap="lg">
             <Anchor component={Link} href={`/apps/${encodeURIComponent(params.id)}`} size="sm">

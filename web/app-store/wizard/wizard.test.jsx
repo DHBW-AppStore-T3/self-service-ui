@@ -336,6 +336,13 @@ describe('deployment wizard', () => {
         expect(window.location.pathname).toBe('/apps/ubuntu/deploy');
     });
 
+    it('sends a student back to the app instead of showing a wizard the backend would refuse', async () => {
+        vi.stubGlobal('fetch', backend({ '/api/app-store/users/me': { role: 'student' } }).fetch);
+        renderView(<Wizard params={{ id: 'ubuntu' }} />);
+        await waitFor(() => expect(window.location.pathname).toBe('/apps/ubuntu'));
+        expect(screen.queryByRole('button', { name: 'Next' })).toBeNull();
+    });
+
     it('offers nothing to deploy when the app has no deployable version', async () => {
         await open({ '/api/app-store/apps/ubuntu': { ...APP, versions: [] } }).catch(() => {});
         expect(await screen.findByText('No deployable version is available for this app.')).toBeTruthy();
