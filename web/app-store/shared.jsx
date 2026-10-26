@@ -55,9 +55,10 @@ function errorKey(error, useDummyAuth) {
 /**
  * StateView renders loading and error for `query` and `children` otherwise.
  * Retrying is offered for every error but the dev-login one, which a retry
- * cannot fix.
+ * cannot fix. `messages` words an error key (`forbidden`, `notFound`, …) for
+ * the thing the view is about: "this app was not found" is wrong for a deployment.
  */
-export function StateView({ query, children }) {
+export function StateView({ query, children, messages = {} }) {
     const { t } = useTranslation();
     const { useDummyAuth } = useAuth() ?? {};
 
@@ -74,7 +75,7 @@ export function StateView({ query, children }) {
         return (
             <Alert color={key === 'devLogin' ? 'yellow' : 'red'} title={t('appStore.error')} icon={<AlertCircle size={18} />} role="alert">
                 <Stack gap="sm">
-                    <Text size="sm">{t(`appStore.errors.${key}`)}</Text>
+                    <Text size="sm">{messages[key] ?? t(`appStore.errors.${key}`)}</Text>
                     {key !== 'devLogin' && (
                         <Button variant="light" size="xs" w="fit-content" onClick={() => query.refetch()} loading={query.isFetching}>
                             {t('appStore.retry')}

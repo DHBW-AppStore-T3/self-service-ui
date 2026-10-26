@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
-    accessEntries, createAppStoreApi, deploymentPayload, filterApps, frontendLink, isStaff, plainSummary,
-    quickDeployBlocker, statusColor, versionOptions,
+    accessEntries, activeCatalogFilter, approvedVersionOptions, createAppStoreApi, deployTarget, deploymentPayload,
+    INITIAL_STREAM, applyStreamEvent, formatTaskLog, cloudNames, credentialState, departmentsForGitLink, filterApps, frontendLink, greetingName, isAdmin, isStaff,
+    normalizeGitLink, plainSummary, quickDeployBlocker, safeNextPath, statusColor, versionOptions,
 } from './api.js';
 
 const json = (data, init = {}) => new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json' }, ...init });
@@ -70,6 +71,12 @@ describe('roles and status', () => {
         expect(isStaff(undefined)).toBe(false);
     });
 
+    it('counts only admins as admin', () => {
+        expect(isAdmin({ role: 'admin' })).toBe(true);
+        expect(isAdmin({ role: 'teacher' })).toBe(false);
+        expect(isAdmin(undefined)).toBe(false);
+    });
+
     // A deployment without any task has status null; that used to throw.
     it('colours every status, including none', () => {
         expect(statusColor(null)).toBe('gray');
@@ -134,6 +141,273 @@ describe('catalog filter', () => {
         expect(filterApps(apps, { search: '', visibility: 'private', sort: 'name' }, 'de').map(a => a.name)).toEqual(['Alpha']);
         expect(filterApps(apps, { search: '', visibility: 'all', sort: 'name' }, 'de').map(a => a.name)).toEqual(['Alpha', 'Zeta']);
         expect(filterApps(apps, { search: '', visibility: 'all', sort: 'newest' }, 'de').map(a => a.name)).toEqual(['Alpha', 'Zeta']);
+    });
+});
+
+describe('departments', () => {
+    it('brings every spelling of a git link to host/owner/repo', () => {
+        const expected = 'github.com/dhbw-appstore-t3/online-ide';
+        expect(normalizeGitLink('https://github.com/DHBW-AppStore-T3/Online-IDE')).toBe(expected);
+        expect(normalizeGitLink('https://github.com/DHBW-AppStore-T3/Online-IDE.git')).toBe(expected);
+        expect(normalizeGitLink('https://github.com/DHBW-AppStore-T3/Online-IDE.git/')).toBe(expected);
+        expect(normalizeGitLink('https://www.github.com/DHBW-AppStore-T3/Online-IDE/')).toBe(expected);
+        expect(normalizeGitLink('ssh://git@github.com/DHBW-AppStore-T3/Online-IDE.git')).toBe(expected);
+        expect(normalizeGitLink('git@github.com:DHBW-AppStore-T3/Online-IDE.git')).toBe(expected);
+        expect(normalizeGitLink('  ')).toBeNull();
+        expect(normalizeGitLink(null)).toBeNull();
+    });
+
+    it('assigns departments by exact alias, never by name', () => {
+        expect(departmentsForGitLink('https://github.com/DHBW-AppStore-T3/Online-IDE')).toEqual(['informatik']);
+        expect(departmentsForGitLink('https://github.com/DHBW-AppStore/web-latex.git'))
+            .toEqual(['informatik', 'maschinenbau', 'elektrotechnik', 'wirtschaftsingenieurwesen', 'faecheruebergreifend']);
+        // The same repository name under an unknown owner is not the curated app.
+        expect(departmentsForGitLink('https://github.com/someone-else/online-ide')).toEqual([]);
+        expect(departmentsForGitLink(undefined)).toEqual([]);
+    });
+});
+
+describe('catalog filter by department and recommendation', () => {
+    const apps = [
+        { name: 'IDE', git_link: 'https://github.com/DHBW-AppStore-T3/Online-IDE', recommended: true, description: '', is_private: false, created_at: '2026-01-01' },
+        { name: 'LaTeX', git_link: 'https://github.com/DHBW-AppStore-T3/Web-LaTeX', recommended: false, description: '', is_private: false, created_at: '2026-01-02' },
+        { name: 'Unknown', git_link: 'https://example.org/x', recommended: true, description: '', is_private: false, created_at: '2026-01-03' },
+    ];
+    const names = filter => filterApps(apps, { search: '', visibility: 'all', sort: 'name', filter }, 'de').map(a => a.name);
+
+    it('shows everything under all, and only matches under a department or recommended', () => {
+        expect(names('all')).toEqual(['IDE', 'LaTeX', 'Unknown']);
+        expect(names('maschinenbau')).toEqual(['LaTeX']);
+        expect(names('informatik')).toEqual(['IDE', 'LaTeX']);
+        expect(names('recommended')).toEqual(['IDE', 'Unknown']);
+    });
+
+    it('combines the filter with the search', () => {
+        expect(filterApps(apps, { search: 'late', visibility: 'all', sort: 'name', filter: 'informatik' }, 'de').map(a => a.name)).toEqual(['LaTeX']);
+        expect(filterApps(apps, { search: 'late', visibility: 'all', sort: 'name', filter: 'recommended' }, 'de')).toEqual([]);
+    });
+
+    it('treats a missing filter like all', () => {
+        expect(filterApps(apps, { search: '', visibility: 'all', sort: 'name' }, 'de')).toHaveLength(3);
+    });
+
+    it('preselects recommended only while something is recommended and nothing was chosen', () => {
+        expect(activeCatalogFilter(null, apps)).toBe('recommended');
+        expect(activeCatalogFilter(null, apps.map(a => ({ ...a, recommended: false })))).toBe('all');
+        expect(activeCatalogFilter('informatik', apps)).toBe('informatik');
+        expect(activeCatalogFilter('all', apps)).toBe('all');
+        // The last recommendation was withdrawn while the chip was selected.
+        expect(activeCatalogFilter('recommended', apps.map(a => ({ ...a, recommended: false })))).toBe('all');
+    });
+});
+
+describe('which version gets deployed', () => {
+    const versions = [
+        { version: 'v2.0-rc1', name: 'v2.0-rc1', prerelease: 'True' },
+        { version: 'v1.1', name: 'v1.1', prerelease: 'False' },
+        { version: 'v1.0', name: 'v1.0', prerelease: 'False' },
+    ];
+
+    it('takes the version an admin fixed', () => {
+        expect(deployTarget({ versions, deploy_version: 'v1.0' })).toEqual({ version: 'v1.0', fixed: true });
+    });
+
+    it('falls back to the first stable version while nothing is fixed', () => {
+        expect(deployTarget({ versions, deploy_version: null })).toEqual({ version: 'v1.1', fixed: false });
+        expect(deployTarget({ versions })).toEqual({ version: 'v1.1', fixed: false });
+    });
+
+    it('ignores a fixed version the list no longer offers', () => {
+        expect(deployTarget({ versions, deploy_version: 'v0.9' })).toEqual({ version: 'v1.1', fixed: false });
+    });
+
+    it('has no target without any version', () => {
+        expect(deployTarget({ versions: [], deploy_version: 'v1.0' })).toEqual({ version: null, fixed: false });
+        expect(deployTarget({})).toEqual({ version: null, fixed: false });
+    });
+});
+
+describe('versions an admin can fix', () => {
+    const versions = [
+        { version: 'v1.2', name: 'v1.2', prerelease: 'False' },
+        { version: 'v1.1', name: 'Second', prerelease: 'False' },
+        { version: 'v1.0', name: 'v1.0', prerelease: 'False' },
+    ];
+    const approvals = [
+        { version_tag: 'v1.2', status: 'pending' },
+        { version_tag: 'v1.1', status: 'approved' },
+        { version_tag: 'v1.0', status: 'rejected' },
+        { version_tag: 'v0.1', status: 'approved' },
+    ];
+
+    it('offers only approved versions that the repository still lists', () => {
+        expect(approvedVersionOptions(versions, approvals).map(o => o.value)).toEqual(['v1.1']);
+        expect(approvedVersionOptions(versions, approvals)[0].label).toBe('v1.1 – Second');
+    });
+
+    it('offers nothing while the approvals are unknown', () => {
+        expect(approvedVersionOptions(versions, undefined)).toEqual([]);
+    });
+});
+
+describe('the deploy version calls', () => {
+    it('PUTs the version, and null to clear it', async () => {
+        const fetchImpl = vi.fn(async () => json({ appId: 'a' }));
+        const api = createAppStoreApi({ baseUrl: '/api/app-store', fetchImpl });
+        await api.setDeployVersion('a/b', 'v1.1');
+        await api.setDeployVersion('a/b', null);
+        expect(fetchImpl.mock.calls[0][0]).toBe('/api/app-store/admin/apps/a%2Fb/deploy-version');
+        expect(fetchImpl.mock.calls[0][1]).toMatchObject({ method: 'PUT', body: '{"version_tag":"v1.1"}' });
+        expect(fetchImpl.mock.calls[1][1]).toMatchObject({ body: '{"version_tag":null}' });
+    });
+
+    it('reads the approvals of an app', async () => {
+        const fetchImpl = vi.fn(async () => json([]));
+        const api = createAppStoreApi({ baseUrl: '/api/app-store', fetchImpl });
+        await api.versionApprovals('a/b');
+        expect(fetchImpl.mock.calls[0][0]).toBe('/api/app-store/apps/a%2Fb/versions');
+    });
+});
+
+describe('greeting', () => {
+    it('uses the first name, then the username, then nothing', () => {
+        expect(greetingName({ firstName: ' Dozentin ', username: 'dozent.demo' })).toBe('Dozentin');
+        expect(greetingName({ firstName: '  ', username: 'dozent.demo' })).toBe('dozent.demo');
+        expect(greetingName({ firstName: null, username: 'dozent.demo' })).toBe('dozent.demo');
+        expect(greetingName({})).toBeNull();
+        expect(greetingName(undefined)).toBeNull();
+    });
+});
+
+describe('OpenStack credentials', () => {
+    it('names the clouds of a clouds.yaml', () => {
+        const one = 'clouds:\n  openstack:\n    auth:\n      auth_url: https://x\n';
+        const two = '# a comment\nclouds:\n    dhbw:\n        auth:\n            a: b\n    "other-cloud":\n        auth: {}\nextra:\n  nope: 1\n';
+        expect(cloudNames(one)).toEqual(['openstack']);
+        expect(cloudNames(two)).toEqual(['dhbw', 'other-cloud']);
+        expect(cloudNames('nothing: here')).toEqual([]);
+        expect(cloudNames('')).toEqual([]);
+    });
+
+    it('classifies a stored credential', () => {
+        expect(credentialState({ project_verified: true, last_validation_error: null })).toBe('valid');
+        expect(credentialState({ project_verified: false, last_validation_error: null })).toBe('unverified');
+        expect(credentialState({ project_verified: true, last_validation_error: 'auth_failed' })).toBe('invalid');
+    });
+
+    it('lets only app paths through as the place to return to', () => {
+        expect(safeNextPath('/apps/abc')).toBe('/apps/abc');
+        expect(safeNextPath('/apps/a%20b?x=1')).toBeNull();
+        expect(safeNextPath('//evil.example/x')).toBeNull();
+        expect(safeNextPath('https://evil.example')).toBeNull();
+        expect(safeNextPath('javascript:alert(1)')).toBeNull();
+        expect(safeNextPath('apps/abc')).toBeNull();
+        expect(safeNextPath(null)).toBeNull();
+    });
+
+    it('reads, saves from a clouds.yaml, tests and deletes through the backend', async () => {
+        const fetchImpl = vi.fn(async (url, init) => (init?.method === 'DELETE' ? new Response(null, { status: 204 }) : json({ credentialId: 'c1' })));
+        const api = createAppStoreApi({ baseUrl: '/api/app-store', fetchImpl });
+        await api.credentials();
+        await api.saveCredentialFromYaml('clouds: {}', 'dhbw');
+        await api.saveCredentialFromYaml('clouds: {}');
+        await api.testCredential('c/1');
+        expect(await api.deleteCredential('c/1')).toBeNull();
+        const calls = fetchImpl.mock.calls.map(([url, init]) => [url, init.method ?? 'GET', init.body]);
+        expect(calls).toEqual([
+            ['/api/app-store/me/openstack-credentials', 'GET', undefined],
+            ['/api/app-store/me/openstack-credentials/from-yaml', 'POST', '{"clouds_yaml":"clouds: {}","cloud_name":"dhbw"}'],
+            ['/api/app-store/me/openstack-credentials/from-yaml', 'POST', '{"clouds_yaml":"clouds: {}"}'],
+            ['/api/app-store/me/openstack-credentials/c%2F1/test', 'POST', undefined],
+            ['/api/app-store/me/openstack-credentials/c%2F1', 'DELETE', undefined],
+        ]);
+    });
+});
+
+describe('live log of a deployment', () => {
+    const apply = (state, ...events) => events.reduce((s, [name, payload]) => applyStreamEvent(s, name, payload), state);
+
+    it('takes phase and progress from the snapshot and from progress events', () => {
+        const state = apply(INITIAL_STREAM,
+            ['snapshot', { status: 'running', current_phase: 'plan', progress_pct: 10 }],
+            ['progress', { current_phase: 'apply', progress_pct: 55 }]);
+        expect(state).toMatchObject({ phase: 'apply', progress: 55, done: null });
+    });
+
+    it('collects log lines and keeps the last ones only', () => {
+        let state = INITIAL_STREAM;
+        for (let i = 0; i < 2100; i++) state = applyStreamEvent(state, 'log', { message: `line ${i}` });
+        expect(state.lines).toHaveLength(2000);
+        expect(state.lines[0]).toBe('line 100');
+        expect(state.lines.at(-1)).toBe('line 2099');
+    });
+
+    it('notes an overflow and the end of the task', () => {
+        expect(apply(INITIAL_STREAM, ['overflow', {}]).overflow).toBe(true);
+        expect(apply(INITIAL_STREAM, ['failed', { message: 'boom' }])).toMatchObject({ done: 'failed' });
+        expect(apply(INITIAL_STREAM, ['succeeded', {}]).done).toBe('succeeded');
+        expect(apply(INITIAL_STREAM, ['revoked', {}]).done).toBe('revoked');
+    });
+
+    it('ends right away on the snapshot of a task that is already over', () => {
+        expect(apply(INITIAL_STREAM, ['snapshot', { status: 'success' }]).done).toBe('succeeded');
+        expect(apply(INITIAL_STREAM, ['snapshot', { status: 'failed' }]).done).toBe('failed');
+        expect(apply(INITIAL_STREAM, ['snapshot', { status: null }]).done).toBe('ended');
+        expect(apply(INITIAL_STREAM, ['snapshot', { status: 'running' }]).done).toBeNull();
+    });
+
+    it('ignores what it does not know', () => {
+        expect(apply(INITIAL_STREAM, ['mystery', { x: 1 }])).toEqual(INITIAL_STREAM);
+    });
+
+    it('reads the deployment and its tasks', async () => {
+        const fetchImpl = vi.fn(async () => json({}));
+        const api = createAppStoreApi({ baseUrl: '/api/app-store/', fetchImpl });
+        await api.deployment('d/1');
+        await api.deploymentTasks('d/1');
+        await api.deploymentLogs('d/1');
+        expect(fetchImpl.mock.calls.map(c => c[0])).toEqual([
+            '/api/app-store/deployments/d%2F1',
+            '/api/app-store/tasks/deployment/d%2F1',
+            '/api/app-store/deployments/d%2F1?include_logs=true',
+        ]);
+        expect(api.streamUrl('d/1')).toBe('/api/app-store/deployments/d%2F1/stream');
+    });
+});
+
+describe('the stored log of a task', () => {
+    const entries = [
+        { timestamp: '2026-10-24T11:02:44.303Z', level: 'INFO', category: 'phase', message: '=== STARTING ===', correlation_id: 'x' },
+        { timestamp: '2026-10-24T11:02:45.100Z', level: 'ERROR', category: 'tofu', message: 'Error: quota exceeded' },
+    ];
+
+    it('reads the JSON list the worker stores as one line per entry', () => {
+        expect(formatTaskLog(JSON.stringify(entries))).toBe(
+            '2026-10-24 11:02:44 INFO  === STARTING ===\n2026-10-24 11:02:45 ERROR Error: quota exceeded',
+        );
+    });
+
+    it('shows anything else as it is', () => {
+        expect(formatTaskLog('plain text\nsecond line')).toBe('plain text\nsecond line');
+        expect(formatTaskLog('[not json')).toBe('[not json');
+        expect(formatTaskLog('{"a": 1}')).toBe('{"a": 1}');
+        expect(formatTaskLog('[1, 2]')).toBe('[1, 2]');
+        expect(formatTaskLog(null)).toBe('');
+    });
+
+    it('keeps an entry without a message or time readable', () => {
+        expect(formatTaskLog(JSON.stringify([{ level: 'WARN' }, { message: 'hi' }]))).toBe('WARN \nhi');
+    });
+});
+
+describe('recommending an app', () => {
+    it('PUTs the flag to the admin endpoint', async () => {
+        const fetchImpl = vi.fn(async () => json({ appId: 'a/b', recommended: true }));
+        const api = createAppStoreApi({ baseUrl: '/api/app-store', fetchImpl });
+        await api.setRecommended('a/b', true);
+        expect(fetchImpl).toHaveBeenCalledWith('/api/app-store/admin/apps/a%2Fb/recommended', expect.objectContaining({
+            method: 'PUT', body: '{"recommended":true}',
+        }));
     });
 });
 

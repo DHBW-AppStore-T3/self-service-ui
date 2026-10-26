@@ -64,6 +64,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write       # sign the image's origin (Sigstore, keyless)
+      attestations: write   # store that signature with GitHub
     outputs:
       digest: ${{ steps.push.outputs.digest }}
     steps:
@@ -79,6 +81,8 @@ jobs:
       - name: Build (amd64, loaded for the scan)
         uses: docker/build-push-action@v6
         with:
+          # New per run: the upgrade step (Dockerfile, ARG SECURITY_REFRESH) never comes from the build cache.
+          build-args: SECURITY_REFRESH=${{ github.run_id }}
           context: .
           load: true
           platforms: linux/amd64
@@ -111,6 +115,8 @@ jobs:
           github.event_name != 'pull_request'
         uses: docker/build-push-action@v6
         with:
+          # New per run: the upgrade step (Dockerfile, ARG SECURITY_REFRESH) never comes from the build cache.
+          build-args: SECURITY_REFRESH=${{ github.run_id }}
           context: .
           push: true
           platforms: linux/amd64
@@ -118,9 +124,19 @@ jobs:
             ${{ steps.name.outputs.image }}:sha-${{ steps.name.outputs.short }}
             ${{ steps.name.outputs.image }}:${{ github.ref_name }}
           cache-from: type=gha
+      # Signs which repository, workflow, branch and commit built this digest (SLSA
+      # build provenance, keyless); the deployment repo rolls out only images that
+      # have it (.github/scripts/verify-image.sh there).
+      - name: Attest the image's origin
+        if: steps.push.outputs.digest != ''
+        uses: actions/attest@v4
+        with:
+          subject-name: ${{ steps.name.outputs.image }}
+          subject-digest: ${{ steps.push.outputs.digest }}
 
   # The deployment repo pins the image just pushed by its digest in
-  # k8s/images/<staging|prod>.yaml (k8s-bump.yml: a commit on dev, a PR on main);
+  # k8s/images/<staging|prod>.yaml (k8s-bump.yml: a self-merging PR on dev,
+  # a PR on main that a person approves);
   # Argo CD of that environment follows.
   k8s-rollout:
     name: "Roll out on k8s"
@@ -130,10 +146,21 @@ jobs:
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') &&
       github.event_name != 'pull_request'
     steps:
+      # A one-hour token of the GitHub App "DHBW AppStore deploy" (installed only
+      # on the deployment repository, Actions: write), not a personal token.
+      - name: Token for the deployment repository
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.DEPLOY_APP_CLIENT_ID }}
+          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
+          owner: DHBW-AppStore-T3
+          repositories: deployment
+          permission-actions: write
       - name: Pin the new image in the deployment repo
         run: |
           gh workflow run k8s-bump.yml --repo DHBW-AppStore-T3/deployment --ref "$GITHUB_REF_NAME" \
             -f component=self-service-ui -f tag="sha-${GITHUB_SHA::7}" -f digest="$DIGEST"
         env:
-          GH_TOKEN: ${{ secrets.DEPLOYMENT_PAT }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           DIGEST: ${{ needs.image.outputs.digest }}

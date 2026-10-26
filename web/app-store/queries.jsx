@@ -1,13 +1,17 @@
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { appStoreEnabled } from '/features.js';
 import { useApiMutation } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useSession } from '/providers/session.jsx';
-import { createAppStoreApi, isStaff, isTransitional } from './api.js';
+import { readAdminView, subscribeAdminView, writeAdminView } from './admin-view.js';
+import { INITIAL_STREAM, applyStreamEvent, createAppStoreApi, greetingName, isAdmin, isStaff, isTransitional } from './api.js';
 
 // How often the deployment list refreshes while something is still moving.
 const POLL_MS = 15000;
+
+// The same for one deployment, which a person is watching: faster.
+const DETAIL_POLL_MS = 5000;
 
 // Every query key starts with this, so one invalidation reaches all of them.
 const ROOT = 'app-store';
@@ -51,14 +55,34 @@ export function useMe() {
     });
 }
 
+// The admin-view switch of the signed-in account, as [on, setOn].
+export function useAdminViewSwitch() {
+    const account = useUserKey();
+    const on = useSyncExternalStore(subscribeAdminView, () => readAdminView(account));
+    const setOn = useCallback(value => account && writeAdminView(account, value), [account]);
+    return [on, setOn];
+}
+
 /**
  * useRole answers what the views need to know about the role. While it is
  * unknown (loading, failed), `staff` is false: offering a deploy button the
  * backend would refuse is worse than offering it a moment late.
+ *
+ * `isAdminView` is an admin with the switch on (/app-store/settings). With it
+ * off, an admin is shown the App Store the way a lecturer sees it; the
+ * admin-only parts of a view key off this, not off `admin`.
  */
 export function useRole() {
     const me = useMe();
-    return { staff: isStaff(me.data), student: me.data?.role === 'student', loaded: me.isSuccess };
+    const [adminViewOn] = useAdminViewSwitch();
+    const admin = isAdmin(me.data);
+    return {
+        staff: isStaff(me.data),
+        student: me.data?.role === 'student',
+        admin,
+        isAdminView: admin && adminViewOn,
+        loaded: me.isSuccess,
+    };
 }
 
 export function useApps() {
@@ -129,6 +153,260 @@ export function useMyAccess(deploymentId, enabled) {
 // Errors are shown inline by the deploy form: the reasons it can fail
 // (credentials missing, role) need a link next to them, not a modal.
 export function useCreateDeployment({ onSuccess } = {}) {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useApiMutation({
+        mutationFn: body => api.createDeployment(body),
+        invalidates: [[ROOT, userKey, 'deployments']],
+        onSuccess,
+        reportErrors: 'inline',
+    });
+}
+
+// Admin only: marks an app as recommended or not. Both the list and the
+// detail of apps carry the flag, so both are refetched.
+export function useSetRecommended() {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useApiMutation({
+        mutationFn: ({ appId, recommended }) => api.setRecommended(appId, recommended),
+        invalidates: [[ROOT, userKey, 'apps'], [ROOT, userKey, 'app']],
+    });
+}
+
+// Approval entries of one app; the backend answers owners and admins only, so
+// the caller says when it is one.
+export function useVersionApprovals(appId, enabled) {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useQuery({
+        queryKey: [ROOT, userKey, 'approvals', appId],
+        queryFn: ({ signal }) => api.versionApprovals(appId, signal),
+        enabled: Boolean(enabled && userKey && appId),
+        retry: false,
+    });
+}
+
+// Fixes (or, with null, clears) the version lecturers deploy. Not through
+// useApiMutation: a 409 here means one of two specific things the view
+// explains next to the button, not the generic "someone else was faster" dialog.
+export function useSetDeployVersion() {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    const queryClient = useQueryClient();
+    const refresh = () => queryClient.invalidateQueries({ queryKey: [ROOT, userKey, 'app'] });
+    return useMutation({
+        mutationFn: ({ appId, versionTag }) => api.setDeployVersion(appId, versionTag),
+        // A refusal can mean the approval just ended, so the app is read again.
+        onSettled: refresh,
+    });
+}
+
+// What the home page calls the person, or null while the App Store has not
+// answered (or is not part of this deployment): the page keeps its neutral title then.
+export function useGreetingName() {
+    const me = useMe();
+    return greetingName(me.data);
+}
+
+// The caller's stored OpenStack credentials, without secrets.
+export function useCredentials() {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useQuery({
+        queryKey: [ROOT, userKey, 'credentials'],
+        queryFn: ({ signal }) => api.credentials(signal),
+        enabled: Boolean(userKey),
+        retry: false,
+    });
+}
+
+// Errors are shown next to the upload, which is where they can be acted on.
+export function useSaveCredential({ onSuccess } = {}) {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useApiMutation({
+        mutationFn: ({ yaml, cloudName }) => api.saveCredentialFromYaml(yaml, cloudName),
+        invalidates: [[ROOT, userKey, 'credentials']],
+        onSuccess,
+        reportErrors: 'inline',
+    });
+}
+
+export function useTestCredential() {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useApiMutation({
+        mutationFn: credentialId => api.testCredential(credentialId),
+        invalidates: [[ROOT, userKey, 'credentials']],
+    });
+}
+
+export function useDeleteCredential() {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useApiMutation({
+        mutationFn: credentialId => api.deleteCredential(credentialId),
+        invalidates: [[ROOT, userKey, 'credentials']],
+    });
+}
+
+/**
+ * useDeployment follows one deployment while it is still moving (every
+ * DETAIL_POLL_MS) and stops once its status has settled. It does not poll in a
+ * background tab (the query default), and a failed poll keeps the last answer
+ * and tries again: the page then shows a connection notice, not an empty error.
+ */
+export function useDeployment(deploymentId) {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useQuery({
+        queryKey: [ROOT, userKey, 'deployment', deploymentId],
+        queryFn: ({ signal }) => api.deployment(deploymentId, signal),
+        enabled: Boolean(userKey && deploymentId),
+        retry: false,
+        refetchInterval: query => (isTransitional(query.state.data?.status) ? DETAIL_POLL_MS : false),
+    });
+}
+
+// Every task of a deployment (owner view). Keyed by the status as well, so the
+// history reloads when the status changes.
+export function useDeploymentTasks(deploymentId, enabled, status) {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useQuery({
+        queryKey: [ROOT, userKey, 'deployment-tasks', deploymentId, status],
+        queryFn: ({ signal }) => api.deploymentTasks(deploymentId, signal),
+        enabled: Boolean(enabled && userKey && deploymentId),
+        retry: false,
+    });
+}
+
+// The full log of the latest task: large, hence only when asked for.
+export function useDeploymentLogs(deploymentId, enabled) {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useQuery({
+        queryKey: [ROOT, userKey, 'deployment-logs', deploymentId],
+        queryFn: ({ signal }) => api.deploymentLogs(deploymentId, signal),
+        enabled: Boolean(enabled && userKey && deploymentId),
+        retry: false,
+    });
+}
+
+const STREAM_EVENTS = ['snapshot', 'progress', 'log', 'overflow', 'started', 'succeeded', 'failed', 'revoked'];
+
+/**
+ * useDeploymentStream listens to the live log of a deployment's task while
+ * `enabled`. It closes itself when the task ends and then refreshes what the
+ * page shows from the backend. A broken stream is not retried: `broken` tells
+ * the page, and the polled status carries on without it.
+ */
+export function useDeploymentStream(deploymentId, enabled) {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    const queryClient = useQueryClient();
+    const [state, setState] = useState(INITIAL_STREAM);
+    const [broken, setBroken] = useState(false);
+    const latest = useRef(INITIAL_STREAM);
+    // The effect depends on the address, not on the client: a new client object
+    // must not reopen a stream that is already running.
+    const url = deploymentId ? api.streamUrl(deploymentId) : null;
+
+    useEffect(() => {
+        if (!enabled || !url || typeof EventSource === 'undefined') return undefined;
+        const source = new EventSource(url, { withCredentials: true });
+        for (const name of STREAM_EVENTS) {
+            source.addEventListener(name, event => {
+                let payload;
+                try {
+                    payload = JSON.parse(event.data);
+                } catch {
+                    return;
+                }
+                latest.current = applyStreamEvent(latest.current, name, payload);
+                setState(latest.current);
+                if (latest.current.done) {
+                    source.close();
+                    queryClient.invalidateQueries({ queryKey: [ROOT, userKey, 'deployment', deploymentId] });
+                    queryClient.invalidateQueries({ queryKey: [ROOT, userKey, 'deployment-tasks', deploymentId] });
+                    queryClient.invalidateQueries({ queryKey: [ROOT, userKey, 'deployments'] });
+                }
+            });
+        }
+        // EventSource would reconnect by itself; a stream that failed once is
+        // more likely a proxy that cannot carry it than a blip, so it stays down.
+        source.onerror = () => {
+            source.close();
+            setBroken(true);
+        };
+        return () => source.close();
+    }, [url, deploymentId, enabled, queryClient, userKey]);
+
+    return { ...state, broken };
+}
+
+// How one version runs (pods, VMs, one VM per person, the sizes people may choose).
+export function useAppRuntime(appId, version) {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useQuery({
+        queryKey: [ROOT, userKey, 'runtime', appId, version],
+        queryFn: ({ signal }) => api.appRuntime(appId, version, signal),
+        enabled: Boolean(userKey && appId && version),
+        retry: false,
+        staleTime: 10 * 60 * 1000,
+    });
+}
+
+export function useCourses() {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useQuery({
+        queryKey: [ROOT, userKey, 'courses'],
+        queryFn: ({ signal }) => api.courses(signal),
+        enabled: Boolean(userKey),
+        retry: false,
+        staleTime: 5 * 60 * 1000,
+    });
+}
+
+// The members of every course, one query each: a course is selected as a whole,
+// so the wizard has to know who is in it.
+export function useCourseMembers(courseIds) {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useQueries({
+        queries: courseIds.map(courseId => ({
+            queryKey: [ROOT, userKey, 'course', courseId],
+            queryFn: ({ signal }) => api.course(courseId, signal),
+            enabled: Boolean(userKey),
+            retry: false,
+            staleTime: 5 * 60 * 1000,
+        })),
+    });
+}
+
+// Students to choose from: everybody, or — for a search of two letters or more —
+// the matches (which the backend finds in Keycloak, so people who never signed in
+// to the App Store are found as well).
+export function useStudents(search) {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    const term = search.trim();
+    const searching = term.length >= 2;
+    return useQuery({
+        queryKey: [ROOT, userKey, 'students', searching ? term : ''],
+        queryFn: ({ signal }) => (searching ? api.searchStudents(term, signal) : api.students(signal)),
+        enabled: Boolean(userKey),
+        retry: false,
+        staleTime: 60 * 1000,
+        placeholderData: previous => previous,
+    });
+}
+
+// The deployment is created from the wizard, which then leads to its page.
+export function useCreateWizardDeployment({ onSuccess } = {}) {
     const api = useAppStoreApi();
     const userKey = useUserKey();
     return useApiMutation({

@@ -5,11 +5,17 @@
 // dummy identity is NOT an App Store login — the backend only accepts a real
 // access token, so in that mode every call answers 401.
 
+import { departmentsForGitLink } from './departments.js';
+
+export { DEPARTMENTS, departmentsForGitLink, normalizeGitLink } from './departments.js';
+
 // HTTP statuses the views tell apart.
 export const UNAUTHORIZED = 401;
 export const FORBIDDEN = 403;
 export const NOT_FOUND = 404;
+export const CONFLICT = 409;
 export const PRECONDITION_FAILED = 412;
+export const BAD_GATEWAY = 502;
 
 // The backend's page size limit; `list` walks pages of this size.
 const PAGE_SIZE = 100;
@@ -41,6 +47,7 @@ export function createAppStoreApi({ baseUrl, onUnauthorized = () => {}, fetchImp
         });
         if (response.status === UNAUTHORIZED) onUnauthorized();
         if (!response.ok) throw await httpError(response);
+        if (response.status === 204) return null;
         if (!response.headers.get('content-type')?.includes('application/json')) {
             throw new Error('App Store response is not JSON');
         }
@@ -68,6 +75,40 @@ export function createAppStoreApi({ baseUrl, onUnauthorized = () => {}, fetchImp
         deployments: signal => list('/deployments/', signal),
         myAccess: (deploymentId, signal) => request(`/deployments/${id(deploymentId)}/my-access`, { signal }),
         createDeployment: body => request('/deployments/', { method: 'POST', body }),
+        // How a version runs: runtime, `scope` ('user' = one VM per person), the
+        // cpu/memory and network choices the author released.
+        appRuntime: (appId, version, signal) => request(`/apps/${id(appId)}/runtime?version=${id(version)}`, { signal }),
+        // Staff only: who can be given access to a deployment.
+        courses: signal => list('/courses/', signal),
+        course: (courseId, signal) => request(`/courses/${id(courseId)}`, { signal }),
+        students: signal => request(`/users/?role=student&limit=1000`, { signal }),
+        searchStudents: (query, signal) => request(`/users/search?query=${encodeURIComponent(query)}&limit=50`, { signal }),
+        deployment: (deploymentId, signal) => request(`/deployments/${id(deploymentId)}`, { signal }),
+        // Owner view only: every task of the deployment, newest information first.
+        deploymentTasks: (deploymentId, signal) => request(`/tasks/deployment/${id(deploymentId)}`, { signal }),
+        // The same detail with the latest task's full log; large, so asked for on demand.
+        deploymentLogs: (deploymentId, signal) =>
+            request(`/deployments/${id(deploymentId)}?include_logs=true`, { signal }),
+        // Server-Sent Events of the latest task (owner view only), for an EventSource.
+        streamUrl: deploymentId => `${root}/deployments/${id(deploymentId)}/stream`,
+        // The caller's OpenStack credentials, one per project, without secrets.
+        credentials: signal => request('/me/openstack-credentials', { signal }),
+        // Keystone checks the credential before anything is stored; 422 says why not.
+        // `cloudName` picks the entry when the file holds several clouds.
+        saveCredentialFromYaml: (cloudsYaml, cloudName) => request('/me/openstack-credentials/from-yaml', {
+            method: 'POST',
+            body: { clouds_yaml: cloudsYaml, ...(cloudName ? { cloud_name: cloudName } : {}) },
+        }),
+        testCredential: credentialId => request(`/me/openstack-credentials/${id(credentialId)}/test`, { method: 'POST' }),
+        deleteCredential: credentialId => request(`/me/openstack-credentials/${id(credentialId)}`, { method: 'DELETE' }),
+        // Owner or admin: every approval entry of the app, whatever its status.
+        versionApprovals: (appId, signal) => request(`/apps/${id(appId)}/versions`, { signal }),
+        // Admin only (the backend answers 403 to anyone else). `null` clears the setting.
+        setDeployVersion: (appId, versionTag) =>
+            request(`/admin/apps/${id(appId)}/deploy-version`, { method: 'PUT', body: { version_tag: versionTag } }),
+        // Admin only (the backend answers 403 to anyone else).
+        setRecommended: (appId, recommended) =>
+            request(`/admin/apps/${id(appId)}/recommended`, { method: 'PUT', body: { recommended } }),
     };
 }
 
@@ -86,6 +127,8 @@ async function httpError(response) {
     const error = new Error(message ? `App Store HTTP ${response.status}: ${message}` : `App Store HTTP ${response.status}`);
     error.status = response.status;
     error.reason = reason;
+    // Structured details beyond the reason, e.g. the `cause` of a refused credential.
+    error.detail = typeof detail === 'object' && detail !== null ? detail : undefined;
     return error;
 }
 
@@ -108,11 +151,29 @@ export function frontendLink(baseUrl, path) {
 // ---------------------------------------------------------------------------
 // Catalog
 
-// filterApps applies the search box and the two selects. Search matches name
-// and description, case-insensitively in the UI language.
-export function filterApps(apps, { search, visibility, sort }, locale) {
+// The catalog's first filter: 'recommended', 'all' or one of the departments.
+//
+// `selected` is what the person clicked, or null while they have not. Until they
+// do, recommended is the default — but only while something is recommended: an
+// empty default would be the first thing a lecturer sees.
+export function activeCatalogFilter(selected, apps) {
+    const hasRecommended = apps.some(app => app.recommended === true);
+    if (selected === 'recommended' && !hasRecommended) return 'all';
+    return selected ?? (hasRecommended ? 'recommended' : 'all');
+}
+
+function matchesCatalogFilter(app, filter) {
+    if (filter === 'all') return true;
+    if (filter === 'recommended') return app.recommended === true;
+    return departmentsForGitLink(app.git_link).includes(filter);
+}
+
+// filterApps applies the filter, the search box and the select. Search matches
+// name and description, case-insensitively in the UI language.
+export function filterApps(apps, { search, visibility, sort, filter = 'all' }, locale) {
     const needle = search.trim().toLocaleLowerCase(locale);
     return apps
+        .filter(app => matchesCatalogFilter(app, filter))
         .filter(app => `${app.name} ${app.description || ''}`.toLocaleLowerCase(locale).includes(needle))
         .filter(app => visibility === 'all' || app.is_private === (visibility === 'private'))
         .sort((a, b) => sort === 'newest'
@@ -142,6 +203,57 @@ export function plainSummary(markdown) {
 }
 
 // ---------------------------------------------------------------------------
+// Greeting
+
+// What the home page calls the person: the first name the App Store has, else
+// the username, else nothing (the page then keeps its neutral title).
+export function greetingName(me) {
+    return me?.firstName?.trim() || me?.username?.trim() || null;
+}
+
+// ---------------------------------------------------------------------------
+// OpenStack credentials
+
+/**
+ * cloudNames lists the clouds a clouds.yaml defines, so the person can pick one
+ * when there are several (the backend wants `cloud_name` then). A plain scan of
+ * the keys under `clouds:`, not a YAML parser: a file it cannot read yields no
+ * names and goes to the backend, which answers with a proper message.
+ */
+export function cloudNames(text) {
+    const lines = String(text ?? '').split(/\r?\n/);
+    const start = lines.findIndex(line => /^clouds:\s*(#.*)?$/.test(line));
+    if (start < 0) return [];
+    const names = [];
+    let indent = null;
+    for (const line of lines.slice(start + 1)) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const lead = line.length - line.trimStart().length;
+        if (lead === 0) break;
+        indent ??= lead;
+        if (lead !== indent) continue;
+        const key = trimmed.match(/^(?:"([^"]+)"|'([^']+)'|([^\s:#"'][^:#]*?))\s*:(?:\s|$)/);
+        if (key) names.push(key[1] ?? key[2] ?? key[3]);
+    }
+    return names;
+}
+
+// 'valid', 'invalid' (Keystone refused it at the last check) or 'unverified'
+// (stored before projects were checked: it cannot be deployed with until it is
+// checked once).
+export function credentialState(credential) {
+    if (credential.last_validation_error) return 'invalid';
+    return credential.project_verified ? 'valid' : 'unverified';
+}
+
+// The page to return to after saving credentials, taken from the address. Only
+// an app page of this section qualifies: the value is whatever the link said.
+export function safeNextPath(path) {
+    return typeof path === 'string' && /^\/apps\/[A-Za-z0-9_.~%-]+(?:\/[a-z-]+)?$/.test(path) ? path : null;
+}
+
+// ---------------------------------------------------------------------------
 // Roles
 
 // Staff set environments up; students get access to them. The backend enforces
@@ -149,6 +261,11 @@ export function plainSummary(markdown) {
 // would be refused.
 export function isStaff(user) {
     return user?.role === 'teacher' || user?.role === 'admin';
+}
+
+// Admins manage the App Store itself: recommendations, versions, approvals.
+export function isAdmin(user) {
+    return user?.role === 'admin';
 }
 
 // ---------------------------------------------------------------------------
@@ -188,6 +305,32 @@ export function versionOptions(versions) {
 }
 
 /**
+ * deployTarget is the version a lecturer deploys: the one an admin fixed, while
+ * the list still offers it, otherwise the first of the list (stable releases
+ * first) — what lecturers got before anything could be fixed, and what keeps
+ * them from being blocked by an admin who has not got round to it. `fixed` says
+ * which of the two it is; `version` is null when there is nothing to deploy.
+ */
+export function deployTarget(app) {
+    const options = versionOptions(app?.versions);
+    const fixed = app?.deploy_version;
+    if (fixed && options.some(option => option.value === fixed)) return { version: fixed, fixed: true };
+    return { version: options[0]?.value ?? null, fixed: false };
+}
+
+/**
+ * approvedVersionOptions lists what an admin may fix as the deploy version:
+ * versions the repository still lists that have an approved entry. The backend
+ * checks again (the tag may have moved) and refuses with 409 if not. Without
+ * the approvals there is nothing to offer.
+ */
+export function approvedVersionOptions(versions, approvals) {
+    if (!approvals) return [];
+    const approved = new Set(approvals.filter(a => a.status === 'approved').map(a => a.version_tag));
+    return versionOptions(versions).filter(option => approved.has(option.value));
+}
+
+/**
  * quickDeployBlocker says why an app cannot be deployed with one click, or
  * null when it can. One click means: no teams, no inputs. Anything the app
  * declares that needs a value — a required variable without default, a file
@@ -208,6 +351,80 @@ export function quickDeployBlocker(variables) {
 // teams and no inputs.
 export function deploymentPayload({ name, appId, releaseTag }) {
     return { name: name.trim(), appId, releaseTag, userInputVar: { tofu: {} }, teams: [] };
+}
+
+// ---------------------------------------------------------------------------
+// Live log (GET /deployments/{id}/stream)
+
+export const INITIAL_STREAM = { phase: null, progress: null, lines: [], overflow: false, done: null };
+
+// More than this and the oldest lines make room: a terraform run can print tens
+// of thousands, and the page only has to show the tail.
+const MAX_LOG_LINES = 2000;
+
+// How a task that is already over ends the stream (its snapshot is all there is).
+const ENDED_BY_TASK_STATUS = { success: 'succeeded', failed: 'failed', cancelled: 'revoked' };
+
+/**
+ * applyStreamEvent folds one Server-Sent Event of the backend into the state of
+ * the live view. Events: `snapshot` (first, with the task's status and phase),
+ * `progress`, `log`, `overflow` (the backend stopped sending log lines),
+ * `started`, and one of `succeeded`/`failed`/`revoked` last. `done` is set by
+ * whatever ends the stream, and is what tells the view to stop listening.
+ */
+export function applyStreamEvent(state, name, payload) {
+    switch (name) {
+        case 'snapshot': {
+            const over = ENDED_BY_TASK_STATUS[payload.status] ?? (payload.status ? null : 'ended');
+            return {
+                ...state,
+                phase: payload.current_phase ?? state.phase,
+                progress: payload.progress_pct ?? state.progress,
+                done: over,
+            };
+        }
+        case 'progress':
+            return {
+                ...state,
+                phase: payload.current_phase ?? payload.phase ?? state.phase,
+                progress: payload.progress_pct ?? payload.percent ?? state.progress,
+            };
+        case 'log': {
+            const lines = [...state.lines, String(payload.message ?? payload.line ?? '')];
+            return { ...state, lines: lines.length > MAX_LOG_LINES ? lines.slice(-MAX_LOG_LINES) : lines };
+        }
+        case 'overflow':
+            return { ...state, overflow: true };
+        case 'succeeded':
+        case 'failed':
+        case 'revoked':
+            return { ...state, done: name };
+        default:
+            return state;
+    }
+}
+
+/**
+ * formatTaskLog makes the stored log readable. The worker keeps a task's log as
+ * one JSON list of entries (`timestamp`, `level`, `message`, …), which shown as
+ * it is runs on as a single line; anything that is not such a list is text
+ * already and stays as it is.
+ */
+export function formatTaskLog(logs) {
+    if (!logs) return '';
+    let entries;
+    try {
+        entries = JSON.parse(logs);
+    } catch {
+        return logs;
+    }
+    if (!Array.isArray(entries) || !entries.every(entry => entry && typeof entry === 'object' && !Array.isArray(entry))) return logs;
+    return entries.map(entry => {
+        const time = entry.timestamp ?? entry.iso_timestamp;
+        const stamp = time ? String(time).replace('T', ' ').slice(0, 19) : '';
+        const level = entry.level ? String(entry.level).padEnd(5) : '';
+        return [stamp, level, entry.message ?? ''].filter(part => part !== '').join(' ');
+    }).join('\n');
 }
 
 // ---------------------------------------------------------------------------

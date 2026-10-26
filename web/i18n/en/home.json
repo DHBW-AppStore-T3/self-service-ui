@@ -1,7 +1,8 @@
 {
     "hero": {
         "title": "Welcome to dhbwCloud Self-Service",
-        "intro": "The DHBW's cloud, workspaces, language models and DNS."
+        "intro": "The DHBW's cloud, workspaces, language models and DNS.",
+        "greeting": "Hello {{name}}"
     },
     "services": {
         "projects": {
