@@ -45,6 +45,9 @@ EXPOSE 8080
 # which is exactly what the pod's allowPrivilegeEscalation: false does. We
 # listen on 8080, so nothing here needs the capability in the first place.
 # apk upgrade pulls in fixes for base-image packages (Trivy gate, e.g. brotli-libs).
+# SECURITY_REFRESH changes in every CI build (the workflow passes the run id), so the upgrade below never comes from
+# the build cache: a cached layer keeps the package state of its first build and misses every fix released since.
+ARG SECURITY_REFRESH
 RUN apk upgrade --no-cache \
     && apk add --no-cache libcap \
     && setcap -r /usr/bin/caddy \
