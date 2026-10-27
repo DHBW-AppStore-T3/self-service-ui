@@ -165,6 +165,22 @@ describe('deployment detail', () => {
         expect(screen.getByText('10.0.0.5:22')).toBeTruthy();
     });
 
+    it('lists an account as address, user, password', async () => {
+        const { fetch } = server({
+            ...ME('student'),
+            '/api/app-store/deployments/d1': detail({ status: 'success', latest_task: { ...TASK, status: 'success', progress_pct: 100 } }),
+            '/api/app-store/deployments/d1/my-access': ACCESS,
+        });
+        vi.stubGlobal('fetch', fetch);
+        renderView(<DeploymentDetail params={{ id: 'd1' }} />);
+        const address = await screen.findByText('Address');
+        const user = screen.getByText('User');
+        const password = screen.getByText('Password');
+        const follows = (a, b) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+        expect(follows(address, user)).toBe(true);
+        expect(follows(user, password)).toBe(true);
+    });
+
     it('tells a student what a failure means for them', async () => {
         const { fetch } = server({ ...ME('student'), '/api/app-store/deployments/d1': detail({ status: 'failed', latest_task: { ...TASK, status: 'failed' } }) });
         vi.stubGlobal('fetch', fetch);
@@ -210,6 +226,75 @@ describe('deployment detail', () => {
         });
         expect(await screen.findByText(/Plan: 3 to add/)).toBeTruthy();
         expect(screen.getByText(/Initializing the backend/)).toBeTruthy();
+    });
+
+    describe('credentials of a member', () => {
+        const TEAMS = [{ teamId: 'x', name: 'Team A', members: [{ userId: 'u1', email: 'anna@dhbw.de', username: 'anna' }] }];
+        const MEMBER_ACCESS = { user_accounts: { 'Team A-anna': { username: 'anna', url: 'https://ide-anna.example', auth: 'pw-anna', type: 'password' } }, team_vms: {} };
+        const ACCESS_PATH = '/api/app-store/deployments/d1/members/u1/access';
+
+        function owner(permissions, extra = {}) {
+            return server({
+                ...ME('teacher'),
+                '/api/app-store/deployments/d1': detail({ permissions, teams: TEAMS, status: 'success', latest_task: { ...TASK, status: 'success' } }),
+                '/api/app-store/tasks/deployment/d1': [],
+                ...extra,
+            });
+        }
+
+        it('are fetched when the deploying lecturer asks, not with the page', async () => {
+            const { fetch, calls } = owner(OWNER, { [ACCESS_PATH]: MEMBER_ACCESS });
+            vi.stubGlobal('fetch', fetch);
+            renderView(<DeploymentDetail params={{ id: 'd1' }} />);
+
+            const button = await screen.findByRole('button', { name: 'Show credentials' });
+            expect(calls[ACCESS_PATH]).toBeUndefined();
+
+            fireEvent.click(button);
+            expect(await screen.findByText('https://ide-anna.example')).toBeTruthy();
+            expect(calls[ACCESS_PATH]).toBe(1);
+            // The password is masked, as for the person themselves.
+            expect(screen.queryByText('pw-anna')).toBeNull();
+        });
+
+        it('go away again when hidden', async () => {
+            const { fetch } = owner(OWNER, { [ACCESS_PATH]: MEMBER_ACCESS });
+            vi.stubGlobal('fetch', fetch);
+            renderView(<DeploymentDetail params={{ id: 'd1' }} />);
+
+            fireEvent.click(await screen.findByRole('button', { name: 'Show credentials' }));
+            await screen.findByText('https://ide-anna.example');
+            fireEvent.click(screen.getByRole('button', { name: 'Hide credentials' }));
+            expect(screen.queryByText('https://ide-anna.example')).toBeNull();
+        });
+
+        it('say so when there are none', async () => {
+            const { fetch } = owner(OWNER, { [ACCESS_PATH]: { user_accounts: {}, team_vms: {} } });
+            vi.stubGlobal('fetch', fetch);
+            renderView(<DeploymentDetail params={{ id: 'd1' }} />);
+
+            fireEvent.click(await screen.findByRole('button', { name: 'Show credentials' }));
+            expect(await screen.findByText(/no credentials for this environment/)).toBeTruthy();
+        });
+
+        it('are refused to the owner view without the operate right: no button', async () => {
+            const { fetch, calls } = owner({ owner_view: true, operate: false, member: false });
+            vi.stubGlobal('fetch', fetch);
+            renderView(<DeploymentDetail params={{ id: 'd1' }} />);
+
+            expect(await screen.findByText('anna@dhbw.de')).toBeTruthy();
+            expect(screen.queryByRole('button', { name: 'Show credentials' })).toBeNull();
+            expect(calls[ACCESS_PATH]).toBeUndefined();
+        });
+
+        it('show the error when the backend refuses', async () => {
+            const { fetch } = owner(OWNER, { [ACCESS_PATH]: new Response('', { status: 403 }) });
+            vi.stubGlobal('fetch', fetch);
+            renderView(<DeploymentDetail params={{ id: 'd1' }} />);
+
+            fireEvent.click(await screen.findByRole('button', { name: 'Show credentials' }));
+            expect(await screen.findByRole('alert')).toBeTruthy();
+        });
     });
 
     it('stops listening when the task ends, and reads the deployment again', async () => {

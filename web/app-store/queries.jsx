@@ -150,6 +150,20 @@ export function useMyAccess(deploymentId, enabled) {
     });
 }
 
+// One member's credentials (operate right only; 403 otherwise). Secrets of
+// someone else: `gcTime: 0` drops them from the cache when the panel closes.
+export function useMemberAccess(deploymentId, userId) {
+    const api = useAppStoreApi();
+    const userKey = useUserKey();
+    return useQuery({
+        queryKey: [ROOT, userKey, 'member-access', deploymentId, userId],
+        queryFn: ({ signal }) => api.memberAccess(deploymentId, userId, signal),
+        enabled: Boolean(userKey && deploymentId && userId),
+        retry: false,
+        gcTime: 0,
+    });
+}
+
 // Errors are shown inline by the deploy form: the reasons it can fail
 // (credentials missing, role) need a link next to them, not a modal.
 export function useCreateDeployment({ onSuccess } = {}) {

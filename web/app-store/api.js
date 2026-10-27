@@ -74,6 +74,9 @@ export function createAppStoreApi({ baseUrl, onUnauthorized = () => {}, fetchImp
             request(`/apps/${id(appId)}/variables?version=${id(version)}`, { signal }),
         deployments: signal => list('/deployments/', signal),
         myAccess: (deploymentId, signal) => request(`/deployments/${id(deploymentId)}/my-access`, { signal }),
+        // One member's credentials, same shape as myAccess. Operate right only.
+        memberAccess: (deploymentId, userId, signal) =>
+            request(`/deployments/${id(deploymentId)}/members/${id(userId)}/access`, { signal }),
         createDeployment: body => request('/deployments/', { method: 'POST', body }),
         // How a version runs: runtime, `scope` ('user' = one VM per person), the
         // cpu/memory and network choices the author released.
@@ -428,10 +431,10 @@ export function formatTaskLog(logs) {
 }
 
 // ---------------------------------------------------------------------------
-// Access credentials (GET /deployments/{id}/my-access)
+// Access credentials (GET /deployments/{id}/my-access, .../members/{user_id}/access)
 
 /**
- * accessEntries flattens the my-access answer into one entry per account.
+ * accessEntries flattens a my-access (or member-access) answer into one entry per account.
  * `user_accounts` mirrors the app's tofu output: each value has `username`,
  * `auth` (password or key, per `type`), and an address as `url` or
  * `ip`/`port`. `team_vms` adds the team machine's address where the account
