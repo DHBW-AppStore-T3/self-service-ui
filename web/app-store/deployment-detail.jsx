@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Link } from 'wouter';
 import { useTranslation } from 'react-i18next';
 import { Alert, Anchor, Badge, Box, Button, Code, Group, Paper, Progress, ScrollArea, Stack, Table, Text, Title } from '@mantine/core';
-import { AlertCircle, ArrowLeft, WifiOff } from 'lucide-react';
+import { AlertCircle, ArrowLeft, KeyRound, WifiOff } from 'lucide-react';
 import { formatTaskLog, isTransitional, statusColor } from './api.js';
-import { AccessPanel } from './deployments.jsx';
+import { AccessPanel, MemberAccessPanel } from './deployments.jsx';
 import {
     useApps, useDeployment, useDeploymentLogs, useDeploymentStream, useDeploymentTasks,
 } from './queries.jsx';
@@ -36,7 +36,27 @@ function Progression({ task, live }) {
     );
 }
 
-function Teams({ teams }) {
+// One member. With the operate right their credentials can be shown, e.g. to
+// answer a question: fetched when asked for, not with the page.
+function Member({ deploymentId, member, canReveal }) {
+    const { t } = useTranslation();
+    const [shown, setShown] = useState(false);
+    return (
+        <Stack gap={6}>
+            <Group gap="xs">
+                <Text size="xs" c="dimmed">{member.email}</Text>
+                {canReveal && (
+                    <Button size="compact-xs" variant="subtle" leftSection={<KeyRound size={12} />} onClick={() => setShown(value => !value)}>
+                        {t(shown ? 'appStore.access.hide' : 'appStore.access.reveal')}
+                    </Button>
+                )}
+            </Group>
+            {shown && <MemberAccessPanel deploymentId={deploymentId} userId={member.userId} />}
+        </Stack>
+    );
+}
+
+function Teams({ deploymentId, teams, canReveal }) {
     const { t } = useTranslation();
     return (
         <Paper withBorder p="lg">
@@ -45,9 +65,9 @@ function Teams({ teams }) {
                 {teams.length === 0 ? <Text size="sm" c="dimmed">{t('appStore.detail.noTeams')}</Text> : teams.map(team => (
                     <Box key={team.teamId}>
                         <Text fw={500} size="sm">{team.name}</Text>
-                        <Text size="xs" c="dimmed">
-                            {team.members.length === 0 ? '–' : team.members.map(m => m.email).join(', ')}
-                        </Text>
+                        {team.members.length === 0
+                            ? <Text size="xs" c="dimmed">–</Text>
+                            : <Stack gap={4}>{team.members.map(m => <Member key={m.userId} deploymentId={deploymentId} member={m} canReveal={canReveal} />)}</Stack>}
                     </Box>
                 ))}
             </Stack>
@@ -179,7 +199,7 @@ export function DeploymentDetail({ params }) {
 
                         {ownerView && (
                             <>
-                                <Teams teams={deployment.teams ?? []} />
+                                <Teams deploymentId={params.id} teams={deployment.teams ?? []} canReveal={permissions.operate === true} />
                                 {tasks.data?.length > 0 && <TaskHistory tasks={tasks.data} />}
                                 <LogPanel deploymentId={params.id} live={live} running={running} />
                             </>

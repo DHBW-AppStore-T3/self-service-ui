@@ -113,6 +113,13 @@ describe('one-click deployment', () => {
 });
 
 describe('access credentials', () => {
+    it('asks for the credentials of one member by deployment and user id', async () => {
+        const fetchImpl = vi.fn().mockResolvedValue(json({ user_accounts: {}, team_vms: {} }));
+        const api = createAppStoreApi({ baseUrl: '/api/app-store', fetchImpl });
+        await api.memberAccess('d 1', 'u/1');
+        expect(fetchImpl.mock.calls[0][0]).toBe('/api/app-store/deployments/d%201/members/u%2F1/access');
+    });
+
     it('builds one entry per account with an address', () => {
         const entries = accessEntries({
             user_accounts: {

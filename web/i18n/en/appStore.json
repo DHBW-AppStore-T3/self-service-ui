@@ -100,6 +100,8 @@
     "access": {
         "title": "Credentials: {{name}}",
         "show": "Credentials",
+        "reveal": "Show credentials",
+        "hide": "Hide credentials",
         "username": "User",
         "address": "Address",
         "password": "Password",

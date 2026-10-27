@@ -5,7 +5,7 @@ import { ActionIcon, Badge, Box, Button, CopyButton, Group, Modal, Paper, Passwo
 import { Check, Copy, KeyRound, RefreshCw, Server } from 'lucide-react';
 import { CopyableText } from '/helper/copyable-text.jsx';
 import { accessEntries, statusColor } from './api.js';
-import { useApps, useDeployments, useMyAccess, useRole } from './queries.jsx';
+import { useApps, useDeployments, useMemberAccess, useMyAccess, useRole } from './queries.jsx';
 import { EmptyState, StateView } from './shared.jsx';
 
 function CopyIcon({ value }) {
@@ -23,17 +23,14 @@ function CopyIcon({ value }) {
     );
 }
 
-// One account: who, where, and the secret — a password stays masked until
-// asked for, a key is shown as the block of text it is.
+// One account, in the order it is used: where to go, who to log in as, the
+// secret. A password stays masked until asked for, a key is shown as the block
+// of text it is.
 function AccessEntry({ entry }) {
     const { t } = useTranslation();
     return (
         <Paper withBorder p="md">
             <Stack gap="xs">
-                <Group gap="xs">
-                    <Text size="sm" c="dimmed" w={110}>{t('appStore.access.username')}</Text>
-                    <CopyableText value={entry.username}><Text size="sm" ff="monospace">{entry.username}</Text></CopyableText>
-                </Group>
                 {entry.address && (
                     <Group gap="xs">
                         <Text size="sm" c="dimmed" w={110}>{t('appStore.access.address')}</Text>
@@ -41,6 +38,10 @@ function AccessEntry({ entry }) {
                         {entry.protocol && <Badge variant="light" size="sm">{entry.protocol}</Badge>}
                     </Group>
                 )}
+                <Group gap="xs">
+                    <Text size="sm" c="dimmed" w={110}>{t('appStore.access.username')}</Text>
+                    <CopyableText value={entry.username}><Text size="sm" ff="monospace">{entry.username}</Text></CopyableText>
+                </Group>
                 {entry.secret && (entry.secretIsKey ? (
                     <Box>
                         <Group justify="space-between">
@@ -60,11 +61,9 @@ function AccessEntry({ entry }) {
     );
 }
 
-// The caller's own credentials for one environment: one block per account.
-// Loaded only while `enabled`: they are secrets, and most rows are never opened.
-export function AccessPanel({ deploymentId, enabled = true }) {
+// The accounts of one my-access / member-access answer: one block per account.
+function AccessEntries({ query }) {
     const { t } = useTranslation();
-    const query = useMyAccess(deploymentId, enabled);
     const entries = accessEntries(query.data);
     return (
         <StateView query={query}>
@@ -73,6 +72,17 @@ export function AccessPanel({ deploymentId, enabled = true }) {
                 : <Text size="sm" c="dimmed">{t('appStore.access.none')}</Text>}
         </StateView>
     );
+}
+
+export function AccessPanel({ deploymentId, enabled = true }) {
+    return <AccessEntries query={useMyAccess(deploymentId, enabled)} />;
+}
+
+// One member's credentials, for whoever may operate the deployment (the
+// deploying lecturer, an admin): mounted when asked for, dropped from memory
+// as soon as it is hidden again.
+export function MemberAccessPanel({ deploymentId, userId }) {
+    return <AccessEntries query={useMemberAccess(deploymentId, userId)} />;
 }
 
 // The student's own credentials for one environment, in a dialog from the list.
