@@ -304,9 +304,9 @@
             "range": "{{min}} bis {{max}}, Standard {{default}}",
             "network": "Netzwerk",
             "internet": "Internetzugang",
-            "internetHint": "Erlaubt der Umgebung, das Internet zu erreichen.",
+            "internetHint": "Erlaubt der Umgebung, Webserver im Internet zu erreichen (HTTP und HTTPS).",
             "podNetwork": "Netzwerk zwischen den Umgebungen",
-            "podNetworkHint": "Erlaubt den Umgebungen der Teams, sich gegenseitig zu erreichen."
+            "podNetworkHint": "Erlaubt den Umgebungen dieses Deployments, sich auf jedem TCP- und UDP-Port zu erreichen (eigene Server und Clients der Studierenden), unter ihrem Namen oder alle zusammen als \"peers\"."
         },
         "summary": {
             "title": "Zusammenfassung",

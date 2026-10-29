@@ -304,9 +304,9 @@
             "range": "{{min}} to {{max}}, default {{default}}",
             "network": "Network",
             "internet": "Internet access",
-            "internetHint": "Allows the environment to reach the internet.",
+            "internetHint": "Allows the environment to reach web servers on the internet (HTTP and HTTPS).",
             "podNetwork": "Network between the environments",
-            "podNetworkHint": "Allows the teams' environments to reach each other."
+            "podNetworkHint": "Allows the environments of this deployment to reach each other on any TCP and UDP port (students' own servers and clients), by name or all at once as \"peers\"."
         },
         "summary": {
             "title": "Summary",
