@@ -10,3 +10,11 @@ CVE-2026-78669
 CVE-2026-78667
 CVE-2026-111943
 CVE-2026-97031
+
+# go-jose/v4 v4.1.5 in /usr/bin/caddy of the base image caddy:alpine (new since 2026-10-27; fixed in
+# go-jose 4.1.6). Checked 2026-10-29: Caddy 2.11.7 is the latest release and the current caddy:alpine still
+# has 4.1.5, so there is no image to move to; the fix would be building Caddy ourselves (xcaddy), as for the
+# findings above. Exposure: a DoS when a JWK with an RSA key is parsed; Caddy parses no JWKs from clients here,
+# it only receives requests the pod's oauth2-proxy forwards on :8080 inside the pod.
+# Delete as soon as the scan passes without it. Review by 2026-11-30.
+CVE-2026-116587
