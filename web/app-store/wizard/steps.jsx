@@ -1,6 +1,7 @@
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    ActionIcon, Alert, Badge, Box, Button, Checkbox, Chip, Group, Loader, NumberInput, Paper, Radio, ScrollArea, SegmentedControl,
+    ActionIcon, Alert, Badge, Box, Button, Checkbox, Chip, Group, Loader, NumberInput, Paper, ScrollArea, SegmentedControl,
     Select, SimpleGrid, Stack, Text, TextInput, Title,
 } from '@mantine/core';
 import { AlertCircle, Shuffle, X } from 'lucide-react';
@@ -110,6 +111,8 @@ function DropColumn({ title, onDrop, children }) {
 
 export function TeamsStep({ state, setState, studentIds, cache, forced, teamName, scopeChoice = false, scope = 'team', setGroupScope = () => {} }) {
     const { t } = useTranslation();
+    const environmentTitleId = useId();
+    const environmentHelpId = useId();
     const labelOf = id => displayNameOf(cache.get(id) ?? { userId: id });
 
     if (studentIds.length === 0) return <Text c="dimmed">{t('appStore.wizard.teams.empty')}</Text>;
@@ -134,16 +137,18 @@ export function TeamsStep({ state, setState, studentIds, cache, forced, teamName
                 data={['one', 'eachUser', 'custom'].map(value => ({ value, label: t(`appStore.wizard.teams.modes.${value}`) }))} />
 
             {forced && <Text size="sm" c="dimmed">{t('appStore.wizard.teams.forced')}</Text>}
-            {scopeChoice && <Text size="sm" c="dimmed">{t('appStore.wizard.teams.scopeHint')}</Text>}
+            {/* Where the app lets the person choose: for teams, one environment per team or per person. Two short
+                options like the frontend; below them what the selected one means. */}
             {scopeChoice && mode !== 'eachUser' && (
-                <Radio.Group value={scope} onChange={setGroupScope} label={t('appStore.wizard.teams.environment.title')}>
-                    <Stack gap="xs" mt="xs">
-                        {['team', 'user'].map(value => (
-                            <Radio key={value} value={value} label={t(`appStore.wizard.teams.environment.${value}`)}
-                                description={t(`appStore.wizard.teams.environment.${value}Hint`)} />
-                        ))}
-                    </Stack>
-                </Radio.Group>
+                <Stack gap={6} align="flex-start">
+                    <Text fw={500} size="sm" id={environmentTitleId}>{t('appStore.wizard.teams.environment.title')}</Text>
+                    <SegmentedControl value={scope} onChange={setGroupScope} aria-labelledby={environmentTitleId}
+                        aria-describedby={environmentHelpId}
+                        data={['team', 'user'].map(value => ({ value, label: t(`appStore.wizard.teams.environment.${value}`) }))} />
+                    <Text size="sm" id={environmentHelpId} aria-live="polite" data-testid="environment-help">
+                        {t(`appStore.wizard.teams.environment.${scope}Hint`)}
+                    </Text>
+                </Stack>
             )}
             {!forced && mode !== 'custom' && <Text size="sm" c="dimmed">{t(mode === 'one' ? 'appStore.wizard.teams.oneHint' : 'appStore.wizard.teams.eachHint', { count: studentIds.length })}</Text>}
 

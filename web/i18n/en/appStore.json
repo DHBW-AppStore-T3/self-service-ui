@@ -271,7 +271,6 @@
                 "custom": "Own teams"
             },
             "forced": "This app runs one environment per person: everybody is on their own.",
-            "scopeHint": "The distribution also decides what one environment is: everybody on their own gets one each; for teams, choose below whether a team shares one or everyone keeps their own.",
             "environment": {
                 "title": "Environments of a team",
                 "team": "One per team",

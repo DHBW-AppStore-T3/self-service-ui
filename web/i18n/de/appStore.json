@@ -271,7 +271,6 @@
                 "custom": "Eigene Teams"
             },
             "forced": "Diese App läuft je Person: Alle sind einzeln.",
-            "scopeHint": "Die Verteilung legt auch fest, was eine Umgebung ist: Wer einzeln ist, bekommt eine eigene; bei Teams wählen Sie unten, ob sich ein Team eine Umgebung teilt oder jede Person ihre eigene behält.",
             "environment": {
                 "title": "Umgebungen eines Teams",
                 "team": "Eine je Team",

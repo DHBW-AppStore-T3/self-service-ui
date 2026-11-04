@@ -171,6 +171,19 @@ describe('deployment wizard', () => {
             expect(sent[0].userInputVar.scope).toBe('user');
         });
 
+        it('says below the short options what the selected one means', async () => {
+            await withCourse(choice('team'));
+            await waitFor(() => expect(screen.getByRole('button', { name: 'Next' }).disabled).toBe(false));
+            next();
+            const help = screen.getByTestId('environment-help');
+            expect(help.textContent).toBe('The members of a team work together in one environment.');
+            fireEvent.click(screen.getByRole('radio', { name: 'One per person' }));
+            expect(help.textContent).toBe('Everyone gets an environment of their own; the team decides who gets which files.');
+            // The long hint above the distribution is gone; the sentence describes the choice.
+            expect(screen.queryByText(/The distribution also decides/)).toBeNull();
+            expect(screen.getByRole('radiogroup', { name: 'Environments of a team' }).getAttribute('aria-describedby')).toBe(help.id);
+        });
+
         it('starts everybody on their own for an app that runs per person, without locking anything', async () => {
             const { sent } = await withCourse(choice('user'));
             await waitFor(() => expect(screen.getByRole('button', { name: 'Next' }).disabled).toBe(false));
