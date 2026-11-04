@@ -146,6 +146,78 @@ describe('deployment wizard', () => {
         deploy();
         await waitFor(() => expect(sent).toHaveLength(1));
         expect(sent[0].teams).toEqual([{ name: 'Team 1', userIds: ['u1'] }, { name: 'Team 2', userIds: ['u2'] }]);
+        // The app fixes the scope: nothing to send.
+        expect(sent[0].userInputVar.scope).toBeUndefined();
+    });
+
+    describe('where the app lets the person choose one environment per person or per team', () => {
+        const choice = scope => ({ '/api/app-store/apps/ubuntu/runtime': { ...POD, scope, scope_choice: true } });
+
+        it('lets a team keep one environment per person (a file per team, an environment each) and sends it', async () => {
+            const { sent } = await withCourse(choice('team'));
+            await waitFor(() => expect(screen.getByRole('button', { name: 'Next' }).disabled).toBe(false));
+            next();
+            expect(screen.getByRole('radio', { name: 'One team for everyone' }).checked).toBe(true);
+            // Teams start with the app's own scope.
+            expect(screen.getByRole('radio', { name: 'One per team' }).checked).toBe(true);
+            fireEvent.click(screen.getByRole('radio', { name: 'One per person' }));
+            next();
+            await screen.findByText('This version needs no settings.');
+            next();
+            expect(await screen.findByText('2 environments, one per person')).toBeTruthy();
+            deploy();
+            await waitFor(() => expect(sent).toHaveLength(1));
+            expect(sent[0].teams).toEqual([{ name: 'Team 1', userIds: ['u1', 'u2'] }]);
+            expect(sent[0].userInputVar.scope).toBe('user');
+        });
+
+        it('says below the short options what the selected one means', async () => {
+            await withCourse(choice('team'));
+            await waitFor(() => expect(screen.getByRole('button', { name: 'Next' }).disabled).toBe(false));
+            next();
+            const help = screen.getByTestId('environment-help');
+            expect(help.textContent).toBe('The members of a team work together in one environment.');
+            fireEvent.click(screen.getByRole('radio', { name: 'One per person' }));
+            expect(help.textContent).toBe('Everyone gets an environment of their own; the team decides who gets which files.');
+            // The long hint above the distribution is gone; the sentence describes the choice.
+            expect(screen.queryByText(/The distribution also decides/)).toBeNull();
+            expect(screen.getByRole('radiogroup', { name: 'Environments of a team' }).getAttribute('aria-describedby')).toBe(help.id);
+        });
+
+        it('starts everybody on their own for an app that runs per person, without locking anything', async () => {
+            const { sent } = await withCourse(choice('user'));
+            await waitFor(() => expect(screen.getByRole('button', { name: 'Next' }).disabled).toBe(false));
+            next();
+            expect(screen.getByRole('radio', { name: 'Everybody on their own' }).checked).toBe(true);
+            expect(screen.getByRole('radio', { name: 'Own teams' }).disabled).toBe(false);
+            expect(screen.queryByText('This app runs one environment per person: everybody is on their own.')).toBeNull();
+            // The choice is only for teams.
+            expect(screen.queryByRole('radio', { name: 'One per person' })).toBeNull();
+
+            fireEvent.click(screen.getByRole('radio', { name: 'One team for everyone' }));
+            fireEvent.click(screen.getByRole('radio', { name: 'One per team' }));
+            next();
+            await screen.findByText('This version needs no settings.');
+            next();
+            expect(await screen.findByText('1 environment, one per team')).toBeTruthy();
+            deploy();
+            await waitFor(() => expect(sent).toHaveLength(1));
+            expect(sent[0].teams).toEqual([{ name: 'Team 1', userIds: ['u1', 'u2'] }]);
+            expect(sent[0].userInputVar.scope).toBe('team');
+        });
+
+        it('sends scope user for everybody on their own', async () => {
+            const { sent } = await withCourse(choice('team'));
+            await waitFor(() => expect(screen.getByRole('button', { name: 'Next' }).disabled).toBe(false));
+            next();
+            fireEvent.click(screen.getByRole('radio', { name: 'Everybody on their own' }));
+            next();
+            await screen.findByText('This version needs no settings.');
+            next();
+            deploy();
+            await waitFor(() => expect(sent).toHaveLength(1));
+            expect(sent[0].userInputVar.scope).toBe('user');
+        });
     });
 
     it('hides the hint and the controls of own teams while everybody is on their own', async () => {

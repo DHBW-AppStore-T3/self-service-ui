@@ -197,6 +197,10 @@
         "open": "Details",
         "teams": "Teams",
         "noTeams": "No teams",
+        "scope": {
+            "team": "One environment per team",
+            "user": "One environment per person"
+        },
         "members": "Members",
         "tasks": "Task history",
         "taskType": "Task",
@@ -267,6 +271,13 @@
                 "custom": "Own teams"
             },
             "forced": "This app runs one environment per person: everybody is on their own.",
+            "environment": {
+                "title": "Environments of a team",
+                "team": "One per team",
+                "teamHint": "The members of a team work together in one environment.",
+                "user": "One per person",
+                "userHint": "Everyone gets an environment of their own; the team decides who gets which files."
+            },
             "count": "Number of teams",
             "shuffle": "Distribute randomly",
             "clear": "Empty all teams",
@@ -319,6 +330,10 @@
             "teams_other": "{{count}} teams",
             "members_one": "{{count}} person",
             "members_other": "{{count}} people",
+            "perPerson_one": "{{count}} environment, one per person",
+            "perPerson_other": "{{count}} environments, one per person",
+            "perTeam_one": "{{count}} environment, one per team",
+            "perTeam_other": "{{count}} environments, one per team",
             "changes": "Changed settings",
             "noChanges": "All settings are at their defaults.",
             "files": "Files",

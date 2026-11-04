@@ -62,7 +62,12 @@ ablehnt.
   `variables.js`, `payload.js`) ist aus `frontend/src/views/new-deployment/`
   übernommen; der Payload von `POST /deployments/` ist derselbe. Nicht dabei:
   Werthilfen für `@openstack:`-Marker (Netz-/Flavor-/Image-Auswahl) und eine
-  eigene Oberfläche für Mehr-Image-Packer-Apps.
+  eigene Oberfläche für Mehr-Image-Packer-Apps. Scope wie im Frontend: `scope: user`
+  ohne `scope_choice` erzwingt „Jede Person einzeln“; mit `scope_choice` ergibt
+  „einzeln“ `scope: user`, Teams wählen „Eine je Team“ oder „Eine je Person“
+  (kurze Auswahl wie im Frontend, darunter ein Satz zur gewählten; Start: der
+  Scope der App), gesendet als `userInputVar.scope`. Die Detailseite
+  zeigt den Scope (`scope` der API, sonst `userInputVar.scope`).
 - **Zugangsdaten** (#20): `clouds.yaml` hochladen oder einfügen; bei leerem
   Bestand wird sofort gespeichert, sonst bestätigt der Button.
 

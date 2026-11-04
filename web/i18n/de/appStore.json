@@ -197,6 +197,10 @@
         "open": "Details",
         "teams": "Teams",
         "noTeams": "Keine Teams",
+        "scope": {
+            "team": "Eine Umgebung je Team",
+            "user": "Eine Umgebung je Person"
+        },
         "members": "Mitglieder",
         "tasks": "Verlauf der Aufgaben",
         "taskType": "Aufgabe",
@@ -267,6 +271,13 @@
                 "custom": "Eigene Teams"
             },
             "forced": "Diese App läuft je Person: Alle sind einzeln.",
+            "environment": {
+                "title": "Umgebungen eines Teams",
+                "team": "Eine je Team",
+                "teamHint": "Die Mitglieder eines Teams arbeiten gemeinsam in einer Umgebung.",
+                "user": "Eine je Person",
+                "userHint": "Jede Person bekommt eine eigene Umgebung; das Team bestimmt, wer welche Dateien bekommt."
+            },
             "count": "Anzahl der Teams",
             "shuffle": "Zufällig verteilen",
             "clear": "Alle Teams leeren",
@@ -319,6 +330,10 @@
             "teams_other": "{{count}} Teams",
             "members_one": "{{count}} Person",
             "members_other": "{{count}} Personen",
+            "perPerson_one": "{{count}} Umgebung, eine je Person",
+            "perPerson_other": "{{count}} Umgebungen, eine je Person",
+            "perTeam_one": "{{count}} Umgebung, eine je Team",
+            "perTeam_other": "{{count}} Umgebungen, eine je Team",
             "changes": "Geänderte Einstellungen",
             "noChanges": "Alle Einstellungen stehen auf ihrer Voreinstellung.",
             "files": "Dateien",

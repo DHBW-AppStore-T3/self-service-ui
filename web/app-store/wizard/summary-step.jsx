@@ -17,7 +17,7 @@ function Row({ label, children }) {
 }
 
 export function SummaryStep({
-    app, name, version, teams, studentCount, defs, isMultiImage, values, files, runtime, network, workloads, resourceChanged,
+    app, name, version, teams, studentCount, defs, isMultiImage, values, files, runtime, network, workloads, scope, resourceChanged,
     needsCredential, usableCredentials, credentialId, setCredentialId, credentialsReady, appId,
 }) {
     const { t } = useTranslation();
@@ -41,6 +41,9 @@ export function SummaryStep({
                             {studentCount === 0 ? t('appStore.wizard.summary.nobody') : (
                                 <Stack gap={4}>
                                     <Text size="sm">{t('appStore.wizard.summary.teams', { count: teams.length })} · {t('appStore.wizard.summary.members', { count: studentCount })}</Text>
+                                    {runtime?.scope && (
+                                        <Text size="sm">{t(scope === 'user' ? 'appStore.wizard.summary.perPerson' : 'appStore.wizard.summary.perTeam', { count: workloads })}</Text>
+                                    )}
                                     {teams.map(team => (
                                         <Text key={team.name} size="xs" c="dimmed">{team.name}: {team.members.map(m => m.username).join(', ')}</Text>
                                     ))}

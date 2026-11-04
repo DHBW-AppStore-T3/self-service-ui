@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
     ActionIcon, Alert, Badge, Box, Button, Checkbox, Chip, Group, Loader, NumberInput, Paper, ScrollArea, SegmentedControl,
@@ -108,18 +109,24 @@ function DropColumn({ title, onDrop, children }) {
     );
 }
 
-export function TeamsStep({ state, setState, studentIds, cache, forced, teamName }) {
+export function TeamsStep({ state, setState, studentIds, cache, forced, teamName, scopeChoice = false, scope = 'team', setGroupScope = () => {} }) {
     const { t } = useTranslation();
+    const environmentTitleId = useId();
+    const environmentHelpId = useId();
     const labelOf = id => displayNameOf(cache.get(id) ?? { userId: id });
 
     if (studentIds.length === 0) return <Text c="dimmed">{t('appStore.wizard.teams.empty')}</Text>;
 
     const mode = forced ? 'eachUser' : state.mode;
-    const choose = next => setState(
-        next === 'one' ? chooseOneGroup(state, studentIds, teamName)
-            : next === 'eachUser' ? chooseEachUser(studentIds, teamName)
-                : chooseCustom({ ...state, assignments: state.assignments.length ? state.assignments : [studentIds] }, studentIds.length, teamName),
-    );
+    const choose = next => {
+        // Teams start with the app's own scope again after "everybody on their own".
+        if (next === 'eachUser') setGroupScope(null);
+        setState(
+            next === 'one' ? chooseOneGroup(state, studentIds, teamName)
+                : next === 'eachUser' ? chooseEachUser(studentIds, teamName)
+                    : chooseCustom({ ...state, assignments: state.assignments.length ? state.assignments : [studentIds] }, studentIds.length, teamName),
+        );
+    };
     const unassigned = unassignedOf(studentIds, state.assignments);
     const moveTo = (id, target) => id && studentIds.includes(id) && setState({ ...state, assignments: moveStudent(state.assignments, id, target) });
     const targets = [{ value: 'pool', label: t('appStore.wizard.teams.pool') }, ...state.names.slice(0, state.count).map((n, i) => ({ value: String(i), label: n || teamName(i) }))];
@@ -130,6 +137,19 @@ export function TeamsStep({ state, setState, studentIds, cache, forced, teamName
                 data={['one', 'eachUser', 'custom'].map(value => ({ value, label: t(`appStore.wizard.teams.modes.${value}`) }))} />
 
             {forced && <Text size="sm" c="dimmed">{t('appStore.wizard.teams.forced')}</Text>}
+            {/* Where the app lets the person choose: for teams, one environment per team or per person. Two short
+                options like the frontend; below them what the selected one means. */}
+            {scopeChoice && mode !== 'eachUser' && (
+                <Stack gap={6} align="flex-start">
+                    <Text fw={500} size="sm" id={environmentTitleId}>{t('appStore.wizard.teams.environment.title')}</Text>
+                    <SegmentedControl value={scope} onChange={setGroupScope} aria-labelledby={environmentTitleId}
+                        aria-describedby={environmentHelpId}
+                        data={['team', 'user'].map(value => ({ value, label: t(`appStore.wizard.teams.environment.${value}`) }))} />
+                    <Text size="sm" id={environmentHelpId} aria-live="polite" data-testid="environment-help">
+                        {t(`appStore.wizard.teams.environment.${scope}Hint`)}
+                    </Text>
+                </Stack>
+            )}
             {!forced && mode !== 'custom' && <Text size="sm" c="dimmed">{t(mode === 'one' ? 'appStore.wizard.teams.oneHint' : 'appStore.wizard.teams.eachHint', { count: studentIds.length })}</Text>}
 
             {!forced && mode === 'custom' && (
