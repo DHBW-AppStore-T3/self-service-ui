@@ -54,10 +54,11 @@ const isBlankValue = val => val === undefined || val === null || (typeof val ===
  * buildDeploymentPayload turns the wizard's state into the create request.
  * Empty values are left out, so the variable's own default applies instead of a
  * `null` forwarded to Terraform; file variables travel under `files`; a
- * credential is sent only for VM apps.
+ * credential is sent only for VM apps. `scope` (one workload per person or per
+ * team) is sent only where the app lets the person choose it.
  */
 export function buildDeploymentPayload({
-    name, appId, releaseTag, teams, definitions, isMultiImage, values, files, runtime, credentialId, resources, network,
+    name, appId, releaseTag, teams, definitions, isMultiImage, values, files, runtime, credentialId, resources, network, scope,
 }) {
     const { all } = buildDraftValues(definitions, values, isMultiImage);
     const userInputVar = { packer: {}, terraform: {} };
@@ -77,6 +78,7 @@ export function buildDeploymentPayload({
     }
     if (resources && Object.keys(resources).length > 0) userInputVar.resources = resources;
     if (network) userInputVar.network = network;
+    if (scope) userInputVar.scope = scope;
 
     const payload = { name: name.trim(), appId, releaseTag, teams, userInputVar };
     if (!isClusterRuntime(runtime) && credentialId) payload.credentialId = credentialId;

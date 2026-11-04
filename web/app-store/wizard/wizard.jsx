@@ -40,6 +40,8 @@ function WizardBody({ app }) {
     const [name, setName] = useState(app.name);
     const [studentIds, setStudentIds] = useState([]);
     const [teamsState, setTeamsState] = useState({ mode: 'one', count: 0, assignments: [], names: [] });
+    // Teams with one environment per team or per person, where the app lets the person choose; null: the app's own.
+    const [groupScope, setGroupScope] = useState(null);
     const [values, setValues] = useState({});
     const [files, setFiles] = useState({});
     const [resources, setResources] = useState(null);
@@ -47,13 +49,18 @@ function WizardBody({ app }) {
     const [chosenCredential, setChosenCredential] = useState(null);
 
     const runtimeData = runtime.data;
-    const forced = runtimeData?.scope === 'user';
+    // `scope: user` forces everybody on their own, unless the app lets the person choose (`scope_choice`): then
+    // everybody on their own runs per person, and teams get one environment per team or per member.
+    const scopeChoice = runtimeData?.scope_choice === true;
+    const appScope = runtimeData?.scope === 'user' ? 'user' : 'team';
+    const forced = appScope === 'user' && !scopeChoice;
+    const scope = !scopeChoice ? appScope : teamsState.mode === 'eachUser' ? 'user' : groupScope ?? appScope;
     const defs = useMemo(() => dedupeVariables(variables.data ?? []), [variables.data]);
     const isMultiImage = isMultiImageLayout(Object.keys(groupPackerByTemplate(defs)));
     const teams = buildWizardTeams(teamsState.names, teamsState.assignments, directory.cache);
     const choices = runtimeData?.resources ?? [];
     const resourcesValue = resources ?? defaultSelection(choices);
-    const workloads = forced ? studentIds.length : teamsState.count;
+    const workloads = scope === 'user' ? studentIds.length : teamsState.count;
     const missing = findMissingRequired(defs, values, isMultiImage, teams);
     const needsCredential = runtimeData?.runtime === 'openstack-vm';
     const usableCredentials = (credentials.data ?? []).filter(usable);
@@ -80,7 +87,11 @@ function WizardBody({ app }) {
     const loading = runtime.isPending || variables.isPending;
 
     function advance() {
-        if (step === 0) setTeamsState(syncTeams(teamsState, studentIds, forced, teamName));
+        // An app that runs per person by default starts with everybody on their own, so clicking through changes
+        // nothing; only while nobody is placed yet.
+        const untouched = teamsState.assignments.every(group => !group || group.length === 0);
+        const startsPerPerson = scopeChoice && appScope === 'user' && teamsState.mode === 'one' && untouched;
+        if (step === 0) setTeamsState(syncTeams(teamsState, studentIds, forced || startsPerPerson, teamName));
         if (step === 1) {
             setValues(previous => reconcileValues(defs, previous, isMultiImage, teams));
         }
@@ -95,6 +106,7 @@ function WizardBody({ app }) {
             runtime: runtimeData.runtime, credentialId,
             resources: choices.length > 0 ? resourcesValue : undefined,
             network: networkPayload({ choices: runtimeData.network, selection: network, workloads }),
+            scope: scopeChoice ? scope : undefined,
         }));
     }
 
@@ -121,7 +133,7 @@ function WizardBody({ app }) {
                 )}
                 {step === 1 && (
                     <TeamsStep state={teamsState} setState={setTeamsState} studentIds={studentIds} cache={directory.cache}
-                        forced={forced} teamName={teamName} />
+                        forced={forced} teamName={teamName} scopeChoice={scopeChoice} scope={scope} setGroupScope={setGroupScope} />
                 )}
                 {step === 2 && (
                     <VariablesStep defs={defs} isMultiImage={isMultiImage} values={values} setValues={setValues} files={files}
@@ -130,7 +142,7 @@ function WizardBody({ app }) {
                 )}
                 {step === 3 && runtimeData && (
                     <SummaryStep app={app} name={name} version={version} teams={teams} studentCount={studentIds.length} defs={defs}
-                        isMultiImage={isMultiImage} values={values} files={files} runtime={runtimeData} network={network} workloads={workloads}
+                        isMultiImage={isMultiImage} values={values} files={files} runtime={runtimeData} network={network} workloads={workloads} scope={scope}
                         resourceChanged={resourceChanged} needsCredential={needsCredential} usableCredentials={usableCredentials}
                         credentialId={credentialId} setCredentialId={setChosenCredential} credentialsReady={credentials.isSuccess}
                         appId={app.appId} />

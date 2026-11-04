@@ -199,6 +199,25 @@ describe('deployment detail', () => {
         expect(await screen.findByText('This deployment was not found or no longer exists.')).toBeTruthy();
     });
 
+    it.each([
+        ['what the backend recorded', { scope: 'user', userInputVar: { scope: 'team' } }, 'One environment per person'],
+        ['the choice of an older deployment', { scope: null, userInputVar: { scope: 'team' } }, 'One environment per team'],
+    ])('says what one environment is: %s', async (_, fields, text) => {
+        const { fetch } = server({
+            ...ME('teacher'),
+            '/api/app-store/deployments/d1': detail({
+                permissions: OWNER,
+                teams: [{ teamId: 'x', name: 'Team A', members: [] }],
+                ...fields,
+            }),
+            '/api/app-store/tasks/deployment/d1': [],
+        });
+        vi.stubGlobal('fetch', fetch);
+        renderView(<DeploymentDetail params={{ id: 'd1' }} />);
+
+        expect(await screen.findByText(text)).toBeTruthy();
+    });
+
     it('gives the owner teams, task history and the live log', async () => {
         const { fetch } = server({
             ...ME('teacher'),

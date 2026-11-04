@@ -56,12 +56,20 @@ function Member({ deploymentId, member, canReveal }) {
     );
 }
 
-function Teams({ deploymentId, teams, canReveal }) {
+// One workload per team or per person: what the backend recorded, else the choice in the wizard (older rows).
+export function deploymentScope(deployment) {
+    if (deployment.scope === 'team' || deployment.scope === 'user') return deployment.scope;
+    const chosen = deployment.userInputVar && typeof deployment.userInputVar === 'object' ? deployment.userInputVar.scope : undefined;
+    return chosen === 'team' || chosen === 'user' ? chosen : null;
+}
+
+function Teams({ deploymentId, teams, scope, canReveal }) {
     const { t } = useTranslation();
     return (
         <Paper withBorder p="lg">
             <Stack gap="sm">
                 <Title order={2} size="h4">{t('appStore.detail.teams')}</Title>
+                {scope && <Text size="sm" c="dimmed">{t(`appStore.detail.scope.${scope}`)}</Text>}
                 {teams.length === 0 ? <Text size="sm" c="dimmed">{t('appStore.detail.noTeams')}</Text> : teams.map(team => (
                     <Box key={team.teamId}>
                         <Text fw={500} size="sm">{team.name}</Text>
@@ -199,7 +207,7 @@ export function DeploymentDetail({ params }) {
 
                         {ownerView && (
                             <>
-                                <Teams deploymentId={params.id} teams={deployment.teams ?? []} canReveal={permissions.operate === true} />
+                                <Teams deploymentId={params.id} teams={deployment.teams ?? []} scope={deploymentScope(deployment)} canReveal={permissions.operate === true} />
                                 {tasks.data?.length > 0 && <TaskHistory tasks={tasks.data} />}
                                 <LogPanel deploymentId={params.id} live={live} running={running} />
                             </>
